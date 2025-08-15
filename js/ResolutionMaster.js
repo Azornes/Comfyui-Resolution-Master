@@ -336,91 +336,78 @@ app.registerExtension({
                 // Helper function for WAN custom calculation
                 const applyWANCustomCalculation = (width, height) => {
                     // WAN flexible resolution range: 320p to 820p
+                    // "p" resolution is based on total pixel count, not just height
+                    // 320p at 16:9 = 569x320 = 182,080 pixels
+                    // 480p at 16:9 = 853x480 = 409,440 pixels  
+                    // 720p at 16:9 = 1280x720 = 921,600 pixels
+                    // 820p at 16:9 = 1458x820 = 1,195,560 pixels
+                    
+                    const minPixels = 182080;  // 320p equivalent
+                    const maxPixels = 1195560; // 820p equivalent
+                    
                     // Calculate current aspect ratio
                     const currentAspectRatio = width / height;
+                    const currentPixels = width * height;
                     
-                    // Determine if it's closer to 16:9 or 9:16
-                    const ratio16_9 = 16 / 9;
-                    const ratio9_16 = 9 / 16;
+                    // Determine target pixel count within WAN range
+                    let targetPixels = Math.max(minPixels, Math.min(maxPixels, currentPixels));
                     
+                    // Calculate dimensions maintaining aspect ratio
                     let targetWidth, targetHeight;
                     
-                    // Determine if landscape or portrait
-                    const isLandscape = Math.abs(currentAspectRatio - ratio16_9) < Math.abs(currentAspectRatio - ratio9_16);
-                    
-                    if (isLandscape) {
-                        // Landscape mode (16:9)
-                        // Calculate based on height to determine the "p" value
-                        const currentP = Math.max(320, Math.min(820, height));
-                        
-                        // Calculate proportional width for 16:9
-                        targetHeight = Math.round(currentP);
-                        targetWidth = Math.round(targetHeight * ratio16_9);
+                    if (currentAspectRatio >= 1) {
+                        // Landscape or square
+                        targetHeight = Math.sqrt(targetPixels / currentAspectRatio);
+                        targetWidth = targetHeight * currentAspectRatio;
                     } else {
-                        // Portrait mode (9:16)
-                        // Calculate based on width to determine the "p" value
-                        const currentP = Math.max(320, Math.min(820, width));
-                        
-                        // Calculate proportional height for 9:16
-                        targetWidth = Math.round(currentP);
-                        targetHeight = Math.round(targetWidth / ratio9_16);
-                    }
-                    
-                    // For custom aspect ratios, maintain ratio while keeping within 320p-820p range
-                    if (Math.abs(currentAspectRatio - ratio16_9) > 0.2 && Math.abs(currentAspectRatio - ratio9_16) > 0.2) {
-                        // Calculate target based on current pixel count
-                        const minP = 320;
-                        const maxP = 820;
-                        
-                        // Determine target resolution based on shorter dimension
-                        const shorterDim = Math.min(width, height);
-                        const targetP = Math.max(minP, Math.min(maxP, shorterDim));
-                        
-                        if (width < height) {
-                            targetWidth = targetP;
-                            targetHeight = Math.round(targetP * (height / width));
-                        } else {
-                            targetHeight = targetP;
-                            targetWidth = Math.round(targetP * (width / height));
-                        }
+                        // Portrait
+                        targetWidth = Math.sqrt(targetPixels * currentAspectRatio);
+                        targetHeight = targetWidth / currentAspectRatio;
                     }
                     
                     // Round to 16px increments (common for video encoding)
                     targetWidth = Math.round(targetWidth / 16) * 16;
                     targetHeight = Math.round(targetHeight / 16) * 16;
                     
-                    // Ensure minimum viable dimensions (320p minimum)
-                    const minDimension = 320;
-                    if (targetWidth < minDimension && targetHeight < minDimension) {
-                        if (targetWidth < targetHeight) {
-                            targetWidth = minDimension;
-                            targetHeight = Math.round(minDimension * (height / width) / 16) * 16;
-                        } else {
-                            targetHeight = minDimension;
-                            targetWidth = Math.round(minDimension * (width / height) / 16) * 16;
-                        }
+                    // Recalculate actual pixels after rounding
+                    const actualPixels = targetWidth * targetHeight;
+                    
+                    // If rounding pushed us too far out of range, adjust
+                    if (actualPixels > maxPixels * 1.1) {
+                        // Scale down to fit within range
+                        const scaleFactor = Math.sqrt(maxPixels / actualPixels);
+                        targetWidth = Math.round((targetWidth * scaleFactor) / 16) * 16;
+                        targetHeight = Math.round((targetHeight * scaleFactor) / 16) * 16;
+                    } else if (actualPixels < minPixels * 0.9) {
+                        // Scale up to fit within range
+                        const scaleFactor = Math.sqrt(minPixels / actualPixels);
+                        targetWidth = Math.round((targetWidth * scaleFactor) / 16) * 16;
+                        targetHeight = Math.round((targetHeight * scaleFactor) / 16) * 16;
                     }
                     
-                    // Cap at reasonable maximum (1920x1080 for upscaling later)
-                    targetWidth = Math.min(1920, targetWidth);
-                    targetHeight = Math.min(1080, targetHeight);
+                    // Final safety clamps
+                    targetWidth = Math.max(320, Math.min(2048, targetWidth));
+                    targetHeight = Math.max(320, Math.min(2048, targetHeight));
                     
                     // Determine recommended model based on final resolution
-                    const pixels480p = 832 * 480; // 399,360
-                    const pixels720p = 1280 * 720; // 921,600
-                    const currentPixels = targetWidth * targetHeight;
+                    const pixels480p = 409440; // 480p at 16:9
+                    const pixels720p = 921600; // 720p at 16:9
+                    const finalPixels = targetWidth * targetHeight;
                     
                     // Calculate which resolution is closer
-                    const dist480p = Math.abs(currentPixels - pixels480p);
-                    const dist720p = Math.abs(currentPixels - pixels720p);
+                    const dist480p = Math.abs(finalPixels - pixels480p);
+                    const dist720p = Math.abs(finalPixels - pixels720p);
                     
-                    // Store recommendation (though we can't display it here, it can be used elsewhere)
                     const recommendedModel = dist480p < dist720p ? "480p" : "720p";
+                    
+                    // Calculate equivalent "p" value for logging
+                    const equivalentP = Math.round(Math.sqrt(finalPixels * 9 / 16));
                     
                     return { 
                         width: targetWidth, 
                         height: targetHeight,
-                        recommendedModel: recommendedModel
+                        recommendedModel: recommendedModel,
+                        equivalentP: equivalentP
                     };
                 };
 
@@ -512,7 +499,7 @@ app.registerExtension({
                 resolutionDropdown.title = 'Target resolution';
 
                 const resolutions = [
-                    { label: '480p', value: 480 }, { label: '720p', value: 720 },
+                    { label: '480p', value: 480 }, { label: '720p', value: 720 }, { label: '820p', value: 820 },
                     { label: '1080p', value: 1080 }, { label: '1440p', value: 1440 },
                     { label: '2160p', value: 2160 }, { label: '4320p', value: 4320 }
                 ];
@@ -754,6 +741,283 @@ app.registerExtension({
                     // Set initial opacity
                     megapixelsScaleLabel.style.opacity = '0.5';
                 }, 100);
+
+                // Create auto-detect controls
+                const autoDetectContainer = document.createElement('div');
+                autoDetectContainer.className = 'uar-flex-row';
+                autoDetectContainer.style.marginTop = '5px';
+                autoDetectContainer.style.alignItems = 'center';
+                autoDetectContainer.style.gap = '10px';
+
+                // Auto-detect checkbox
+                const autoDetectCheckbox = document.createElement('input');
+                autoDetectCheckbox.type = 'checkbox';
+                autoDetectCheckbox.className = 'uar-checkbox';
+                autoDetectCheckbox.id = 'auto-detect-' + node.id;
+                autoDetectCheckbox.title = 'Automatically detect dimensions from input image';
+
+                const autoDetectLabel = document.createElement('label');
+                autoDetectLabel.textContent = 'Auto-detect from input';
+                autoDetectLabel.className = 'uar-label';
+                autoDetectLabel.htmlFor = 'auto-detect-' + node.id;
+                autoDetectLabel.style.cursor = 'pointer';
+                autoDetectLabel.title = 'Automatically detect dimensions from input image';
+
+                // Auto-fit to preset button
+                const autoFitButton = document.createElement('button');
+                autoFitButton.textContent = '🎯 Auto-fit to preset';
+                autoFitButton.className = 'uar-button';
+                autoFitButton.title = 'Automatically find closest resolution in selected preset category';
+                autoFitButton.style.display = 'none'; // Hidden by default
+
+                // Auto-fit on image change checkbox
+                const autoFitOnChangeCheckbox = document.createElement('input');
+                autoFitOnChangeCheckbox.type = 'checkbox';
+                autoFitOnChangeCheckbox.className = 'uar-checkbox';
+                autoFitOnChangeCheckbox.id = 'auto-fit-change-' + node.id;
+                autoFitOnChangeCheckbox.title = 'Automatically run auto-fit when new image is detected';
+                autoFitOnChangeCheckbox.style.display = 'none'; // Hidden by default
+
+                const autoFitOnChangeLabel = document.createElement('label');
+                autoFitOnChangeLabel.textContent = 'Auto-fit on change';
+                autoFitOnChangeLabel.className = 'uar-label';
+                autoFitOnChangeLabel.htmlFor = 'auto-fit-change-' + node.id;
+                autoFitOnChangeLabel.style.cursor = 'pointer';
+                autoFitOnChangeLabel.title = 'Automatically run auto-fit when new image is detected';
+                autoFitOnChangeLabel.style.display = 'none'; // Hidden by default
+
+                // Variables to track detected dimensions
+                let detectedDimensions = null;
+                let dimensionCheckInterval = null;
+                let manuallySetByAutoFit = false; // Track if dimensions were set by auto-fit
+
+                // Function to check for image dimensions from connected input
+                const checkForImageDimensions = async () => {
+                    try {
+                        // Check if there's an input image connected
+                        if (!node.inputs || !node.inputs[0] || !node.inputs[0].link) {
+                            // No image input connected
+                            detectedDimensions = null;
+                            if (autoDetectCheckbox.checked) {
+                                // Reset to default values when no image is connected
+                                widthWidget.value = 512;
+                                heightWidget.value = 512;
+                                updateWidgetValues();
+                                updateAllScaleLabels();
+                                updateCanvas();
+                            }
+                            return;
+                        }
+
+                        // Get the link ID to check if image has changed
+                        const linkId = node.inputs[0].link;
+                        const graph = app.graph;
+                        
+                        if (graph) {
+                            const link = graph.links[linkId];
+                            if (link) {
+                                const sourceNode = graph.getNodeById(link.origin_id);
+                                if (sourceNode && sourceNode.imgs && sourceNode.imgs.length > 0) {
+                                    // Get dimensions from the first image
+                                    const img = sourceNode.imgs[0];
+                                    
+                                    // Check if dimensions have changed
+                                    if (!detectedDimensions || 
+                                        detectedDimensions.width !== img.naturalWidth || 
+                                        detectedDimensions.height !== img.naturalHeight) {
+                                        
+                                        detectedDimensions = {
+                                            width: img.naturalWidth,
+                                            height: img.naturalHeight
+                                        };
+
+                                        // Reset auto-fit flag when image changes - allow auto-detect to work again
+                                        manuallySetByAutoFit = false;
+
+                        // If auto-detect is enabled and dimensions weren't manually set by auto-fit, update the dimensions
+                        if (autoDetectCheckbox.checked && !manuallySetByAutoFit) {
+                            widthWidget.value = detectedDimensions.width;
+                            heightWidget.value = detectedDimensions.height;
+                            
+                            // Update UI
+                            updateWidgetValues();
+                            updateAllScaleLabels();
+                            updateCanvas();
+                            
+                            console.log(`[ResolutionMaster] Auto-detected dimensions: ${detectedDimensions.width}x${detectedDimensions.height}`);
+                        }
+
+                                        // Show auto-fit button and checkbox when we have detected dimensions
+                                        autoFitButton.style.display = detectedDimensions ? 'block' : 'none';
+                                        autoFitOnChangeCheckbox.style.display = detectedDimensions && categoryDropdown.value ? 'inline-block' : 'none';
+                                        autoFitOnChangeLabel.style.display = detectedDimensions && categoryDropdown.value ? 'inline-block' : 'none';
+
+                                        // If auto-fit on change is enabled and we have a category selected, automatically run auto-fit
+                                        if (autoFitOnChangeCheckbox.checked && categoryDropdown.value && detectedDimensions) {
+                                            // Trigger auto-fit automatically
+                                            autoFitButton.click();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('[ResolutionMaster] Error checking for image dimensions:', error);
+                    }
+                };
+
+                // Initialize auto-detect checkbox state from widget
+                const autoDetectWidget = node.widgets.find(w => w.name === 'auto_detect');
+                if (autoDetectWidget) {
+                    autoDetectCheckbox.checked = autoDetectWidget.value;
+                    
+                    // If auto-detect is initially enabled, start checking
+                    if (autoDetectWidget.value) {
+                        checkForImageDimensions();
+                        dimensionCheckInterval = setInterval(checkForImageDimensions, 1000);
+                        widthWidget.disabled = true;
+                        heightWidget.disabled = true;
+                    }
+                }
+
+                // Auto-detect checkbox change handler
+                autoDetectCheckbox.addEventListener('change', (e) => {
+                    const autoDetectWidget = node.widgets.find(w => w.name === 'auto_detect');
+                    if (autoDetectWidget) {
+                        autoDetectWidget.value = e.target.checked;
+                    }
+
+                    if (e.target.checked) {
+                        // Start checking for dimensions every second
+                        checkForImageDimensions();
+                        dimensionCheckInterval = setInterval(checkForImageDimensions, 1000);
+                        
+                        // Disable manual controls
+                        widthWidget.disabled = true;
+                        heightWidget.disabled = true;
+                    } else {
+                        // Stop checking for dimensions
+                        if (dimensionCheckInterval) {
+                            clearInterval(dimensionCheckInterval);
+                            dimensionCheckInterval = null;
+                        }
+                        
+                        // Enable manual controls
+                        widthWidget.disabled = false;
+                        heightWidget.disabled = false;
+                    }
+                });
+
+                // Auto-fit button click handler
+                autoFitButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    if (!detectedDimensions) {
+                        console.warn('[ResolutionMaster] No detected dimensions available');
+                        return;
+                    }
+
+                    const selectedCategory = categoryDropdown.value;
+                    if (!selectedCategory) {
+                        alert('Please select a preset category first');
+                        return;
+                    }
+
+                    const presets = presetCategories[selectedCategory];
+                    if (!presets) {
+                        console.warn('[ResolutionMaster] Invalid category selected');
+                        return;
+                    }
+
+                    // Find the closest preset to the detected dimensions
+                    let closestPreset = null;
+                    let closestDistance = Infinity;
+                    const detectedAspect = detectedDimensions.width / detectedDimensions.height;
+                    const detectedPixels = detectedDimensions.width * detectedDimensions.height;
+
+                    Object.keys(presets).forEach(presetName => {
+                        const preset = presets[presetName];
+                        
+                        // Check both original and flipped orientations
+                        const orientations = [
+                            { width: preset.width, height: preset.height, flipped: false },
+                            { width: preset.height, height: preset.width, flipped: true }
+                        ];
+                        
+                        orientations.forEach(orientation => {
+                            const presetAspect = orientation.width / orientation.height;
+                            const presetPixels = orientation.width * orientation.height;
+                            
+                            // Calculate distance based on aspect ratio and total pixels
+                            const aspectDiff = Math.abs(detectedAspect - presetAspect);
+                            const pixelDiff = Math.abs(Math.log(detectedPixels / presetPixels));
+                            const distance = aspectDiff + pixelDiff * 0.5;
+                            
+                            if (distance < closestDistance) {
+                                closestDistance = distance;
+                                const orientationSuffix = orientation.flipped ? ' (flipped)' : '';
+                                closestPreset = { 
+                                    name: presetName + orientationSuffix, 
+                                    width: orientation.width, 
+                                    height: orientation.height,
+                                    originalName: presetName
+                                };
+                            }
+                        });
+                    });
+
+                    if (closestPreset) {
+                        // Apply the closest preset
+                        let finalWidth = closestPreset.width;
+                        let finalHeight = closestPreset.height;
+                        
+                        // Apply category-specific scaling if custom calc is enabled
+                        const useCustomCalc = customCalcCheckbox.checked;
+                        if (useCustomCalc) {
+                            if (selectedCategory === 'WAN') {
+                                // For WAN mode, scale to optimal "p" resolution based on detected dimensions
+                                const wanResult = applyWANCustomCalculation(detectedDimensions.width, detectedDimensions.height);
+                                finalWidth = wanResult.width;
+                                finalHeight = wanResult.height;
+                                console.log(`[ResolutionMaster] WAN scaling applied: ${detectedDimensions.width}x${detectedDimensions.height} → ${finalWidth}x${finalHeight} (${wanResult.recommendedModel} model)`);
+                            } else if (selectedCategory === 'Flux') {
+                                // For Flux mode, apply constraints while maintaining aspect ratio
+                                const fluxResult = applyFluxCustomCalculation(closestPreset.width, closestPreset.height);
+                                finalWidth = fluxResult.width;
+                                finalHeight = fluxResult.height;
+                                console.log(`[ResolutionMaster] Flux constraints applied: ${closestPreset.width}x${closestPreset.height} → ${finalWidth}x${finalHeight}`);
+                            }
+                            // For other categories with custom calc, use the preset as-is
+                        }
+                        
+                        // Apply the final dimensions
+                        widthWidget.value = finalWidth;
+                        heightWidget.value = finalHeight;
+                        
+                        // Mark that dimensions were manually set by auto-fit
+                        manuallySetByAutoFit = true;
+                        
+                        // Update the preset dropdown - use original name for dropdown selection
+                        presetDropdown.value = closestPreset.originalName;
+                        
+                        // Update UI
+                        updateWidgetValues();
+                        updateAllScaleLabels();
+                        updateCanvas();
+                        
+                        console.log(`[ResolutionMaster] Auto-fitted to preset: ${closestPreset.name} with final resolution: ${finalWidth}x${finalHeight}`);
+                    }
+                });
+
+                // Add controls to container
+                autoDetectContainer.appendChild(autoDetectCheckbox);
+                autoDetectContainer.appendChild(autoDetectLabel);
+                autoDetectContainer.appendChild(autoFitButton);
+                autoDetectContainer.appendChild(autoFitOnChangeCheckbox);
+                autoDetectContainer.appendChild(autoFitOnChangeLabel);
+                
+                scalingContainer.appendChild(autoDetectContainer);
 
                 // Create preset aspect ratio controls
                 const presetContainer = document.createElement('div');
@@ -1651,6 +1915,13 @@ app.registerExtension({
                 const origOnRemoved = this.onRemoved;
                 this.onRemoved = function () {
                     document.removeEventListener('mouseup', handleMouseUp);
+                    
+                    // Clean up dimension check interval
+                    if (dimensionCheckInterval) {
+                        clearInterval(dimensionCheckInterval);
+                        dimensionCheckInterval = null;
+                    }
+                    
                     if (origOnRemoved) origOnRemoved.apply(this, arguments);
                 };
 
