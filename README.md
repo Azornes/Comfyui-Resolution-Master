@@ -10,7 +10,7 @@
   <img alt="Downloads" src="https://img.shields.io/badge/dynamic/json?color=%230D2A4A&label=&query=downloads&url=https://gist.githubusercontent.com/Azornes/912463d4edd123956066a7aaaa3ef835/raw/top_layerforge.json&style=for-the-badge" />
 </a>
 <a href='https://github.com/Azornes/Comfyui-Resolution-Master'>
-  <img alt='GitHub Clones' src='https://img.shields.io/badge/dynamic/json?color=2F80ED&label=Clone&query=count&url=https://gist.githubusercontent.com/Azornes/5fa586b9e6938f48638fad37a1d146ae/raw/clone.json&logo=github&style=for-the-badge'>
+  <img alt='GitHub Clones' src='https://img.shields.io/badge/dynamic/json?color=2F80ED&label=Clone&query=count&url=https://gist.githubusercontent.com/Azornes/dc1baa944bb2145d066bdf4e3f490cfc/raw/clone.json&logo=github&style=for-the-badge'>
 </a>
   <a href="https://visitorbadge.io/status?path=https%3A%2F%2Fgithub.com%2FAzornes%2FComfyui-Resolution-Master">
     <img src="https://api.visitorbadge.io/api/combined?path=https%3A%2F%2Fgithub.com%2FAzornes%2FComfyui-Resolution-Master&countColor=%2337d67a&style=for-the-badge&labelStyle=none" />
@@ -18,6 +18,8 @@
   <img alt="Python 3.10+" src="https://img.shields.io/badge/-Python_3.10+-4B8BBE?logo=python&logoColor=FFFFFF&style=for-the-badge&logoWidth=20">
   <img alt="JavaScript" src="https://img.shields.io/badge/-JavaScript-000000?logo=javascript&logoColor=F7DF1E&style=for-the-badge&logoWidth=20">
 </p>
+
+
 
 
 # ComfyUI Resolution Master Node
