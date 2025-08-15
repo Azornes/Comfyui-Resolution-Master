@@ -49,12 +49,3 @@ class ResolutionMaster:
         # In the future, different modes can process width/height differently
         # For now, just pass through the values with rescale factor
         return (width, height, rescale_factor)
-
-
-NODE_CLASS_MAPPINGS = {
-    "ResolutionMaster": ResolutionMaster,
-}
-
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "ResolutionMaster": "Resolution Master",
-}
