@@ -175,81 +175,16 @@ The rescale factor adapts based on your selection:
 4. **Monitor Info Messages**: Pay attention to mode-specific recommendations
 5. **Leverage Rescale Factor**: Connect to upscaling nodes for resolution-independent workflows
 
-## Technical Details
-
-### File Structure
-```
-comfyui-resolution-master/
-├── __init__.py
-├── aztoolkit.py              # Python backend
-├── js/
-│   ├── ResolutionMaster.js     # Frontend interface
-│   ├── css/
-│   │   └── ultimate_aspect_ratio.css
-│   └── utils/
-│       ├── ResourceManager.js
-│       └── LoggerUtils.js
-└── README.md
-```
-
-### Requirements
-- ComfyUI (latest version recommended)
-- Modern web browser with Canvas support
-- No additional Python dependencies required
-
-## Node Properties
-
-### Visible Properties
-- `mode`: Selection mode (Manual/Sliders/Resolutions/Ratios)
-- `width`: Current width value (64-4096px)
-- `height`: Current height value (64-4096px)
-
-### Hidden Properties
-- `rescale_mode`: Current scaling method (manual/resolution/megapixels)
-- `rescale_value`: Calculated rescale factor
-
 ### Internal Properties
 - Min/Max ranges for X and Y axes
 - Step values for grid snapping
 - Decimal precision settings
 - Visual options (dots, frame, snap)
 
-## Troubleshooting
-
-### Common Issues
-
-**Q: The canvas doesn't appear**
-- A: Ensure JavaScript is enabled and refresh the ComfyUI interface
-
-**Q: Presets aren't loading**
-- A: Check browser console for errors, clear cache if needed
-
-**Q: Custom Calc isn't working**
-- A: Make sure you've selected a compatible category (SDXL/Flux/WAN)
-
-**Q: Dimensions reset unexpectedly**
-- A: Check if Custom Calc is enforcing model constraints
-
-## License
-
-MIT License - See LICENSE file for details
 
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
-
-## Credits
-
-Created by Azornes (2025)
-Part of the azToolkit for ComfyUI
-
-## Version History
-
-- **v8.0.0** (2025): Complete rewrite with separate canvas implementation
-  - Added model-specific optimizations
-  - Improved preset system
-  - Enhanced scaling options
-  - Better visual feedback
 
 ## Support
 
