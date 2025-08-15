@@ -1,0 +1,13 @@
+[project]
+name = "comfyui-resolution-master"
+description = "test"
+version = "0.1"
+license = { text = "MIT License" }
+
+[project.urls]
+Repository = "https://github.com/Azornes/Comfyui-Resolution-Master"
+
+[tool.comfy]
+PublisherId = "azornes"
+DisplayName = "Comfyui-Resolution-Master"
+Icon = ""
