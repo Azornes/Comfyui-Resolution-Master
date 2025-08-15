@@ -1,7 +1,7 @@
-<h1 align="center">ResolutionMaster – Advanced Canvas Editor for ComfyUI 🎨</h1>
+<h1 align="center">ResolutionMaster – Precise resolution and aspect ratio control for ComfyUI</h1>
 
 
-<p align="center"><i>ResolutionMaster is an advanced canvas node for ComfyUI, providing a Photoshop-like layer-based editing experience directly within your workflow. It extends the concept of a simple canvas with multi-layer support, masking, blend modes, precise transformations, and seamless integration with other nodes.</i></p>
+<p align="center"><i>ResolutionMaster A powerful and feature-rich ComfyUI custom node for precise resolution and aspect ratio control in AI image generation workflows. This node provides an intuitive interface with advanced scaling options, preset management, and model-specific optimizations.</i></p>
 
 <p align="center">
 
@@ -19,12 +19,6 @@
   <img alt="JavaScript" src="https://img.shields.io/badge/-JavaScript-000000?logo=javascript&logoColor=F7DF1E&style=for-the-badge&logoWidth=20">
 </p>
 
-
-
-
-# ComfyUI Resolution Master Node
-
-A powerful and feature-rich ComfyUI custom node for precise resolution and aspect ratio control in AI image generation workflows. This node provides an intuitive interface with advanced scaling options, preset management, and model-specific optimizations.
 
 ## Features
 
