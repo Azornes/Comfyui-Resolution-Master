@@ -749,42 +749,81 @@ app.registerExtension({
                 autoDetectContainer.style.alignItems = 'center';
                 autoDetectContainer.style.gap = '10px';
 
-                // Auto-detect checkbox
+                // Create a dedicated container for auto-fit controls
+                const autoFitContainer = document.createElement('div');
+                autoFitContainer.className = 'uar-flex-row';
+                autoFitContainer.style.justifyContent = 'space-around';
+                autoFitContainer.style.width = '100%';
+
+                // Auto-detect switch (replacing checkbox)
+                const autoDetectSwitch = document.createElement('div');
+                autoDetectSwitch.className = 'uar-switch';
+                autoDetectSwitch.style.width = '140px'; // Wider for text
+                autoDetectSwitch.title = 'Automatically detect dimensions from input image';
+
                 const autoDetectCheckbox = document.createElement('input');
                 autoDetectCheckbox.type = 'checkbox';
-                autoDetectCheckbox.className = 'uar-checkbox';
                 autoDetectCheckbox.id = 'auto-detect-' + node.id;
-                autoDetectCheckbox.title = 'Automatically detect dimensions from input image';
-
-                const autoDetectLabel = document.createElement('label');
-                autoDetectLabel.textContent = 'Auto-detect from input';
-                autoDetectLabel.className = 'uar-label';
-                autoDetectLabel.htmlFor = 'auto-detect-' + node.id;
-                autoDetectLabel.style.cursor = 'pointer';
-                autoDetectLabel.title = 'Automatically detect dimensions from input image';
+                
+                const autoDetectKnob = document.createElement('div');
+                autoDetectKnob.className = 'switch-knob';
+                
+                const autoDetectLabels = document.createElement('div');
+                autoDetectLabels.className = 'switch-labels';
+                autoDetectLabels.innerHTML = `
+                    <span class="text-off">Manual</span>
+                    <span class="text-on">Auto-detect</span>
+                `;
+                
+                autoDetectSwitch.appendChild(autoDetectCheckbox);
+                autoDetectSwitch.appendChild(autoDetectKnob);
+                autoDetectSwitch.appendChild(autoDetectLabels);
+                
+                // Make the switch clickable
+                autoDetectSwitch.addEventListener('click', (e) => {
+                    if (!e.target.matches('input')) {
+                        autoDetectCheckbox.checked = !autoDetectCheckbox.checked;
+                        autoDetectCheckbox.dispatchEvent(new Event('change'));
+                    }
+                });
 
                 // Auto-fit to preset button
                 const autoFitButton = document.createElement('button');
                 autoFitButton.textContent = '🎯 Auto-fit to preset';
                 autoFitButton.className = 'uar-button';
                 autoFitButton.title = 'Automatically find closest resolution in selected preset category';
-                autoFitButton.style.display = 'none'; // Hidden by default
+                autoFitButton.disabled = true; // Disabled by default
 
-                // Auto-fit on image change checkbox
+                // Auto-fit on change switch (replacing checkbox)
+                const autoFitOnChangeSwitch = document.createElement('div');
+                autoFitOnChangeSwitch.className = 'uar-switch compact';
+                autoFitOnChangeSwitch.title = 'Automatically run auto-fit when new image is detected';
+                
                 const autoFitOnChangeCheckbox = document.createElement('input');
                 autoFitOnChangeCheckbox.type = 'checkbox';
-                autoFitOnChangeCheckbox.className = 'uar-checkbox';
                 autoFitOnChangeCheckbox.id = 'auto-fit-change-' + node.id;
-                autoFitOnChangeCheckbox.title = 'Automatically run auto-fit when new image is detected';
-                autoFitOnChangeCheckbox.style.display = 'none'; // Hidden by default
-
-                const autoFitOnChangeLabel = document.createElement('label');
-                autoFitOnChangeLabel.textContent = 'Auto-fit on change';
-                autoFitOnChangeLabel.className = 'uar-label';
-                autoFitOnChangeLabel.htmlFor = 'auto-fit-change-' + node.id;
-                autoFitOnChangeLabel.style.cursor = 'pointer';
-                autoFitOnChangeLabel.title = 'Automatically run auto-fit when new image is detected';
-                autoFitOnChangeLabel.style.display = 'none'; // Hidden by default
+                
+                const autoFitOnChangeKnob = document.createElement('div');
+                autoFitOnChangeKnob.className = 'switch-knob';
+                
+                const autoFitOnChangeLabels = document.createElement('div');
+                autoFitOnChangeLabels.className = 'switch-labels';
+                autoFitOnChangeLabels.innerHTML = `
+                    <span class="text-off">Off</span>
+                    <span class="text-on">Auto</span>
+                `;
+                
+                autoFitOnChangeSwitch.appendChild(autoFitOnChangeCheckbox);
+                autoFitOnChangeSwitch.appendChild(autoFitOnChangeKnob);
+                autoFitOnChangeSwitch.appendChild(autoFitOnChangeLabels);
+                
+                // Make the switch clickable
+                autoFitOnChangeSwitch.addEventListener('click', (e) => {
+                    if (!e.target.matches('input')) {
+                        autoFitOnChangeCheckbox.checked = !autoFitOnChangeCheckbox.checked;
+                        autoFitOnChangeCheckbox.dispatchEvent(new Event('change'));
+                    }
+                });
 
                 // Variables to track detected dimensions
                 let detectedDimensions = null;
@@ -847,10 +886,16 @@ app.registerExtension({
                             console.log(`[ResolutionMaster] Auto-detected dimensions: ${detectedDimensions.width}x${detectedDimensions.height}`);
                         }
 
-                                        // Show auto-fit button and checkbox when we have detected dimensions
-                                        autoFitButton.style.display = detectedDimensions ? 'block' : 'none';
-                                        autoFitOnChangeCheckbox.style.display = detectedDimensions && categoryDropdown.value ? 'inline-block' : 'none';
-                                        autoFitOnChangeLabel.style.display = detectedDimensions && categoryDropdown.value ? 'inline-block' : 'none';
+                                        // Enable or disable auto-fit controls based on detected dimensions
+                                        autoFitButton.disabled = !detectedDimensions;
+                                        autoFitOnChangeCheckbox.disabled = !detectedDimensions;
+                                        
+                                        // Update visual state of the switch
+                                        if (!detectedDimensions) {
+                                            autoFitOnChangeSwitch.classList.add('disabled');
+                                        } else {
+                                            autoFitOnChangeSwitch.classList.remove('disabled');
+                                        }
 
                                         // If auto-fit on change is enabled and we have a category selected, automatically run auto-fit
                                         if (autoFitOnChangeCheckbox.checked && categoryDropdown.value && detectedDimensions) {
@@ -895,6 +940,13 @@ app.registerExtension({
                         // Disable manual controls
                         widthWidget.disabled = true;
                         heightWidget.disabled = true;
+                        
+                        // Enable auto-fit button if we have detected dimensions
+                        if (detectedDimensions) {
+                            autoFitButton.disabled = false;
+                            autoFitOnChangeCheckbox.disabled = false;
+                            autoFitOnChangeSwitch.classList.remove('disabled');
+                        }
                     } else {
                         // Stop checking for dimensions
                         if (dimensionCheckInterval) {
@@ -905,6 +957,15 @@ app.registerExtension({
                         // Enable manual controls
                         widthWidget.disabled = false;
                         heightWidget.disabled = false;
+
+                        // Disable the auto-fit controls when in manual mode
+                        autoFitButton.disabled = true;
+                        autoFitOnChangeCheckbox.disabled = true;
+                        
+                        // Also disable the switch visually
+                        if (!autoFitOnChangeSwitch.classList.contains('disabled')) {
+                            autoFitOnChangeSwitch.classList.add('disabled');
+                        }
                     }
                 });
 
@@ -1010,14 +1071,26 @@ app.registerExtension({
                     }
                 });
 
-                // Add controls to container
-                autoDetectContainer.appendChild(autoDetectCheckbox);
-                autoDetectContainer.appendChild(autoDetectLabel);
-                autoDetectContainer.appendChild(autoFitButton);
-                autoDetectContainer.appendChild(autoFitOnChangeCheckbox);
-                autoDetectContainer.appendChild(autoFitOnChangeLabel);
+                // Add a visual separator
+                scalingContainer.appendChild(document.createElement('hr'));
+
+                // Group all auto controls in a sub-container for better organization
+                const autoControlsSubContainer = document.createElement('div');
+                autoControlsSubContainer.style.display = 'flex';
+                autoControlsSubContainer.style.flexDirection = 'column';
+                autoControlsSubContainer.style.gap = '5px';
+                autoControlsSubContainer.style.width = '100%';
+
+                autoControlsSubContainer.appendChild(autoDetectContainer);
+                autoControlsSubContainer.appendChild(autoFitContainer);
+
+                // Add controls to their respective containers
+                autoDetectContainer.appendChild(autoDetectSwitch);
                 
-                scalingContainer.appendChild(autoDetectContainer);
+                autoFitContainer.appendChild(autoFitButton);
+                autoFitContainer.appendChild(autoFitOnChangeSwitch);
+                
+                scalingContainer.appendChild(autoControlsSubContainer);
 
                 // Create preset aspect ratio controls
                 const presetContainer = document.createElement('div');
@@ -1121,21 +1194,38 @@ app.registerExtension({
                 presetDropdown.style.display = 'none';
                 presetDropdown.title = 'Select aspect ratio preset';
 
-                // Create custom calculation checkbox
+                // Create custom calculation switch
+                const customCalcSwitch = document.createElement('div');
+                customCalcSwitch.className = 'uar-switch compact';
+                customCalcSwitch.style.display = 'none';
+                customCalcSwitch.style.marginLeft = '10px';
+                customCalcSwitch.title = 'Enable custom resolution calculation for this category';
+                
                 const customCalcCheckbox = document.createElement('input');
                 customCalcCheckbox.type = 'checkbox';
-                customCalcCheckbox.className = 'uar-checkbox';
-                customCalcCheckbox.style.display = 'none';
-                customCalcCheckbox.style.marginLeft = '5px';
-                customCalcCheckbox.title = 'Enable custom resolution calculation for this category';
+                customCalcCheckbox.id = 'custom-calc-' + node.id;
                 
-                const customCalcLabel = document.createElement('label');
-                customCalcLabel.textContent = 'Custom Calc';
-                customCalcLabel.className = 'uar-label';
-                customCalcLabel.style.display = 'none';
-                customCalcLabel.style.marginLeft = '5px';
-                customCalcLabel.style.cursor = 'pointer';
-                customCalcLabel.title = 'Enable custom resolution calculation for this category';
+                const customCalcKnob = document.createElement('div');
+                customCalcKnob.className = 'switch-knob';
+                
+                const customCalcLabels = document.createElement('div');
+                customCalcLabels.className = 'switch-labels';
+                customCalcLabels.innerHTML = `
+                    <span class="text-off">Off</span>
+                    <span class="text-on">Calc</span>
+                `;
+                
+                customCalcSwitch.appendChild(customCalcCheckbox);
+                customCalcSwitch.appendChild(customCalcKnob);
+                customCalcSwitch.appendChild(customCalcLabels);
+                
+                // Make the switch clickable
+                customCalcSwitch.addEventListener('click', (e) => {
+                    if (!e.target.matches('input')) {
+                        customCalcCheckbox.checked = !customCalcCheckbox.checked;
+                        customCalcCheckbox.dispatchEvent(new Event('change'));
+                    }
+                });
                 
                 // Store custom calculation settings per category
                 const categoryCustomCalc = {};
@@ -1153,10 +1243,9 @@ app.registerExtension({
                     presetDropdown.innerHTML = '';
 
                     if (selectedCategory) {
-                        // Show preset dropdown and custom calc checkbox
+                        // Show preset dropdown and custom calc switch
                         presetDropdown.style.display = 'block';
-                        customCalcCheckbox.style.display = 'inline-block';
-                        customCalcLabel.style.display = 'inline-block';
+                        customCalcSwitch.style.display = 'inline-flex';
                         
                         // Restore checkbox state for this category
                         customCalcCheckbox.checked = categoryCustomCalc[selectedCategory] || false;
@@ -1232,10 +1321,9 @@ app.registerExtension({
                             infoMessage.style.display = 'none';
                         }
                     } else {
-                        // Hide preset dropdown and custom calc checkbox
+                        // Hide preset dropdown and custom calc switch
                         presetDropdown.style.display = 'none';
-                        customCalcCheckbox.style.display = 'none';
-                        customCalcLabel.style.display = 'none';
+                        customCalcSwitch.style.display = 'none';
                         
                         // Re-enable all buttons when no category is selected
                         upscaleButton.disabled = false;
@@ -1316,11 +1404,6 @@ app.registerExtension({
                     }
                 });
 
-                // Make label clickable
-                customCalcLabel.addEventListener('click', () => {
-                    customCalcCheckbox.checked = !customCalcCheckbox.checked;
-                    customCalcCheckbox.dispatchEvent(new Event('change'));
-                });
 
                 // Function to apply preset with optional custom calculation
                 const applyPreset = (category, presetName, useCustomCalc) => {
@@ -1401,11 +1484,10 @@ app.registerExtension({
                     }
                 });
 
-                // Add dropdowns and checkbox to container
+                // Add dropdowns and switch to container
                 presetContainer.appendChild(categoryDropdown);
                 presetContainer.appendChild(presetDropdown);
-                presetContainer.appendChild(customCalcCheckbox);
-                presetContainer.appendChild(customCalcLabel);
+                presetContainer.appendChild(customCalcSwitch);
 
                 scalingContainer.appendChild(presetContainer);
                 
@@ -1429,7 +1511,7 @@ app.registerExtension({
                 this.categoryDropdown = categoryDropdown;
                 this.presetDropdown = presetDropdown;
                 this.customCalcCheckbox = customCalcCheckbox;
-                this.customCalcLabel = customCalcLabel;
+                this.customCalcSwitch = customCalcSwitch;
 
                 // Store canvas reference
                 this.sliderCanvas = canvas;

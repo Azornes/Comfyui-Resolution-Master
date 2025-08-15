@@ -1,13 +1,13 @@
-/* ResolutionMaster Node Styles */
+/* ResolutionMaster Node Styles - Updated with Painter Theme */
 
 /* Main container */
 .uar-container {
     width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-start; /* Align content to the top */
-    align-items: flex-start; /* Align content to the left */
-    margin-top: 8px; /* Add space to prevent overlap with widgets above */
+    justify-content: flex-start;
+    align-items: flex-start;
+    margin-top: 8px;
 }
 
 /* Canvas element */
@@ -19,25 +19,60 @@
     margin: 0 auto;
 }
 
-/* Button base styles */
+/* Button styles - using painter-button theme */
 .uar-button {
-    margin-top: 0;
-    padding: 4px 12px;
-    background-color: #3a3a3a;
-    color: #aeaeae;
-    border: 1px solid #5a5a5a;
-    border-radius: 4px;
-    cursor: pointer;
+    background-color: #444;
+    border: 1px solid #555;
+    border-radius: 5px;
+    color: #fff;
+    padding: 6px 14px;
     font-size: 12px;
-    font-weight: bold;
-    user-select: none;
-    min-width: 60px; /* Consistent width for left buttons */
+    font-weight: 550;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    min-width: 80px;
     text-align: center;
+    margin: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    text-shadow: 0 1px 2px rgb(0,0,0);
+    user-select: none;
 }
 
 .uar-button:hover {
-    background-color: #4a4a4a;
-    border-color: #6a6a6a;
+    background-color: #555;
+    border-color: #666;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+.uar-button:active {
+    background-color: #3a3a3a;
+    transform: translateY(0);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.uar-button:disabled,
+.uar-button:disabled:hover {
+    background-color: #3a3a3a;
+    color: #777;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    border-color: #4a4a4a;
+    opacity: 0.6;
+}
+
+/* Primary button style */
+.uar-button.primary {
+    background-color: #3a76d6;
+    border-color: #2a6ac4;
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(0,0,0);
+}
+
+.uar-button.primary:hover {
+    background-color: #4a86e4;
+    border-color: #3a76d6;
 }
 
 /* Control container base */
@@ -59,59 +94,85 @@
     align-items: center;
     width: 100%;
     justify-content: center;
-    flex-wrap: wrap; /* Allow controls to wrap on smaller widths */
+    flex-wrap: wrap;
     margin-top: 5px;
 }
 
 /* Grid layout for scaling controls */
 .uar-grid-container {
     display: grid;
-    /* Responsive 6-column layout */
     grid-template-columns: auto minmax(60px, 1fr) auto auto minmax(60px, 1fr) auto;
     gap: 5px 8px;
     align-items: center;
     width: 100%;
-    padding: 0 30px; /* Reduced horizontal padding */
+    padding: 0 30px;
     box-sizing: border-box;
     margin-top: 5px;
 }
 
 .uar-grid-container .uar-button {
-    align-self: center; /* Ensure vertical centering */
+    align-self: center;
 }
 
-/* Slider styles */
+/* Slider styles - updated to match painter theme */
 .uar-slider {
+    -webkit-appearance: none;
     width: 80px;
+    height: 4px;
+    background: #555;
+    border-radius: 2px;
+    outline: none;
+    padding: 0;
+    margin: 0;
     cursor: pointer;
-    transition: opacity 0.2s; /* Subtle hover effect */
 }
 
-.uar-slider:hover {
-    opacity: 0.8;
+.uar-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #555;
+    transition: background 0.2s;
+}
+
+.uar-slider::-webkit-slider-thumb:hover {
+    background: #fff;
+}
+
+.uar-slider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #555;
 }
 
 /* Label styles */
 .uar-label {
-    color: #aeaeae;
+    color: #bbb;
     font-size: 12px;
-    font-weight: bold;
+    font-weight: 550;
     min-width: 30px;
     text-align: center;
 }
 
 .uar-label-small {
-    color: #aeaeae;
+    color: #bbb;
     font-size: 11px;
-    font-weight: bold;
+    font-weight: 550;
     min-width: 45px;
     text-align: center;
 }
 
 .uar-label-value {
-    color: #aeaeae;
+    color: #bbb;
     font-size: 12px;
-    font-weight: bold;
+    font-weight: 550;
     min-width: 35px;
     text-align: center;
 }
@@ -129,16 +190,25 @@
     cursor: pointer;
 }
 
-/* Dropdown styles */
+/* Dropdown styles - updated to match painter theme */
 .uar-dropdown {
-    padding: 4px 8px;
-    background-color: #3a3a3a;
-    color: #aeaeae;
-    border: 1px solid #5a5a5a;
-    border-radius: 4px;
+    padding: 6px 12px;
+    background-color: #444;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 5px;
     cursor: pointer;
     font-size: 12px;
-    min-width: 80px; /* Consistent min-width */
+    font-weight: 550;
+    transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    text-shadow: 0 1px 2px rgb(0,0,0);
+}
+
+.uar-dropdown:hover {
+    background-color: #555;
+    border-color: #666;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
 }
 
 .uar-dropdown-small {
@@ -147,6 +217,151 @@
 
 .uar-dropdown-medium {
     width: 140px;
+}
+
+/* Modern Switch Styles (replacing checkboxes) */
+.uar-switch {
+    position: relative;
+    width: 90px;
+    height: 30px;
+    box-sizing: border-box;
+    background: linear-gradient(to right, #5a5a5a 30%, #3a76d6);
+    border-radius: 5px;
+    border: 1px solid #555;
+    cursor: pointer;
+    transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    user-select: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    display: inline-block;
+    margin: 2px;
+}
+
+.uar-switch:hover {
+    background: linear-gradient(to right, #6a6a6a 30%, #4a86e4);
+    border-color: #666;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+}
+
+.uar-switch:active {
+    background: linear-gradient(135deg, #3a76d6, #3a3a3a);
+}
+
+.uar-switch input[type="checkbox"] {
+    display: none;
+}
+
+.uar-switch .switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background-color: #5a5a5a;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 2;
+}
+
+.uar-switch:hover .switch-knob {
+    background-color: #6a6a6a;
+}
+
+.uar-switch .switch-labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 550;
+    color: #ffffff;
+    pointer-events: none;
+    z-index: 1;
+    transition: opacity 0.3s ease-in-out;
+    text-shadow: 0 1px 2px rgb(0, 0, 0);
+}
+
+.uar-switch .switch-labels .text-off,
+.uar-switch .switch-labels .text-on {
+    position: absolute;
+    transition: opacity 0.2s ease-in-out;
+    font-size: 11px;
+}
+
+.uar-switch .switch-labels .text-off { 
+    opacity: 1; 
+    padding-left: 20px;
+}
+
+.uar-switch .switch-labels .text-on { 
+    opacity: 0;
+    padding-right: 20px;
+}
+
+/* Checked state */
+.uar-switch:has(input:checked) {
+    background: linear-gradient(to right, #3a76d6, #5a5a5a 70%);
+    border-color: #2a6ac4;
+}
+
+.uar-switch:has(input:checked):hover {
+    background: linear-gradient(to right, #4a86e4, #6a6a6a 70%);
+    border-color: #3a76d6;
+}
+
+.uar-switch input:checked ~ .switch-knob {
+    left: calc(100% - 26px);
+}
+
+.uar-switch input:checked ~ .switch-labels .text-on {
+    opacity: 1;
+    color: #fff;
+}
+
+.uar-switch input:checked ~ .switch-labels .text-off {
+    opacity: 0;
+}
+
+/* Disabled state for switch */
+.uar-switch.disabled,
+.uar-switch:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: #3a3a3a !important;
+    border-color: #4a4a4a !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.uar-switch.disabled .switch-knob,
+.uar-switch:disabled .switch-knob {
+    background-color: #4a4a4a !important;
+}
+
+.uar-switch.disabled .switch-labels,
+.uar-switch:disabled .switch-labels {
+    color: #777 !important;
+}
+
+/* Compact switch for auto-fit on change */
+.uar-switch.compact {
+    width: 70px;
+    font-size: 10px;
+}
+
+.uar-switch.compact .switch-labels .text-off,
+.uar-switch.compact .switch-labels .text-on {
+    font-size: 10px;
 }
 
 /* Preset container */
@@ -172,12 +387,6 @@
     opacity: 0.5 !important;
 }
 
-/* Checkbox styles */
-.uar-checkbox {
-    cursor: pointer;
-    margin: 0 5px;
-}
-
 /* Info message styles */
 .uar-info-message {
     color: #88aacc;
@@ -191,15 +400,16 @@
     box-sizing: border-box;
 }
 
-/* Disabled button styles */
-.uar-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background-color: #2a2a2a;
-    border-color: #4a4a4a;
+/* Separator line */
+hr {
+    width: 100%;
+    border: none;
+    border-top: 1px solid #444;
+    margin: 8px 0;
 }
 
-.uar-button:disabled:hover {
-    background-color: #2a2a2a;
-    border-color: #4a4a4a;
+/* Old checkbox styles for backward compatibility */
+.uar-checkbox {
+    cursor: pointer;
+    margin: 0 5px;
 }
