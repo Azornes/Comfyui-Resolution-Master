@@ -1,0 +1,205 @@
+/* ResolutionMaster Node Styles */
+
+/* Main container */
+.uar-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* Align content to the top */
+    align-items: flex-start; /* Align content to the left */
+    margin-top: 8px; /* Add space to prevent overlap with widgets above */
+}
+
+/* Canvas element */
+.uar-canvas {
+    cursor: pointer;
+    user-select: none;
+    display: block;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+/* Button base styles */
+.uar-button {
+    margin-top: 0;
+    padding: 4px 12px;
+    background-color: #3a3a3a;
+    color: #aeaeae;
+    border: 1px solid #5a5a5a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    user-select: none;
+    min-width: 60px; /* Consistent width for left buttons */
+    text-align: center;
+}
+
+.uar-button:hover {
+    background-color: #4a4a4a;
+    border-color: #6a6a6a;
+}
+
+/* Control container base */
+.uar-controls {
+    display: none;
+    margin-top: 5px;
+    align-items: center;
+    gap: 8px;
+}
+
+.uar-controls.active {
+    display: flex;
+}
+
+/* Flex row for primary controls */
+.uar-flex-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap; /* Allow controls to wrap on smaller widths */
+    margin-top: 5px;
+}
+
+/* Grid layout for scaling controls */
+.uar-grid-container {
+    display: grid;
+    /* Responsive 6-column layout */
+    grid-template-columns: auto minmax(60px, 1fr) auto auto minmax(60px, 1fr) auto;
+    gap: 5px 8px;
+    align-items: center;
+    width: 100%;
+    padding: 0 30px; /* Reduced horizontal padding */
+    box-sizing: border-box;
+    margin-top: 5px;
+}
+
+.uar-grid-container .uar-button {
+    align-self: center; /* Ensure vertical centering */
+}
+
+/* Slider styles */
+.uar-slider {
+    width: 80px;
+    cursor: pointer;
+    transition: opacity 0.2s; /* Subtle hover effect */
+}
+
+.uar-slider:hover {
+    opacity: 0.8;
+}
+
+/* Label styles */
+.uar-label {
+    color: #aeaeae;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 30px;
+    text-align: center;
+}
+
+.uar-label-small {
+    color: #aeaeae;
+    font-size: 11px;
+    font-weight: bold;
+    min-width: 45px;
+    text-align: center;
+}
+
+.uar-label-value {
+    color: #aeaeae;
+    font-size: 12px;
+    font-weight: bold;
+    min-width: 35px;
+    text-align: center;
+}
+
+/* Preview label styles */
+.uar-preview {
+    color: #88aacc;
+    font-size: 10px;
+    min-width: 80px;
+    text-align: left;
+}
+
+/* Radio button styles */
+.uar-radio {
+    cursor: pointer;
+}
+
+/* Dropdown styles */
+.uar-dropdown {
+    padding: 4px 8px;
+    background-color: #3a3a3a;
+    color: #aeaeae;
+    border: 1px solid #5a5a5a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    min-width: 80px; /* Consistent min-width */
+}
+
+.uar-dropdown-small {
+    width: 80px;
+}
+
+.uar-dropdown-medium {
+    width: 140px;
+}
+
+/* Preset container */
+.uar-preset-container {
+    display: none;
+    margin-top: 5px;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+    align-items: center;
+}
+
+.uar-preset-container.active {
+    display: flex;
+}
+
+/* Opacity states for scale mode indicators */
+.uar-scale-active {
+    opacity: 1 !important;
+}
+
+.uar-scale-inactive {
+    opacity: 0.5 !important;
+}
+
+/* Checkbox styles */
+.uar-checkbox {
+    cursor: pointer;
+    margin: 0 5px;
+}
+
+/* Info message styles */
+.uar-info-message {
+    color: #88aacc;
+    font-size: 11px;
+    text-align: center;
+    padding: 5px 10px;
+    background-color: rgba(136, 170, 204, 0.1);
+    border-radius: 4px;
+    margin-top: 5px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Disabled button styles */
+.uar-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #2a2a2a;
+    border-color: #4a4a4a;
+}
+
+.uar-button:disabled:hover {
+    background-color: #2a2a2a;
+    border-color: #4a4a4a;
+}

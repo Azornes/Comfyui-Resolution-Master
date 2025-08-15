@@ -1,0 +1,72 @@
+name: 🐞 Bug Report
+description: Report an error or unexpected behavior
+title: "[BUG] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you for reporting a bug!**  
+        Please follow these steps to capture all necessary information:
+
+        ### ✅ Before You Report:
+        1. Make sure you have the **latest versions**:
+           - [ComfyUI Github](https://github.com/comfyanonymous/ComfyUI/releases)
+           - [ResolutionMaster Github](https://github.com/Azornes/Comfyui-ResolutionMaster/releases) or via [ComfyUI Node Manager](https://registry.comfy.org/publishers/azornes/nodes/ResolutionMaster)
+        
+  - type: input
+    id: environment
+    attributes:
+      label: Environment (OS, ComfyUI version, ResolutionMaster version)
+      placeholder: e.g. Windows 11, ComfyUI v0.3.43, ResolutionMaster v1.2.4
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & Version
+      placeholder: e.g. Chrome 115.0.0, Firefox 120.1.0
+    validations:
+      required: true
+
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What Happened?
+      placeholder: Describe the issue you encountered
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      placeholder: Describe what you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      placeholder: Describe what happened instead
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **Optional:** You can also **attach a screenshot or video** to demonstrate the issue visually.  
+        Simply drag & drop or paste image/video files into this issue form. GitHub supports common image formats and MP4/GIF files.
