@@ -1,4 +1,58 @@
-/* ResolutionMaster Node Styles - Updated with Painter Theme */
+/* ResolutionMaster Node Styles - Optimized with CSS Variables */
+
+:root {
+    /* Color palette */
+    --uar-bg-primary: #444;
+    --uar-bg-secondary: #555;
+    --uar-bg-tertiary: #3a3a3a;
+    --uar-bg-disabled: #3a3a3a;
+    --uar-bg-accent: #3a76d6;
+    --uar-bg-accent-hover: #4a86e4;
+    
+    --uar-border-primary: #555;
+    --uar-border-secondary: #666;
+    --uar-border-tertiary: #4a4a4a;
+    --uar-border-accent: #2a6ac4;
+    --uar-border-accent-hover: #3a76d6;
+    
+    --uar-text-primary: #fff;
+    --uar-text-secondary: #bbb;
+    --uar-text-tertiary: #88aacc;
+    --uar-text-disabled: #777;
+    
+    /* Sizing */
+    --uar-border-radius: 5px;
+    --uar-border-radius-small: 4px;
+    --uar-border-radius-tiny: 2px;
+    --uar-height-control: 26px;
+    --uar-height-slider-thumb: 14px;
+    --uar-height-slider-track: 4px;
+    --uar-width-switch: 90px;
+    --uar-width-switch-compact: 70px;
+    --uar-width-switch-knob: 20px;
+    
+    /* Spacing */
+    --uar-padding-control: 4px 8px;
+    --uar-margin-control: 1px;
+    --uar-gap-small: 2px;
+    --uar-gap-medium: 4px;
+    --uar-gap-large: 8px;
+    
+    /* Typography */
+    --uar-font-size-small: 10px;
+    --uar-font-size-normal: 11px;
+    --uar-font-size-medium: 12px;
+    --uar-font-weight-normal: 550;
+    
+    /* Effects */
+    --uar-shadow-light: 0 1px 2px rgba(0,0,0,0.1);
+    --uar-shadow-medium: 0 2px 4px rgba(0,0,0,0.15);
+    --uar-shadow-inset: inset 0 1px 2px rgba(0,0,0,0.1);
+    --uar-text-shadow: 0 1px 2px rgb(0,0,0);
+    --uar-transition-fast: 0.2s ease-in-out;
+    --uar-transition-normal: 0.3s ease-in-out;
+    --uar-transition-cubic: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
 
 /* Main container */
 .uar-container {
@@ -7,7 +61,7 @@
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;
-    margin-top: 8px;
+    margin-top: var(--uar-gap-large);
 }
 
 /* Canvas element */
@@ -19,23 +73,24 @@
     margin: 0 auto;
 }
 
-/* Button styles - using painter-button theme */
-.uar-button {
-    background-color: #444;
-    border: 1px solid #555;
-    border-radius: 5px;
-    color: #fff;
-    padding: 4px 8px;
-    font-size: 11px;
-    font-weight: 550;
+/* Base control styles */
+.uar-control-base {
+    background-color: var(--uar-bg-primary);
+    border: 1px solid var(--uar-border-primary);
+    border-radius: var(--uar-border-radius);
+    color: var(--uar-text-primary);
+    padding: var(--uar-padding-control);
+    font-size: var(--uar-font-size-normal);
+    font-weight: var(--uar-font-weight-normal);
     cursor: pointer;
-    transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    min-width: 60px;
-    height: 26px;
+    transition: background var(--uar-transition-normal), 
+                border-color var(--uar-transition-normal), 
+                opacity var(--uar-transition-normal);
+    height: var(--uar-height-control);
     text-align: center;
-    margin: 1px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    text-shadow: 0 1px 2px rgb(0,0,0);
+    margin: var(--uar-margin-control);
+    box-shadow: var(--uar-shadow-light);
+    text-shadow: var(--uar-text-shadow);
     user-select: none;
     box-sizing: border-box;
     display: inline-flex;
@@ -43,41 +98,89 @@
     justify-content: center;
 }
 
+.uar-control-base:hover {
+    background-color: var(--uar-bg-secondary);
+    border-color: var(--uar-border-secondary);
+    box-shadow: var(--uar-shadow-medium);
+    transform: translateY(-1px);
+}
+
+.uar-control-base:active {
+    background-color: var(--uar-bg-tertiary);
+    transform: translateY(0);
+    box-shadow: var(--uar-shadow-inset);
+}
+
+.uar-control-base:disabled,
+.uar-control-base:disabled:hover {
+    background-color: var(--uar-bg-disabled);
+    color: var(--uar-text-disabled);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    border-color: var(--uar-border-tertiary);
+    opacity: 0.6;
+}
+
+/* Button styles - inheriting from base control */
+.uar-button {
+    background-color: var(--uar-bg-primary);
+    border: 1px solid var(--uar-border-primary);
+    border-radius: var(--uar-border-radius);
+    color: var(--uar-text-primary);
+    padding: var(--uar-padding-control);
+    font-size: var(--uar-font-size-normal);
+    font-weight: var(--uar-font-weight-normal);
+    cursor: pointer;
+    transition: background var(--uar-transition-normal), 
+                border-color var(--uar-transition-normal), 
+                opacity var(--uar-transition-normal);
+    height: var(--uar-height-control);
+    text-align: center;
+    margin: var(--uar-margin-control);
+    box-shadow: var(--uar-shadow-light);
+    text-shadow: var(--uar-text-shadow);
+    user-select: none;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+}
+
 .uar-button:hover {
-    background-color: #555;
-    border-color: #666;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    background-color: var(--uar-bg-secondary);
+    border-color: var(--uar-border-secondary);
+    box-shadow: var(--uar-shadow-medium);
     transform: translateY(-1px);
 }
 
 .uar-button:active {
-    background-color: #3a3a3a;
+    background-color: var(--uar-bg-tertiary);
     transform: translateY(0);
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+    box-shadow: var(--uar-shadow-inset);
 }
 
 .uar-button:disabled,
 .uar-button:disabled:hover {
-    background-color: #3a3a3a;
-    color: #777;
+    background-color: var(--uar-bg-disabled);
+    color: var(--uar-text-disabled);
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
-    border-color: #4a4a4a;
+    border-color: var(--uar-border-tertiary);
     opacity: 0.6;
 }
 
 /* Primary button style */
 .uar-button.primary {
-    background-color: #3a76d6;
-    border-color: #2a6ac4;
-    color: #fff;
-    text-shadow: 0 1px 2px rgb(0,0,0);
+    background-color: var(--uar-bg-accent);
+    border-color: var(--uar-border-accent);
 }
 
 .uar-button.primary:hover {
-    background-color: #4a86e4;
-    border-color: #3a76d6;
+    background-color: var(--uar-bg-accent-hover);
+    border-color: var(--uar-border-accent-hover);
 }
 
 /* Control container base */
@@ -85,7 +188,7 @@
     display: none;
     margin-top: 5px;
     align-items: center;
-    gap: 8px;
+    gap: var(--uar-gap-large);
 }
 
 .uar-controls.active {
@@ -95,7 +198,7 @@
 /* Flex row for primary controls */
 .uar-flex-row {
     display: flex;
-    gap: 8px;
+    gap: var(--uar-gap-large);
     align-items: center;
     width: 100%;
     justify-content: center;
@@ -106,9 +209,8 @@
 /* Grid layout for scaling controls */
 .uar-grid-container {
     display: grid;
-    /* More compact columns to prevent clipping */
     grid-template-columns: auto minmax(50px, 100px) auto auto minmax(40px, 60px) auto;
-    gap: 2px 4px;
+    gap: var(--uar-gap-small) var(--uar-gap-medium);
     align-items: center;
     width: 100%;
     padding: 0 5px;
@@ -120,13 +222,13 @@
     align-self: center;
 }
 
-/* Slider styles - updated to match painter theme */
+/* Slider styles - using CSS variables */
 .uar-slider {
     -webkit-appearance: none;
     width: 60px;
-    height: 4px;
-    background: #555;
-    border-radius: 2px;
+    height: var(--uar-height-slider-track);
+    background: var(--uar-bg-secondary);
+    border-radius: var(--uar-border-radius-tiny);
     outline: none;
     padding: 0;
     margin: 11px 0;
@@ -137,61 +239,67 @@
 .uar-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
+    width: var(--uar-height-slider-thumb);
+    height: var(--uar-height-slider-thumb);
     background: #e0e0e0;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid #555;
-    transition: background 0.2s;
+    border: 2px solid var(--uar-bg-secondary);
+    transition: background var(--uar-transition-fast);
 }
 
 .uar-slider::-webkit-slider-thumb:hover {
-    background: #fff;
+    background: var(--uar-text-primary);
 }
 
 .uar-slider::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: var(--uar-height-slider-thumb);
+    height: var(--uar-height-slider-thumb);
     background: #e0e0e0;
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid #555;
+    border: 2px solid var(--uar-bg-secondary);
 }
 
-/* Label styles */
+/* Base label styles */
+.uar-label-base {
+    color: var(--uar-text-secondary);
+    font-weight: var(--uar-font-weight-normal);
+    text-align: center;
+}
+
+/* Label styles - inheriting from base */
 .uar-label {
-    color: #bbb;
-    font-size: 12px;
-    font-weight: 550;
+    color: var(--uar-text-secondary);
+    font-size: var(--uar-font-size-medium);
+    font-weight: var(--uar-font-weight-normal);
     min-width: 30px;
     text-align: center;
 }
 
 .uar-label-small {
-    color: #bbb;
-    font-size: 11px;
-    font-weight: 550;
+    color: var(--uar-text-secondary);
+    font-size: var(--uar-font-size-normal);
+    font-weight: var(--uar-font-weight-normal);
     min-width: 45px;
     text-align: center;
 }
 
 .uar-label-value {
-    color: #bbb;
-    font-size: 12px;
-    font-weight: 550;
+    color: var(--uar-text-secondary);
+    font-size: var(--uar-font-size-medium);
+    font-weight: var(--uar-font-weight-normal);
     min-width: 35px;
     text-align: center;
 }
 
 /* Preview label styles */
 .uar-preview {
-    color: #88aacc;
-    font-size: 10px;
-    /* min-width: 80px; */ /* Removing fixed min-width to allow shrinking */
+    color: var(--uar-text-tertiary);
+    font-size: var(--uar-font-size-small);
     text-align: left;
-    overflow-wrap: break-word; /* Allow text to wrap */
-    min-width: 0; /* Allow grid item to shrink fully */
+    overflow-wrap: break-word;
+    min-width: 0;
 }
 
 /* Radio button styles */
@@ -199,29 +307,30 @@
     cursor: pointer;
 }
 
-/* Dropdown styles - updated to match painter theme */
+/* Dropdown styles - using CSS variables */
 .uar-dropdown {
-    padding: 4px 8px;
-    background-color: #444;
-    color: #fff;
-    border: 1px solid #555;
-    border-radius: 5px;
+    background-color: var(--uar-bg-primary);
+    border: 1px solid var(--uar-border-primary);
+    border-radius: var(--uar-border-radius);
+    color: var(--uar-text-primary);
+    padding: var(--uar-padding-control);
+    font-size: var(--uar-font-size-normal);
+    font-weight: var(--uar-font-weight-normal);
     cursor: pointer;
-    font-size: 11px;
-    font-weight: 550;
-    transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    text-shadow: 0 1px 2px rgb(0,0,0);
-    height: 26px;
+    transition: background var(--uar-transition-normal), 
+                border-color var(--uar-transition-normal);
+    box-shadow: var(--uar-shadow-light);
+    text-shadow: var(--uar-text-shadow);
+    height: var(--uar-height-control);
     box-sizing: border-box;
     display: inline-flex;
     align-items: center;
 }
 
 .uar-dropdown:hover {
-    background-color: #555;
-    border-color: #666;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    background-color: var(--uar-bg-secondary);
+    border-color: var(--uar-border-secondary);
+    box-shadow: var(--uar-shadow-medium);
 }
 
 .uar-dropdown-small {
@@ -232,35 +341,37 @@
     width: 120px;
 }
 
-/* Modern Switch Styles (replacing checkboxes) */
+/* Modern Switch Styles - using CSS variables */
 .uar-switch {
     position: relative;
-    width: 90px;
-    height: 26px;
+    width: var(--uar-width-switch);
+    height: var(--uar-height-control);
     box-sizing: border-box;
-    background: linear-gradient(to right, #5a5a5a 30%, #3a76d6);
-    border-radius: 5px;
-    border: 1px solid #555;
+    background: linear-gradient(to right, #5a5a5a 30%, var(--uar-bg-accent));
+    border-radius: var(--uar-border-radius);
+    border: 1px solid var(--uar-border-primary);
     cursor: pointer;
-    transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out, opacity 0.3s ease-in-out;
+    transition: background var(--uar-transition-normal), 
+                border-color var(--uar-transition-normal), 
+                opacity var(--uar-transition-normal);
     user-select: none;
     padding: 0;
     font-family: inherit;
-    font-size: 12px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    font-size: var(--uar-font-size-medium);
+    box-shadow: var(--uar-shadow-light);
     display: inline-block;
-    margin: 2px;
+    margin: var(--uar-gap-small);
 }
 
 .uar-switch:hover {
-    background: linear-gradient(to right, #6a6a6a 30%, #4a86e4);
-    border-color: #666;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    background: linear-gradient(to right, #6a6a6a 30%, var(--uar-bg-accent-hover));
+    border-color: var(--uar-border-secondary);
+    box-shadow: var(--uar-shadow-medium);
     transform: translateY(-1px);
 }
 
 .uar-switch:active {
-    background: linear-gradient(135deg, #3a76d6, #3a3a3a);
+    background: linear-gradient(135deg, var(--uar-bg-accent), var(--uar-bg-tertiary));
 }
 
 .uar-switch input[type="checkbox"] {
@@ -274,12 +385,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 20px;
-    height: 20px;
+    width: var(--uar-width-switch-knob);
+    height: var(--uar-width-switch-knob);
     background-color: #5a5a5a;
-    border-radius: 4px;
+    border-radius: var(--uar-border-radius-small);
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all var(--uar-transition-cubic);
     z-index: 2;
 }
 
@@ -296,40 +407,40 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 550;
-    color: #ffffff;
+    font-weight: var(--uar-font-weight-normal);
+    color: var(--uar-text-primary);
     pointer-events: none;
     z-index: 1;
-    transition: opacity 0.3s ease-in-out;
-    text-shadow: 0 1px 2px rgb(0, 0, 0);
+    transition: opacity var(--uar-transition-normal);
+    text-shadow: var(--uar-text-shadow);
 }
 
 .uar-switch .switch-labels .text-off,
 .uar-switch .switch-labels .text-on {
     position: absolute;
-    transition: opacity 0.2s ease-in-out;
-    font-size: 11px;
+    transition: opacity var(--uar-transition-fast);
+    font-size: var(--uar-font-size-normal);
 }
 
 .uar-switch .switch-labels .text-off { 
     opacity: 1; 
-    padding-left: 20px;
+    padding-left: var(--uar-width-switch-knob);
 }
 
 .uar-switch .switch-labels .text-on { 
     opacity: 0;
-    padding-right: 20px;
+    padding-right: var(--uar-width-switch-knob);
 }
 
 /* Checked state */
 .uar-switch:has(input:checked) {
-    background: linear-gradient(to right, #3a76d6, #5a5a5a 70%);
-    border-color: #2a6ac4;
+    background: linear-gradient(to right, var(--uar-bg-accent), #5a5a5a 70%);
+    border-color: var(--uar-border-accent);
 }
 
 .uar-switch:has(input:checked):hover {
-    background: linear-gradient(to right, #4a86e4, #6a6a6a 70%);
-    border-color: #3a76d6;
+    background: linear-gradient(to right, var(--uar-bg-accent-hover), #6a6a6a 70%);
+    border-color: var(--uar-border-accent-hover);
 }
 
 .uar-switch input:checked ~ .switch-knob {
@@ -338,7 +449,7 @@
 
 .uar-switch input:checked ~ .switch-labels .text-on {
     opacity: 1;
-    color: #fff;
+    color: var(--uar-text-primary);
 }
 
 .uar-switch input:checked ~ .switch-labels .text-off {
@@ -350,31 +461,31 @@
 .uar-switch:disabled {
     cursor: not-allowed;
     opacity: 0.6;
-    background: #3a3a3a !important;
-    border-color: #4a4a4a !important;
+    background: var(--uar-bg-disabled) !important;
+    border-color: var(--uar-border-tertiary) !important;
     transform: none !important;
     box-shadow: none !important;
 }
 
 .uar-switch.disabled .switch-knob,
 .uar-switch:disabled .switch-knob {
-    background-color: #4a4a4a !important;
+    background-color: var(--uar-border-tertiary) !important;
 }
 
 .uar-switch.disabled .switch-labels,
 .uar-switch:disabled .switch-labels {
-    color: #777 !important;
+    color: var(--uar-text-disabled) !important;
 }
 
 /* Compact switch for auto-fit on change */
 .uar-switch.compact {
-    width: 70px;
-    font-size: 10px;
+    width: var(--uar-width-switch-compact);
+    font-size: var(--uar-font-size-small);
 }
 
 .uar-switch.compact .switch-labels .text-off,
 .uar-switch.compact .switch-labels .text-on {
-    font-size: 10px;
+    font-size: var(--uar-font-size-small);
 }
 
 /* Preset container */
@@ -400,25 +511,25 @@
     opacity: 0.5 !important;
 }
 
-/* Info message styles */
+/* Info message styles - using CSS variables */
 .uar-info-message {
-    color: #88aacc;
-    font-size: 11px;
+    color: var(--uar-text-tertiary);
+    font-size: var(--uar-font-size-normal);
     text-align: center;
     padding: 5px 10px;
     background-color: rgba(136, 170, 204, 0.1);
-    border-radius: 4px;
+    border-radius: var(--uar-border-radius-small);
     margin-top: 5px;
     width: 100%;
     box-sizing: border-box;
 }
 
-/* Separator line */
+/* Separator line - using CSS variables */
 hr {
     width: 100%;
     border: none;
-    border-top: 1px solid #444;
-    margin: 8px 0;
+    border-top: 1px solid var(--uar-bg-primary);
+    margin: var(--uar-gap-large) 0;
 }
 
 /* Old checkbox styles for backward compatibility */
