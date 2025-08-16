@@ -40,7 +40,7 @@ class ResolutionMaster:
         }
 
     RETURN_TYPES = ("INT", "INT", "FLOAT")
-    RETURN_NAMES = ("width", "height", "rescale_factor")
+    RETURN_NAMES = ("", "", "")
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 

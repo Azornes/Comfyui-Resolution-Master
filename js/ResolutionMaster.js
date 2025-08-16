@@ -1,6 +1,10 @@
 // ComfyUI.azToolkit.ResolutionMaster v.8.0.0 - 2025 - Fixed with separate canvas
 import { app } from "../../scripts/app.js";
 import { addStylesheet, getUrl } from "./utils/ResourceManager.js";
+import { createModuleLogger } from "./utils/LoggerUtils.js";
+
+// Initialize logger for this module
+const log = createModuleLogger('ResolutionMaster');
 
 addStylesheet(getUrl('./css/resolution_master.css'));
 
@@ -20,6 +24,9 @@ app.registerExtension({
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function () {
                 if (onNodeCreated) onNodeCreated.apply(this, []);
+
+                // Set a minimum size for the node to prevent UI cutoff
+                this.min_size = [420, 520];
 
                 // Initialize properties like original Slider2D
                 this.properties = this.properties || {};
@@ -55,8 +62,84 @@ app.registerExtension({
                 const shiftLeft = 10;
                 const shiftRight = 60;
 
+                // Clear output names for cleaner display (like mxSlider2D)
+                this.outputs[0].name = this.outputs[0].localized_name = "";
+                this.outputs[1].name = this.outputs[1].localized_name = "";
+                this.outputs[2].name = this.outputs[2].localized_name = "";
+
+                // Add onDrawForeground to display live values like mxSlider2D
+                this.onDrawForeground = function(ctx) {
+                    if (this.flags.collapsed) return false;
+
+                    const fontsize = LiteGraph.NODE_SUBTEXT_SIZE;
+                    // Outputs are at the top, starting after the title
+                    const outputStartY = LiteGraph.NODE_TITLE_HEIGHT -25;
+                    
+                    // Display width value next to first output
+                    ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR || "#aeaeae";
+                    ctx.font = fontsize + "px Arial";
+                    ctx.textAlign = "left";
+                    
+                    // Position text to the right of the output slots
+                    const textX = this.size[0] - 45;
+                    
+                    // Width value next to first output
+                    ctx.fillText(
+                        widthWidget.value.toString(),
+                        textX,
+                        outputStartY + LiteGraph.NODE_SLOT_HEIGHT * 0 + fontsize
+                    );
+                    
+                    // Height value next to second output
+                    ctx.fillText(
+                        heightWidget.value.toString(),
+                        textX,
+                        outputStartY + LiteGraph.NODE_SLOT_HEIGHT * 1 + fontsize
+                    );
+                    
+                    // Rescale factor next to third output (with 2 decimal places)
+                    const rescaleValue = rescaleValueWidget ? rescaleValueWidget.value : 1.0;
+                    ctx.fillText(
+                        rescaleValue.toFixed(2),
+                        textX,
+                        outputStartY + LiteGraph.NODE_SLOT_HEIGHT * 2 + fontsize
+                    );
+                };
+
                 const widthWidget = this.widgets.find(w => w.name === 'width');
                 const heightWidget = this.widgets.find(w => w.name === 'height');
+
+                // Hide standard backend sliders like in mxSlider
+                widthWidget.hidden = true;
+                widthWidget.type = "hidden";
+                widthWidget.computeSize = () => [0, -4];
+                heightWidget.hidden = true;
+                heightWidget.type = "hidden";
+                heightWidget.computeSize = () => [0, -4];
+
+                // Hide mode widget
+                const modeWidgetToHide = this.widgets.find(w => w.name === 'mode');
+                if (modeWidgetToHide) {
+                    modeWidgetToHide.hidden = true;
+                    modeWidgetToHide.type = "hidden";
+                    modeWidgetToHide.computeSize = () => [0, -4];
+                }
+
+                // Hide auto_detect widget
+                const autoDetectWidgetToHide = this.widgets.find(w => w.name === 'auto_detect');
+                if (autoDetectWidgetToHide) {
+                    autoDetectWidgetToHide.hidden = true;
+                    autoDetectWidgetToHide.type = "hidden";
+                    autoDetectWidgetToHide.computeSize = () => [0, -4];
+                }
+
+                // Hide rescale_value widget
+                const rescaleValueWidgetToHide = this.widgets.find(w => w.name === 'rescale_value');
+                if (rescaleValueWidgetToHide) {
+                    rescaleValueWidgetToHide.hidden = true;
+                    rescaleValueWidgetToHide.type = "hidden";
+                    rescaleValueWidgetToHide.computeSize = () => [0, -4];
+                }
 
                 // Set widget options to prevent undefined errors
                 widthWidget.options = {
@@ -79,6 +162,7 @@ app.registerExtension({
                     const rescaleModeWidget = this.widgets.find(w => w.name === 'rescale_mode');
                     if (rescaleModeWidget) {
                         rescaleModeWidget.type = "hidden";
+                        rescaleModeWidget.hidden = true;
                         rescaleModeWidget.computeSize = () => [0, -4];
                     }
                 }
@@ -88,6 +172,7 @@ app.registerExtension({
                     const rescaleValueWidget = this.widgets.find(w => w.name === 'rescale_value');
                     if (rescaleValueWidget) {
                         rescaleValueWidget.type = "hidden";
+                        rescaleValueWidget.hidden = true;
                         rescaleValueWidget.computeSize = () => [0, -4];
                     }
                 }
@@ -102,6 +187,7 @@ app.registerExtension({
                 // Create container for centering
                 const container = document.createElement('div');
                 container.className = 'uar-container';
+                container.style.overflow = 'visible'; // Changed from 'hidden' to 'visible' to prevent clipping
 
                 const baseWidth = 400;
                 const scalingContainer = document.createElement('div');
@@ -115,6 +201,13 @@ app.registerExtension({
                 canvas.className = 'uar-canvas';
 
                 scalingContainer.appendChild(canvas);
+                
+                // Observe content size changes to keep node height in sync
+                const resizeObserver = new ResizeObserver(() => {
+                    updateCanvasSize();
+                });
+                resizeObserver.observe(scalingContainer);
+                this._uarResizeObserver = resizeObserver;
 
                 const swapButton = document.createElement('button');
                 swapButton.textContent = '⇄ Swap';
@@ -1519,15 +1612,39 @@ app.registerExtension({
 
                 // Function to update canvas size based on mode
                 const updateCanvasSize = () => {
-                    const nodeWidth = (node.size && node.size[0]) || baseWidth;
+                    log.debug('updateCanvasSize: Starting canvas size update');
+                    
+                    const nodeWidth = (node.size && node.size[0]) || baseWidth + 20;
+                    log.debug('updateCanvasSize: Node width detected', { nodeWidth, baseWidth });
 
                     let scale = 1;
-                    if (nodeWidth < baseWidth) {
-                        scale = nodeWidth / baseWidth;
-                        container.style.alignItems = 'flex-start'; // Align left for correct scaling
+                    let minNodeWidth = 200; // Default minimum width
+                    
+                    // Always use flex-start alignment for consistent positioning
+                    container.style.alignItems = 'flex-start';
+                    
+                    if (nodeWidth < baseWidth + 20 ) {
+                        scale = nodeWidth / (baseWidth + 20);
+                        // When scaling starts, add extra width to prevent clipping
+                        // The more we scale down, the more extra width we need
+                        const extraWidth = Math.max(0, (1 - scale) * 350); // Up to 350px extra when fully scaled down
+                        minNodeWidth = Math.min(baseWidth + 150, nodeWidth + extraWidth); // Maximum increased to ensure radio buttons never clip
+                        
+                        log.debug('updateCanvasSize: Scaling applied', { 
+                            scale: scale.toFixed(3), 
+                            extraWidth: extraWidth.toFixed(1), 
+                            minNodeWidth 
+                        });
+                        
+                        // When scaling, don't add any margin - keep content at left edge
+                        scalingContainer.style.marginLeft = '0';
                     } else {
-                        container.style.alignItems = 'center'; // Center when there is enough space
+                        // When not scaling, also keep at left edge with no margin
+                        scalingContainer.style.marginLeft = '0';
+                        minNodeWidth = 420; // Original minimum when not scaling
+                        log.debug('updateCanvasSize: No scaling needed', { minNodeWidth });
                     }
+                    
                     scalingContainer.style.transform = `scale(${scale})`;
 
                     // Show/hide controls based on mode
@@ -1537,6 +1654,13 @@ app.registerExtension({
                     if (node.presetContainer) {
                         node.presetContainer.style.display = isManual ? 'flex' : 'none';
                     }
+                    
+                    log.debug('updateCanvasSize: Controls visibility set', { 
+                        mode: node.properties.mode, 
+                        isManual, 
+                        primaryControlsDisplay: primaryControls.style.display,
+                        scalingGridDisplay: scalingGrid.style.display
+                    });
 
                     let canvasWidth = baseWidth;
                     let canvasHeight = 0;
@@ -1545,6 +1669,7 @@ app.registerExtension({
                     if (node.properties.mode === 'Manual Sliders') {
                         canvasHeight = 80;
                         unscaledHeight = canvasHeight;
+                        log.debug('updateCanvasSize: Manual Sliders mode dimensions', { canvasHeight, unscaledHeight });
                     } else if (node.properties.mode === 'Manual') {
                         const rangeX = node.properties.maxX - node.properties.minX;
                         const rangeY = node.properties.maxY - node.properties.minY;
@@ -1565,6 +1690,18 @@ app.registerExtension({
                         canvasHeight = tempCanvasHeight + 20;
 
                         unscaledHeight = canvasHeight + 190;
+                        
+                        log.debug('updateCanvasSize: Manual mode dimensions calculated', {
+                            rangeX,
+                            rangeY,
+                            aspectRatio: aspectRatio.toFixed(3),
+                            internalBaseSize,
+                            tempCanvasWidth: tempCanvasWidth.toFixed(1),
+                            tempCanvasHeight: tempCanvasHeight.toFixed(1),
+                            canvasWidth: canvasWidth.toFixed(1),
+                            canvasHeight: canvasHeight.toFixed(1),
+                            unscaledHeight
+                        });
                     }
 
                     // Set internal canvas resolution
@@ -1578,15 +1715,39 @@ app.registerExtension({
                     canvas.style.margin = '0 auto';
                     canvas.style.display = 'block';
 
-                    const finalScaledHeight = unscaledHeight * scale;
+                    // Measure actual content height (unaffected by CSS transform)
+                    const unscaledContentHeight = scalingContainer.scrollHeight || unscaledHeight;
+                    const finalScaledHeight = Math.ceil(unscaledContentHeight * scale);
+                    
+                    log.debug('updateCanvasSize: Height calculations', {
+                        unscaledContentHeight,
+                        scale: scale.toFixed(3),
+                        finalScaledHeight
+                    });
+                    
+                    // Clamp container to the scaled content height
                     container.style.height = finalScaledHeight + 'px';
 
+                    // Make the DOM widget report the real height so the node expands to fit
                     if (node.canvasWidget) {
                         node.canvasWidget.computeSize = () => [nodeWidth, finalScaledHeight];
                     }
-                    app.graph.setDirtyCanvas(true, true);
 
+                    // Dynamically set min node size to prevent clipping
+                    const padding = 10; // small bottom padding
+                    const neededMinHeight = finalScaledHeight + padding;
+                    node.min_size = [minNodeWidth, neededMinHeight];
+                    
+                    log.debug('updateCanvasSize: Final node size set', {
+                        minNodeWidth,
+                        neededMinHeight,
+                        finalNodeSize: `[${minNodeWidth}, ${neededMinHeight}]`
+                    });
+
+                    app.graph.setDirtyCanvas(true, true);
                     renderCanvas();
+                    
+                    log.debug('updateCanvasSize: Canvas size update completed');
                 };
 
                 // Render function for the canvas
@@ -1885,6 +2046,9 @@ app.registerExtension({
                 // Store widget reference
                 this.canvasWidget = canvasWidget;
 
+                // Move custom interface to the top since backend widgets are hidden
+                this.widgets_start_y = 0;
+
                 // Mode widget callback
                 const modeWidget = this.widgets.find(w => w.name === 'mode');
                 if (modeWidget) {
@@ -1988,9 +2152,7 @@ app.registerExtension({
 
                 // Handle resize
                 this.onResize = function () {
-                    setTimeout(() => {
-                        updateCanvasSize();
-                    }, 10);
+                    updateCanvasSize();
                 };
 
                 // Cleanup on node removal
@@ -2002,6 +2164,12 @@ app.registerExtension({
                     if (dimensionCheckInterval) {
                         clearInterval(dimensionCheckInterval);
                         dimensionCheckInterval = null;
+                    }
+
+                    // Disconnect resize observer if present
+                    if (this._uarResizeObserver) {
+                        try { this._uarResizeObserver.disconnect(); } catch(e) {}
+                        this._uarResizeObserver = null;
                     }
                     
                     if (origOnRemoved) origOnRemoved.apply(this, arguments);

@@ -25,14 +25,14 @@
     border: 1px solid #555;
     border-radius: 5px;
     color: #fff;
-    padding: 6px 14px;
-    font-size: 12px;
+    padding: 4px 8px;
+    font-size: 11px;
     font-weight: 550;
     cursor: pointer;
     transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    min-width: 80px;
+    min-width: 60px;
     text-align: center;
-    margin: 2px;
+    margin: 1px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     text-shadow: 0 1px 2px rgb(0,0,0);
     user-select: none;
@@ -101,11 +101,12 @@
 /* Grid layout for scaling controls */
 .uar-grid-container {
     display: grid;
-    grid-template-columns: auto minmax(60px, 1fr) auto auto minmax(60px, 1fr) auto;
-    gap: 5px 8px;
+    /* More compact columns to prevent clipping */
+    grid-template-columns: auto minmax(50px, 100px) auto auto minmax(40px, 60px) auto;
+    gap: 2px 4px;
     align-items: center;
     width: 100%;
-    padding: 0 30px;
+    padding: 0 5px;
     box-sizing: border-box;
     margin-top: 5px;
 }
@@ -117,7 +118,7 @@
 /* Slider styles - updated to match painter theme */
 .uar-slider {
     -webkit-appearance: none;
-    width: 80px;
+    width: 60px;
     height: 4px;
     background: #555;
     border-radius: 2px;
@@ -181,8 +182,10 @@
 .uar-preview {
     color: #88aacc;
     font-size: 10px;
-    min-width: 80px;
+    /* min-width: 80px; */ /* Removing fixed min-width to allow shrinking */
     text-align: left;
+    overflow-wrap: break-word; /* Allow text to wrap */
+    min-width: 0; /* Allow grid item to shrink fully */
 }
 
 /* Radio button styles */
@@ -192,13 +195,13 @@
 
 /* Dropdown styles - updated to match painter theme */
 .uar-dropdown {
-    padding: 6px 12px;
+    padding: 4px 8px;
     background-color: #444;
     color: #fff;
     border: 1px solid #555;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 550;
     transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
@@ -212,18 +215,18 @@
 }
 
 .uar-dropdown-small {
-    width: 80px;
+    width: 60px;
 }
 
 .uar-dropdown-medium {
-    width: 140px;
+    width: 120px;
 }
 
 /* Modern Switch Styles (replacing checkboxes) */
 .uar-switch {
     position: relative;
     width: 90px;
-    height: 30px;
+    height: 26px;
     box-sizing: border-box;
     background: linear-gradient(to right, #5a5a5a 30%, #3a76d6);
     border-radius: 5px;
@@ -261,8 +264,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     background-color: #5a5a5a;
     border-radius: 4px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.2);
@@ -320,7 +323,7 @@
 }
 
 .uar-switch input:checked ~ .switch-knob {
-    left: calc(100% - 26px);
+    left: calc(100% - 22px);
 }
 
 .uar-switch input:checked ~ .switch-labels .text-on {
