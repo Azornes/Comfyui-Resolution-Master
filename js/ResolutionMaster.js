@@ -1,2178 +1,1510 @@
-// ComfyUI.azToolkit.ResolutionMaster v.8.0.0 - 2025 - Fixed with separate canvas
+// ComfyUI.azToolkit.ResolutionMaster v.10.1.0 - Canvas version with single view (no tabs)
+// All controls visible at once like in original DOM version
 import { app } from "../../scripts/app.js";
-import { addStylesheet, getUrl } from "./utils/ResourceManager.js";
 import { createModuleLogger } from "./utils/LoggerUtils.js";
 
 // Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
 
-addStylesheet(getUrl('./css/resolution_master.css'));
+class ResolutionMasterCanvas {
+    constructor(node) {
+        this.node = node;
+        
+        // Initialize properties
+        this.node.properties = this.node.properties || {};
+        this.node.properties.mode = this.node.properties.mode ?? "Manual";
+        this.node.properties.valueX = this.node.properties.valueX ?? 512;
+        this.node.properties.valueY = this.node.properties.valueY ?? 512;
+        this.node.properties.minX = this.node.properties.minX ?? 0;
+        this.node.properties.maxX = this.node.properties.maxX ?? 2048;
+        this.node.properties.stepX = this.node.properties.stepX ?? 64;
+        this.node.properties.minY = this.node.properties.minY ?? 0;
+        this.node.properties.maxY = this.node.properties.maxY ?? 2048;
+        this.node.properties.stepY = this.node.properties.stepY ?? 64;
+        this.node.properties.decimalsX = this.node.properties.decimalsX ?? 0;
+        this.node.properties.decimalsY = this.node.properties.decimalsY ?? 0;
+        this.node.properties.snap = this.node.properties.snap ?? true;
+        this.node.properties.dots = this.node.properties.dots ?? true;
+        this.node.properties.frame = this.node.properties.frame ?? true;
+        
+        // Manual Sliders mode properties
+        this.node.properties.w_min = this.node.properties.w_min ?? 64;
+        this.node.properties.w_max = this.node.properties.w_max ?? 4096;
+        this.node.properties.w_step = this.node.properties.w_step ?? 64;
+        this.node.properties.h_min = this.node.properties.h_min ?? 64;
+        this.node.properties.h_max = this.node.properties.h_max ?? 4096;
+        this.node.properties.h_step = this.node.properties.h_step ?? 64;
+        
+        // Custom sliders properties
+        this.node.properties.snap_min = this.node.properties.snap_min ?? 16;
+        this.node.properties.snap_max = this.node.properties.snap_max ?? 256;
+        this.node.properties.snap_step = this.node.properties.snap_step ?? 16;
+        this.node.properties.s_min = this.node.properties.s_min ?? 0.1;
+        this.node.properties.s_max = this.node.properties.s_max ?? 4.0;
+        this.node.properties.s_step = this.node.properties.s_step ?? 0.1;
+        this.node.properties.mp_min = this.node.properties.mp_min ?? 0.5;
+        this.node.properties.mp_max = this.node.properties.mp_max ?? 6.0;
+        this.node.properties.mp_step = this.node.properties.mp_step ?? 0.1;
 
+        // Additional properties for full functionality
+        this.node.properties.snapValue = this.node.properties.snapValue ?? 64;
+        this.node.properties.upscaleValue = this.node.properties.upscaleValue ?? 1.0;
+        this.node.properties.targetResolution = this.node.properties.targetResolution ?? 1080;
+        this.node.properties.targetMegapixels = this.node.properties.targetMegapixels ?? 2.0;
+        this.node.properties.rescaleMode = this.node.properties.rescaleMode ?? "resolution";
+        this.node.properties.rescaleValue = this.node.properties.rescaleValue ?? 1.0;
+        this.node.properties.autoDetect = this.node.properties.autoDetect ?? false;
+        this.node.properties.autoFitOnChange = this.node.properties.autoFitOnChange ?? false;
+        this.node.properties.selectedCategory = this.node.properties.selectedCategory ?? null;
+        this.node.properties.selectedPreset = this.node.properties.selectedPreset ?? null;
+        this.node.properties.useCustomCalc = this.node.properties.useCustomCalc ?? false;
+        
+        // Internal state
+        this.node.intpos = { x: 0.5, y: 0.5 };
+        this.node.capture = false;
+        this.node.configured = false;
+        
+        // UI state
+        this.hoverElement = null;
+        this.scrollOffset = 0;
+        this.dropdownOpen = null;
+        
+        // Auto-detect state
+        this.detectedDimensions = null;
+        this.dimensionCheckInterval = null;
+        this.manuallySetByAutoFit = false;
+        
+        // Control positions (will be calculated dynamically)
+        this.controls = {};
+        this.resolutions = ['144p', '240p', '360p', '480p', '720p', '820p', '1080p', '1440p', '2160p', '4320p'];
+
+        // Full preset categories
+        this.presetCategories = {
+            'Standard': {
+                '1:1 Square': { width: 512, height: 512 },
+                '1:2 Tall': { width: 512, height: 1024 },
+                '1:3 Ultra Tall': { width: 512, height: 1536 },
+                '2:3 Portrait': { width: 512, height: 768 },
+                '3:4 Portrait': { width: 576, height: 768 },
+                '4:5 Portrait': { width: 512, height: 640 },
+                '4:7 Phone': { width: 512, height: 896 },
+                '5:12 Banner': { width: 512, height: 1228 },
+                '7:9 Vertical': { width: 512, height: 658 },
+                '9:16 Mobile': { width: 576, height: 1024 },
+                '9:21 Ultra Mobile': { width: 512, height: 1194 },
+                '10:16 Monitor': { width: 640, height: 1024 },
+                '13:19 Tall Screen': { width: 512, height: 748 },
+                '3:2 Landscape': { width: 768, height: 512 },
+                '4:3 Classic': { width: 512, height: 384 },
+                '16:9 Widescreen': { width: 768, height: 432 },
+                '21:9 Ultrawide': { width: 1024, height: 439 }
+            },
+            'SDXL': {
+                '1:1 Square': { width: 1024, height: 1024 },
+                '3:4 Portrait': { width: 768, height: 1024 },
+                '4:5 Portrait': { width: 915, height: 1144 },
+                '5:12 Portrait': { width: 640, height: 1536 },
+                '7:9 Portrait': { width: 896, height: 1152 },
+                '9:16 Portrait': { width: 768, height: 1344 },
+                '13:19 Portrait': { width: 832, height: 1216 },
+                '3:2 Landscape': { width: 1254, height: 836 }
+            },
+            'Flux': {
+                '1:1 Square': { width: 1024, height: 1024 },
+                '2:3 Portrait': { width: 832, height: 1248 },
+                '3:4 Portrait': { width: 896, height: 1184 },
+                '4:5 Portrait': { width: 928, height: 1152 },
+                '9:16 Portrait': { width: 768, height: 1344 },
+                '9:21 Portrait': { width: 672, height: 1440 },
+            },
+            'WAN': {
+                '1:1 Square': { width: 720, height: 720 },
+                '2:3 Portrait': { width: 588, height: 882 },
+                '3:4 Portrait': { width: 624, height: 832 },
+                '9:16 Portrait': { width: 720, height: 1280 },
+                '9:21 Portrait': { width: 549, height: 1280 },
+                '3:2 Landscape': { width: 1080, height: 720 },
+                '4:3 Landscape': { width: 960, height: 720 },
+                '16:9 Landscape': { width: 1280, height: 720 },
+                '21:9 Landscape': { width: 1680, height: 720 }
+            },
+            'Social Media': {
+                'Instagram Square': { width: 1080, height: 1080 },
+                'Instagram Portrait': { width: 1080, height: 1350 },
+                'Twitter Post': { width: 1200, height: 675 },
+                'Facebook Cover': { width: 1200, height: 630 },
+                'YouTube Thumbnail': { width: 1280, height: 720 }
+            },
+            'Print': {
+                'A4 Portrait': { width: 2480, height: 3508 },
+                'A4 Landscape': { width: 3508, height: 2480 },
+                'Letter Portrait': { width: 2550, height: 3300 },
+                '4x6 Photo': { width: 1200, height: 1800 },
+                '8x10 Photo': { width: 2400, height: 3000 }
+            },
+            'Cinema': {
+                '2.39:1 Anamorphic': { width: 2048, height: 858 },
+                '1.85:1 Standard': { width: 1998, height: 1080 },
+                '2:1 Univisium': { width: 2048, height: 1024 },
+                '4:3 Academy': { width: 1440, height: 1080 },
+                '1.33:1 Classic': { width: 1436, height: 1080 }
+            }
+        };
+        
+        this.setupNode();
+    }
+    
+    setupNode() {
+        const node = this.node;
+        const self = this;
+        
+        // Set minimum size to accommodate all controls
+        node.size = [330, 620]; // Taller to fit all controls
+        node.min_size = [330, 620];
+        
+        // Clear output names for cleaner display
+        if (node.outputs) {
+            node.outputs.forEach(output => {
+                output.name = output.localized_name = "";
+            });
+        }
+        
+        // Get widgets
+        const widthWidget = node.widgets?.find(w => w.name === 'width');
+        const heightWidget = node.widgets?.find(w => w.name === 'height');
+        const modeWidget = node.widgets?.find(w => w.name === 'mode');
+        const autoDetectWidget = node.widgets?.find(w => w.name === 'auto_detect');
+        const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
+        const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
+        
+        // Hide all backend widgets
+        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
+            if (widget) {
+                widget.hidden = true;
+                widget.type = "hidden";
+                widget.computeSize = () => [0, -4];
+            }
+        });
+        
+        // Initialize values from widgets
+        if (widthWidget && heightWidget) {
+            node.properties.valueX = widthWidget.value;
+            node.properties.valueY = heightWidget.value;
+            
+            // Initialize intpos based on current values
+            node.intpos.x = (widthWidget.value - node.properties.minX) / (node.properties.maxX - node.properties.minX);
+            node.intpos.y = (heightWidget.value - node.properties.minY) / (node.properties.maxY - node.properties.minY);
+        }
+        
+        if (autoDetectWidget) {
+            node.properties.autoDetect = autoDetectWidget.value;
+            if (autoDetectWidget.value) {
+                this.startAutoDetect();
+            }
+        }
+        
+        // Store widget references
+        this.widthWidget = widthWidget;
+        this.heightWidget = heightWidget;
+        this.rescaleModeWidget = rescaleModeWidget;
+        this.rescaleValueWidget = rescaleValueWidget;
+        
+        // Override onDrawForeground
+        node.onDrawForeground = function(ctx) {
+            if (this.flags.collapsed) return;
+            if (this.size[0] < 330) {
+                this.size[0] = 330;
+            }
+            if (this.size[1] < 620) {
+                this.size[1] = 620;
+            }
+            self.drawInterface(ctx);
+        };
+        
+        // Override mouse handlers
+        node.onMouseDown = function(e, pos, canvas) {
+            if (e.canvasY - this.pos[1] < 0) return false;
+            return self.handleMouseDown(e, pos, canvas);
+        };
+        
+        node.onMouseMove = function(e, pos, canvas) {
+            if (!this.capture) {
+                self.handleMouseHover(e, pos, canvas);
+                return false;
+            }
+            return self.handleMouseMove(e, pos, canvas);
+        };
+        
+        node.onMouseUp = function(e) {
+            if (!this.capture) return false;
+            return self.handleMouseUp(e);
+        };
+        
+        node.onPropertyChanged = function(property) {
+            self.handlePropertyChange(property);
+        };
+        
+        // Handle resize
+        node.onResize = function() {
+            if (this.size[0] < 330) {
+                this.size[0] = 330;
+            }
+            if (this.size[1] < 620) {
+                this.size[1] = 620;
+            }
+            app.graph.setDirtyCanvas(true);
+        };
+        
+        // Cleanup
+        const origOnRemoved = node.onRemoved;
+        node.onRemoved = function() {
+            if (self.dimensionCheckInterval) {
+                clearInterval(self.dimensionCheckInterval);
+                self.dimensionCheckInterval = null;
+            }
+            if (origOnRemoved) origOnRemoved.apply(this, arguments);
+        };
+        
+        // Initial configuration
+        node.onGraphConfigured = function() {
+            this.configured = true;
+            this.onPropertyChanged();
+        };
+        
+        // Start auto-detect if enabled
+        if (node.properties.autoDetect) {
+            this.startAutoDetect();
+        }
+    }
+    
+    drawInterface(ctx) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 10;
+        const spacing = 8;
+        
+        this.drawOutputValues(ctx);
+        
+        let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
+        
+        if (props.mode === "Manual") {
+            const section = (title, drawContent) => {
+                const contentHeight = drawContent(ctx, currentY + 20, true);
+                this.drawSection(ctx, title, margin, currentY, node.size[0] - margin * 2, contentHeight + 25);
+                currentY += contentHeight + 25 + spacing;
+            };
+
+            const canvasHeight = 200;
+            this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight);
+            currentY += canvasHeight + spacing;
+            
+            this.drawInfoText(ctx, currentY);
+            currentY += 15 + spacing;
+
+            section("Actions", (ctx, y) => {
+                this.drawPrimaryControls(ctx, y);
+                return 30;
+            });
+            
+            section("Scaling", (ctx, y) => this.drawScalingGrid(ctx, y));
+            section("Auto-Detect", (ctx, y) => this.drawAutoDetectSection(ctx, y));
+            section("Presets", (ctx, y) => this.drawPresetSection(ctx, y));
+
+        } else if (props.mode === "Manual Sliders") {
+            this.drawSliderMode(ctx, currentY);
+        }
+        
+        const neededHeight = currentY + 20;
+        if (node.size[1] < neededHeight) {
+            node.size[1] = neededHeight;
+        }
+    }
+
+    drawSection(ctx, title, x, y, w, h) {
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ccc";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(title, x + 10, y + 15);
+    }
+    
+    drawOutputValues(ctx) {
+        const node = this.node;
+        const props = node.properties;
+        
+        ctx.font = "bold 14px Arial";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        
+        if (this.widthWidget && this.heightWidget) {
+            // Shift values up slightly to better match visual center of slots
+            const y_offset_1 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 0.5);
+            const y_offset_2 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 1.5);
+            const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
+
+            ctx.fillStyle = "#89F";
+            ctx.fillText(this.widthWidget.value.toString(), node.size[0] - 20, y_offset_1);
+            
+            ctx.fillStyle = "#F89";
+            ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
+            
+            ctx.fillStyle = "#9F8";
+            ctx.fillText(props.rescaleValue.toFixed(2), node.size[0] - 20, y_offset_3);
+        }
+    }
+    
+    drawPrimaryControls(ctx, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 20;
+        const buttonWidth = 70;
+        const gap = 5;
+        let x = margin;
+
+        this.controls.swapBtn = { x, y, w: buttonWidth, h: 28 };
+        this.drawButton(ctx, x, y, buttonWidth, 28, "⇄ Swap", this.hoverElement === 'swapBtn');
+        x += buttonWidth + gap;
+
+        this.controls.snapBtn = { x, y, w: buttonWidth, h: 28 };
+        this.drawButton(ctx, x, y, buttonWidth, 28, "⊞ Snap", this.hoverElement === 'snapBtn');
+        x += buttonWidth + gap;
+
+        const sliderX = x;
+        const valueWidth = 35;
+        const sliderWidth = node.size[0] - sliderX - valueWidth - margin;
+
+        this.controls.snapSlider = { x: sliderX, y, w: sliderWidth, h: 28 };
+        this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.snap_min, props.snap_max, props.snap_step);
+
+        ctx.fillStyle = "#ccc";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(props.snapValue.toString(), sliderX + sliderWidth + gap, y + 14);
+    }
+    
+    draw2DCanvas(ctx, x, y, w, h) {
+        const node = this.node;
+        const props = node.properties;
+        
+        this.controls.canvas2d = { x, y, w, h };
+        
+        const rangeX = props.maxX - props.minX;
+        const rangeY = props.maxY - props.minY;
+        const aspectRatio = rangeX / rangeY;
+        
+        let canvasW = w - 20;
+        let canvasH = h - 20;
+        
+        if (aspectRatio > canvasW / canvasH) {
+            canvasH = canvasW / aspectRatio;
+        } else {
+            canvasW = canvasH * aspectRatio;
+        }
+        
+        const offsetX = x + (w - canvasW) / 2;
+        const offsetY = y + (h - canvasH) / 2;
+        
+        this.controls.canvas2d = { x: offsetX, y: offsetY, w: canvasW, h: canvasH };
+        
+        ctx.fillStyle = "rgba(20,20,20,0.8)";
+        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(offsetX - 4, offsetY - 4, canvasW + 8, canvasH + 8, 6);
+        ctx.fill();
+        ctx.stroke();
+        
+        if (props.dots) {
+            ctx.fillStyle = "rgba(200,200,200,0.5)";
+            ctx.beginPath();
+            let stX = canvasW * props.stepX / rangeX;
+            let stY = canvasH * props.stepY / rangeY;
+            for (let ix = stX; ix < canvasW; ix += stX) {
+                for (let iy = stY; iy < canvasH; iy += stY) {
+                    ctx.rect(offsetX + ix - 0.5, offsetY + iy - 0.5, 1, 1);
+                }
+            }
+            ctx.fill();
+        }
+        
+        if (props.frame) {
+            ctx.fillStyle = "rgba(150,150,250,0.1)";
+            ctx.strokeStyle = "rgba(150,150,250,0.7)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.rect(offsetX, offsetY + canvasH * (1 - node.intpos.y), 
+                    canvasW * node.intpos.x, canvasH * node.intpos.y);
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        const knobX = offsetX + canvasW * node.intpos.x;
+        const knobY = offsetY + canvasH * (1 - node.intpos.y);
+        
+        ctx.fillStyle = "#FFF";
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    drawInfoText(ctx, y) {
+        const node = this.node;
+        if (this.widthWidget && this.heightWidget) {
+            const width = this.widthWidget.value;
+            const height = this.heightWidget.value;
+            const mp = ((width * height) / 1000000).toFixed(2);
+            const aspectRatio = (width / height).toFixed(2);
+            const pResolution = this.getClosestPResolution(width, height);
+            
+            ctx.fillStyle = "#bbb";
+            ctx.font = "12px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(`${width} × ${height}  |  ${mp} MP ${pResolution}  |  ${aspectRatio}:1`,
+                        node.size[0] / 2, y);
+        }
+    }
+    
+    drawScalingGrid(ctx, y) {
+        const margin = 20;
+        this.drawScaleRow(ctx, margin, y);
+        this.drawResolutionRow(ctx, margin, y + 35);
+        this.drawMegapixelsRow(ctx, margin, y + 70);
+        return 105;
+    }
+    
+    drawScaleRow(ctx, x, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 20;
+        const availableWidth = node.size[0] - margin * 2;
+        const gap = 8;
+        
+        const btnWidth = 50;
+        const valueWidth = 45;
+        const previewWidth = 70;
+        const radioWidth = 18;
+        const sliderWidth = availableWidth - btnWidth - valueWidth - previewWidth - radioWidth - (gap * 4);
+
+        let currentX = x;
+
+        this.controls.scaleBtn = { x: currentX, y, w: btnWidth, h: 28 };
+        this.drawButton(ctx, currentX, y, btnWidth, 28, "⬆", this.hoverElement === 'scaleBtn');
+        currentX += btnWidth + gap;
+        
+        this.controls.scaleSlider = { x: currentX, y, w: sliderWidth, h: 28 };
+        this.drawSlider(ctx, currentX, y, sliderWidth, 28, props.upscaleValue, props.s_min, props.s_max, props.s_step);
+        currentX += sliderWidth + gap;
+        
+        ctx.fillStyle = "#ccc";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(props.upscaleValue.toFixed(1) + "x", currentX + valueWidth / 2, y + 14);
+        currentX += valueWidth + gap;
+        
+        if (this.widthWidget && this.heightWidget) {
+            const newW = Math.round(this.widthWidget.value * props.upscaleValue);
+            const newH = Math.round(this.heightWidget.value * props.upscaleValue);
+            ctx.fillStyle = "#888";
+            ctx.font = "11px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
+        }
+        currentX += previewWidth + gap;
+        
+        this.controls.upscaleRadio = { x: currentX, y: y + 5, w: radioWidth, h: 18 };
+        this.drawRadioButton(ctx, currentX, y + 5, radioWidth, props.rescaleMode === "manual", this.hoverElement === 'upscaleRadio');
+    }
+    
+    drawResolutionRow(ctx, x, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 20;
+        const availableWidth = node.size[0] - margin * 2;
+        const gap = 8;
+        
+        const btnWidth = 50;
+        const valueWidth = 45;
+        const previewWidth = 70;
+        const radioWidth = 18;
+        const dropdownWidth = availableWidth - btnWidth - valueWidth - previewWidth - radioWidth - (gap * 4);
+        
+        let currentX = x;
+
+        this.controls.resolutionBtn = { x: currentX, y, w: btnWidth, h: 28 };
+        this.drawButton(ctx, currentX, y, btnWidth, 28, "📺", this.hoverElement === 'resolutionBtn');
+        currentX += btnWidth + gap;
+
+        this.controls.resolutionDropdown = { x: currentX, y, w: dropdownWidth, h: 28 };
+        const selectedText = this.resolutions.find(r => parseInt(r) === props.targetResolution) || '1080p';
+        this.drawDropdown(ctx, currentX, y, dropdownWidth, 28, selectedText, this.hoverElement === 'resolutionDropdown');
+        currentX += dropdownWidth + gap;
+        
+        const scaleFactor = this.calculateResolutionScale(props.targetResolution);
+        ctx.fillStyle = "#ccc";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`×${scaleFactor.toFixed(2)}`, currentX + valueWidth / 2, y + 14);
+        currentX += valueWidth + gap;
+        
+        if (this.widthWidget && this.heightWidget) {
+            const newW = Math.round(this.widthWidget.value * scaleFactor);
+            const newH = Math.round(this.heightWidget.value * scaleFactor);
+            ctx.fillStyle = "#888";
+            ctx.font = "11px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
+        }
+        currentX += previewWidth + gap;
+        
+        this.controls.resolutionRadio = { x: currentX, y: y + 5, w: radioWidth, h: 18 };
+        this.drawRadioButton(ctx, currentX, y + 5, radioWidth, props.rescaleMode === "resolution", this.hoverElement === 'resolutionRadio');
+    }
+    
+    drawMegapixelsRow(ctx, x, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 20;
+        const availableWidth = node.size[0] - margin * 2;
+        const gap = 8;
+        
+        const btnWidth = 50;
+        const valueWidth = 45;
+        const previewWidth = 70;
+        const radioWidth = 18;
+        const sliderWidth = availableWidth - btnWidth - valueWidth - previewWidth - radioWidth - (gap * 4);
+
+        let currentX = x;
+
+        this.controls.megapixelsBtn = { x: currentX, y, w: btnWidth, h: 28 };
+        this.drawButton(ctx, currentX, y, btnWidth, 28, "📷", this.hoverElement === 'megapixelsBtn');
+        currentX += btnWidth + gap;
+        
+        this.controls.megapixelsSlider = { x: currentX, y, w: sliderWidth, h: 28 };
+        this.drawSlider(ctx, currentX, y, sliderWidth, 28, props.targetMegapixels, props.mp_min, props.mp_max, props.mp_step);
+        currentX += sliderWidth + gap;
+        
+        const scaleFactor = this.calculateMegapixelsScale(props.targetMegapixels);
+        ctx.fillStyle = "#ccc";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(`${props.targetMegapixels.toFixed(1)}MP`, currentX + valueWidth / 2, y + 14);
+        currentX += valueWidth + gap;
+        
+        if (this.widthWidget && this.heightWidget) {
+            const newW = Math.round(this.widthWidget.value * scaleFactor);
+            const newH = Math.round(this.heightWidget.value * scaleFactor);
+            ctx.fillStyle = "#888";
+            ctx.font = "11px Arial";
+            ctx.textAlign = "left";
+            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
+        }
+        currentX += previewWidth + gap;
+        
+        this.controls.megapixelsRadio = { x: currentX, y: y + 5, w: radioWidth, h: 18 };
+        this.drawRadioButton(ctx, currentX, y + 5, 18, props.rescaleMode === "megapixels", this.hoverElement === 'megapixelsRadio');
+    }
+
+    drawAutoDetectSection(ctx, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 20;
+        const availableWidth = node.size[0] - margin * 2;
+        const gap = 8;
+        
+        const toggleWidth = 140;
+        const checkboxWidth = 18;
+        const checkboxLabelWidth = 30;
+        const autoFitWidth = availableWidth - toggleWidth - checkboxWidth - checkboxLabelWidth - (gap * 2);
+
+        let currentX = margin;
+
+        this.controls.autoDetectToggle = { x: currentX, y, w: toggleWidth, h: 28 };
+        this.drawToggle(ctx, currentX, y, toggleWidth, 28, props.autoDetect, 
+                       props.autoDetect ? "Auto-detect ON" : "Auto-detect OFF",
+                       this.hoverElement === 'autoDetectToggle');
+        currentX += toggleWidth + gap;
+        
+        this.controls.autoFitBtn = { x: currentX, y, w: autoFitWidth, h: 28 };
+        const btnEnabled = this.detectedDimensions && props.selectedCategory;
+        this.drawButton(ctx, currentX, y, autoFitWidth, 28, "🎯 Auto-fit", this.hoverElement === 'autoFitBtn', !btnEnabled);
+        currentX += autoFitWidth + gap;
+        
+        this.controls.autoFitCheckbox = { x: currentX, y: y + 5, w: checkboxWidth, h: 18 };
+        this.drawCheckbox(ctx, currentX, y + 5, checkboxWidth, props.autoFitOnChange, this.hoverElement === 'autoFitCheckbox', !btnEnabled);
+        
+        ctx.fillStyle = btnEnabled ? "#ddd" : "#777";
+        ctx.font = "11px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Auto", currentX + checkboxWidth + 4, y + 14);
+        
+        if (props.autoDetect && this.detectedDimensions) {
+            ctx.fillStyle = "#5f5";
+            ctx.font = "12px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(`Detected: ${this.detectedDimensions.width}×${this.detectedDimensions.height}`,
+                        node.size[0] / 2, y + 45);
+            return 60;
+        }
+        return 30;
+    }
+    
+    drawPresetSection(ctx, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 20;
+        const availableWidth = node.size[0] - margin * 2;
+        let currentHeight = 30;
+        const gap = 8;
+        let currentX = margin;
+
+        if (props.selectedCategory) {
+            const checkboxWidth = 18;
+            const checkboxLabelWidth = 30;
+            const checkboxTotalWidth = checkboxWidth + checkboxLabelWidth + gap;
+
+            const dropdownsWidth = availableWidth - checkboxTotalWidth;
+            const categoryDDWidth = dropdownsWidth * 0.45;
+            const presetDDWidth = dropdownsWidth * 0.55;
+
+            this.controls.categoryDropdown = { x: currentX, y, w: categoryDDWidth, h: 28 };
+            const categoryText = props.selectedCategory || "Category...";
+            this.drawDropdown(ctx, currentX, y, categoryDDWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
+            currentX += categoryDDWidth + gap;
+
+            this.controls.presetDropdown = { x: currentX, y, w: presetDDWidth, h: 28 };
+            const presetText = props.selectedPreset || "Select Preset...";
+            this.drawDropdown(ctx, currentX, y, presetDDWidth, 28, presetText, this.hoverElement === 'presetDropdown');
+            currentX += presetDDWidth + gap;
+            
+            this.controls.customCalcCheckbox = { x: currentX, y: y + 5, w: checkboxWidth, h: 18 };
+            this.drawCheckbox(ctx, currentX, y + 5, checkboxWidth, props.useCustomCalc, this.hoverElement === 'customCalcCheckbox');
+            
+            ctx.fillStyle = "#ddd";
+            ctx.font = "11px Arial";
+            ctx.fillText("Calc", currentX + checkboxWidth + 4, y + 14);
+        } else {
+            // Category dropdown takes full width
+            this.controls.categoryDropdown = { x: currentX, y, w: availableWidth, h: 28 };
+            const categoryText = props.selectedCategory || "Category...";
+            this.drawDropdown(ctx, currentX, y, availableWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
+        }
+
+        if (props.useCustomCalc && props.selectedCategory) {
+            const messageY = y + 40;
+            this.drawInfoMessage(ctx, messageY);
+            currentHeight += 25;
+        }
+
+        return currentHeight;
+    }
+    
+    drawInfoMessage(ctx, y) {
+        const node = this.node;
+        const props = node.properties;
+        const category = props.selectedCategory;
+        
+        let message = "";
+        if (category === "SDXL" && props.useCustomCalc) {
+            message = "💡 SDXL Mode: Using officially supported resolutions";
+        } else if (category === "Flux" && props.useCustomCalc) {
+            message = "💡 Flux Mode: 32px increments, 320-2560px, max 4.0 MP";
+        } else if (category === "WAN" && props.useCustomCalc && this.widthWidget && this.heightWidget) {
+            const pixels = this.widthWidget.value * this.heightWidget.value;
+            const model = pixels < 600000 ? "480p" : "720p";
+            message = `💡 WAN Mode: Suggesting ${model} model, 320p-820p range`;
+        }
+        
+        if (message) {
+            ctx.fillStyle = "rgba(250, 165, 90, 0.15)";
+            ctx.strokeStyle = "rgba(250, 165, 90, 0.5)";
+            ctx.beginPath();
+            ctx.roundRect(20, y - 10, node.size[0] - 40, 20, 4);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = "#fa5";
+            ctx.font = "11px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(message, node.size[0] / 2, y);
+        }
+    }
+    
+    drawSliderMode(ctx, y) {
+        const node = this.node;
+        const props = node.properties;
+        const margin = 10;
+        const w = node.size[0] - margin * 2;
+        
+        if (!this.widthWidget || !this.heightWidget) return;
+        
+        ctx.fillStyle = "#ccc";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Width:", margin, y);
+        
+        this.controls.widthSlider = { x: margin, y: y + 10, w, h: 25 };
+        this.drawSlider(ctx, margin, y + 10, w, 25, this.widthWidget.value, props.w_min, props.w_max, props.w_step);
+        
+        ctx.textAlign = "right";
+        ctx.fillText(this.widthWidget.value.toString(), node.size[0] - margin, y + 25);
+        
+        y += 45;
+        ctx.textAlign = "left";
+        ctx.fillText("Height:", margin, y);
+        
+        this.controls.heightSlider = { x: margin, y: y + 10, w, h: 25 };
+        this.drawSlider(ctx, margin, y + 10, w, 25, this.heightWidget.value, props.h_min, props.h_max, props.h_step);
+        
+        ctx.textAlign = "right";
+        ctx.fillText(this.heightWidget.value.toString(), node.size[0] - margin, y + 25);
+    }
+    
+    // Drawing primitives
+    drawButton(ctx, x, y, w, h, text, hover = false, disabled = false) {
+        const grad = ctx.createLinearGradient(x, y, x, y + h);
+        if (disabled) {
+            grad.addColorStop(0, "#4a4a4a");
+            grad.addColorStop(1, "#404040");
+        } else if (hover) {
+            grad.addColorStop(0, "#6a6a6a");
+            grad.addColorStop(1, "#606060");
+        } else {
+            grad.addColorStop(0, "#5a5a5a");
+            grad.addColorStop(1, "#505050");
+        }
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = disabled ? "#333" : hover ? "#777" : "#222";
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 5);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.fillStyle = disabled ? "#888" : "#ddd";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+    }
+    
+    drawSlider(ctx, x, y, w, h, value, min, max, step) {
+        ctx.fillStyle = "#222";
+        ctx.beginPath();
+        ctx.roundRect(x, y + h / 2 - 3, w, 6, 3);
+        ctx.fill();
+        
+        const pos = (value - min) / (max - min);
+        const knobX = x + w * pos;
+        const knobY = y + h / 2;
+
+        const grad = ctx.createLinearGradient(knobX - 7, knobY - 7, knobX + 7, knobY + 7);
+        grad.addColorStop(0, "#e0e0e0");
+        grad.addColorStop(1, "#c0c0c0");
+        ctx.fillStyle = grad;
+        ctx.strokeStyle = "#111";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+    }
+    
+    drawDropdown(ctx, x, y, w, h, text, hover = false) {
+        this.drawButton(ctx, x, y, w, h, "", hover);
+
+        ctx.fillStyle = "#ddd";
+        ctx.font = "11px Arial";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x + 5, y, w - 25, h);
+        ctx.clip();
+        ctx.fillText(text, x + 8, y + h / 2 + 1);
+        ctx.restore();
+        
+        ctx.fillStyle = "#aaa";
+        ctx.beginPath();
+        ctx.moveTo(x + w - 18, y + h / 2 - 3);
+        ctx.lineTo(x + w - 10, y + h / 2 + 3);
+        ctx.lineTo(x + w - 2, y + h / 2 - 3);
+        ctx.fill();
+    }
+    
+    drawRadioButton(ctx, x, y, size, checked, hover = false) {
+        ctx.strokeStyle = hover ? "#ccc" : "#999";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size / 2 - 2, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        if (checked) {
+            ctx.fillStyle = "#5af";
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2 - 6, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+    }
+    
+    drawCheckbox(ctx, x, y, size, checked, hover = false, disabled = false) {
+        ctx.strokeStyle = disabled ? "#555" : hover ? "#ccc" : "#999";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x, y, size, size, 4);
+        ctx.stroke();
+        
+        if (checked) {
+            ctx.fillStyle = disabled ? "#666" : "#5af";
+            ctx.beginPath();
+            ctx.moveTo(x + 4, y + size / 2);
+            ctx.lineTo(x + size / 2 - 1, y + size - 4);
+            ctx.lineTo(x + size - 4, y + 4);
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+    }
+    
+    drawToggle(ctx, x, y, w, h, isOn, text, hover = false) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, h / 2);
+        
+        const grad = ctx.createLinearGradient(x, y, x + w, y);
+        if (isOn) {
+            grad.addColorStop(0, "#3a76d6");
+            grad.addColorStop(1, "#5a96f6");
+        } else {
+            grad.addColorStop(0, "#555");
+            grad.addColorStop(1, "#666");
+        }
+        ctx.fillStyle = grad;
+        ctx.fill();
+        
+        ctx.strokeStyle = hover ? "#888" : "#222";
+        ctx.stroke();
+        
+        const knobX = isOn ? x + w - h + 2 : x + 2;
+        const knobGrad = ctx.createLinearGradient(knobX, y, knobX, y + h - 4);
+        knobGrad.addColorStop(0, "#f0f0f0");
+        knobGrad.addColorStop(1, "#d0d0d0");
+        ctx.fillStyle = knobGrad;
+        
+        ctx.beginPath();
+        ctx.arc(knobX + (h-4)/2, y + h/2, (h-6)/2, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 11px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+    }
+    
+    // Mouse handling methods
+    handleMouseDown(e, pos, canvas) {
+        const node = this.node;
+        const props = node.properties;
+        
+        const relX = e.canvasX - node.pos[0];
+        const relY = e.canvasY - node.pos[1];
+        
+        if (props.mode === "Manual") {
+            const c2d = this.controls.canvas2d;
+            if (c2d && this.isPointInControl(relX, relY, c2d)) {
+                node.capture = 'canvas2d';
+                node.captureInput(true);
+                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey);
+                return true;
+            }
+        }
+        
+        for (const key in this.controls) {
+            if (this.isPointInControl(relX, relY, this.controls[key])) {
+                if (key.endsWith('Btn')) {
+                    this.handleButtonClick(key);
+                    return true;
+                }
+                if (key.endsWith('Slider')) {
+                    node.capture = key;
+                    node.captureInput(true);
+                    this.updateSliderValue(key, relX - this.controls[key].x, this.controls[key].w);
+                    return true;
+                }
+                if (key.endsWith('Dropdown')) {
+                    this.showDropdownMenu(key, e);
+                    return true;
+                }
+                if (key.endsWith('Toggle')) {
+                    this.handleToggleClick(key);
+                    return true;
+                }
+                if (key.endsWith('Checkbox')) {
+                    this.handleCheckboxClick(key);
+                    return true;
+                }
+                if (key.endsWith('Radio')) {
+                    this.handleRadioClick(key);
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    handleMouseMove(e, pos, canvas) {
+        const node = this.node;
+        
+        if (!node.capture) return false;
+        
+        // If the mouse button is released, but we are still capturing, handle it as a mouse up event
+        if (e.buttons === 0) {
+            this.handleMouseUp(e);
+            return true;
+        }
+        
+        const relX = e.canvasX - node.pos[0];
+        const relY = e.canvasY - node.pos[1];
+        
+        if (node.capture === 'canvas2d') {
+            const c2d = this.controls.canvas2d;
+            if (c2d) {
+                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey);
+            }
+            return true;
+        }
+        
+        if (node.capture.endsWith('Slider')) {
+            const control = this.controls[node.capture];
+            if (control) {
+                this.updateSliderValue(node.capture, relX - control.x, control.w);
+            }
+            return true;
+        }
+        
+        return false;
+    }
+    
+    handleMouseHover(e, pos, canvas) {
+        const node = this.node;
+        const relX = e.canvasX - node.pos[0];
+        const relY = e.canvasY - node.pos[1];
+        
+        let newHover = null;
+        
+        for (const element in this.controls) {
+            if (this.isPointInControl(relX, relY, this.controls[element])) {
+                newHover = element;
+                break;
+            }
+        }
+        
+        if (newHover !== this.hoverElement) {
+            this.hoverElement = newHover;
+            app.graph.setDirtyCanvas(true);
+        }
+    }
+    
+    handleMouseUp(e) {
+        const node = this.node;
+        
+        if (!node.capture) return false;
+        
+        node.capture = false;
+        node.captureInput(false);
+        
+        if (this.widthWidget && this.heightWidget) {
+            this.widthWidget.value = node.properties.valueX;
+            this.heightWidget.value = node.properties.valueY;
+        }
+        
+        this.updateRescaleValue();
+        
+        return true;
+    }
+    
+    handlePropertyChange(property) {
+        const node = this.node;
+        if (!node.configured) return;
+        
+        node.intpos.x = (node.properties.valueX - node.properties.minX) / 
+                       (node.properties.maxX - node.properties.minX);
+        node.intpos.y = (node.properties.valueY - node.properties.minY) / 
+                       (node.properties.maxY - node.properties.minY);
+        
+        node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
+        node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
+        
+        app.graph.setDirtyCanvas(true);
+    }
+    
+    handleButtonClick(buttonName) {
+        const actions = {
+            swapBtn: () => this.handleSwap(),
+            snapBtn: () => this.handleSnap(),
+            scaleBtn: () => this.handleScale(),
+            resolutionBtn: () => this.handleResolutionScale(),
+            megapixelsBtn: () => this.handleMegapixelsScale(),
+            autoFitBtn: () => this.handleAutoFit()
+        };
+        actions[buttonName]?.();
+    }
+
+    handleToggleClick(toggleName) {
+        const props = this.node.properties;
+        if (toggleName === 'autoDetectToggle') {
+            props.autoDetect = !props.autoDetect;
+            if (props.autoDetect) this.startAutoDetect();
+            else this.stopAutoDetect();
+            const widget = this.node.widgets?.find(w => w.name === 'auto_detect');
+            if (widget) widget.value = props.autoDetect;
+            app.graph.setDirtyCanvas(true);
+        }
+    }
+
+    handleCheckboxClick(checkboxName) {
+        const props = this.node.properties;
+        if (checkboxName === 'autoFitCheckbox' && this.detectedDimensions && props.selectedCategory) {
+            props.autoFitOnChange = !props.autoFitOnChange;
+        } else if (checkboxName === 'customCalcCheckbox') {
+            props.useCustomCalc = !props.useCustomCalc;
+        }
+        app.graph.setDirtyCanvas(true);
+    }
+
+    handleRadioClick(radioName) {
+        const props = this.node.properties;
+        const radioMap = {
+            upscaleRadio: 'manual',
+            resolutionRadio: 'resolution',
+            megapixelsRadio: 'megapixels'
+        };
+        props.rescaleMode = radioMap[radioName];
+        this.updateRescaleValue();
+        app.graph.setDirtyCanvas(true);
+    }
+    
+    // Value update methods
+    updateCanvasValue(x, y, w, h, shiftKey) {
+        const node = this.node;
+        const props = node.properties;
+        
+        let vX = Math.max(0, Math.min(1, x / w));
+        let vY = Math.max(0, Math.min(1, 1 - y / h));
+        
+        if (shiftKey !== props.snap) {
+            let sX = props.stepX / (props.maxX - props.minX);
+            let sY = props.stepY / (props.maxY - props.minY);
+            vX = Math.round(vX / sX) * sX;
+            vY = Math.round(vY / sY) * sY;
+        }
+        
+        node.intpos.x = vX;
+        node.intpos.y = vY;
+        
+        let newX = props.minX + (props.maxX - props.minX) * vX;
+        let newY = props.minY + (props.maxY - props.minY) * vY;
+        
+        const rnX = Math.pow(10, props.decimalsX);
+        const rnY = Math.pow(10, props.decimalsY);
+        newX = Math.round(rnX * newX) / rnX;
+        newY = Math.round(rnY * newY) / rnY;
+        
+        props.valueX = newX;
+        props.valueY = newY;
+        
+        if (this.widthWidget && this.heightWidget) {
+            this.widthWidget.value = newX;
+            this.heightWidget.value = newY;
+        }
+        
+        this.updateRescaleValue();
+        app.graph.setDirtyCanvas(true);
+    }
+    
+    updateSliderValue(sliderName, x, w) {
+        const props = this.node.properties;
+        let value = Math.max(0, Math.min(1, x / w));
+        
+        const sliderConfig = {
+            snapSlider: { prop: 'snapValue', min: props.snap_min, max: props.snap_max, step: props.snap_step },
+            scaleSlider: { prop: 'upscaleValue', min: props.s_min, max: props.s_max, step: props.s_step, updateOn: 'manual' },
+            megapixelsSlider: { prop: 'targetMegapixels', min: props.mp_min, max: props.mp_max, step: props.mp_step, updateOn: 'megapixels' },
+            widthSlider: { prop: 'valueX', min: props.w_min, max: props.w_max, step: props.w_step },
+            heightSlider: { prop: 'valueY', min: props.h_min, max: props.h_max, step: props.h_step }
+        };
+
+        const config = sliderConfig[sliderName];
+        if (config) {
+            let newValue = config.min + value * (config.max - config.min);
+            props[config.prop] = Math.round(newValue / config.step) * config.step;
+            
+            if (sliderName === 'scaleSlider' || sliderName === 'megapixelsSlider') {
+                 props[config.prop] = parseFloat(props[config.prop].toFixed(1));
+            }
+
+            if (config.updateOn && props.rescaleMode === config.updateOn) {
+                this.updateRescaleValue();
+            }
+
+            if(sliderName === 'widthSlider' && this.widthWidget) this.widthWidget.value = props.valueX;
+            if(sliderName === 'heightSlider' && this.heightWidget) this.heightWidget.value = props.valueY;
+
+            if(sliderName.includes('Slider')) this.handlePropertyChange();
+        }
+        
+        app.graph.setDirtyCanvas(true);
+    }
+    
+    showDropdownMenu(dropdownName, e) {
+        const props = this.node.properties;
+        let items, callback;
+        
+        if (dropdownName === 'categoryDropdown') {
+            items = Object.keys(this.presetCategories);
+            callback = (value) => {
+                props.selectedCategory = value;
+                props.selectedPreset = null;
+                app.graph.setDirtyCanvas(true);
+            };
+        } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
+            const presets = this.presetCategories[props.selectedCategory];
+            items = Object.keys(presets).map(name => `${name} (${presets[name].width}×${presets[name].height})`);
+            callback = (value) => this.applyPreset(props.selectedCategory, value.split(' (')[0]);
+        } else if (dropdownName === 'resolutionDropdown') {
+            items = this.resolutions;
+            callback = (value) => {
+                props.targetResolution = parseInt(value);
+                if (props.rescaleMode === 'resolution') this.updateRescaleValue();
+                app.graph.setDirtyCanvas(true);
+            };
+        }
+        
+        if (items?.length) {
+            new LiteGraph.ContextMenu(items, { event: e.originalEvent || e, callback });
+        }
+    }
+    
+    // Action handlers
+    handleSwap() {
+        if (this.widthWidget && this.heightWidget) {
+            [this.widthWidget.value, this.heightWidget.value] = [this.heightWidget.value, this.widthWidget.value];
+            this.node.properties.valueX = this.widthWidget.value;
+            this.node.properties.valueY = this.heightWidget.value;
+            this.handlePropertyChange();
+            this.updateRescaleValue();
+        }
+    }
+    
+    handleSnap() {
+        if (this.widthWidget && this.heightWidget) {
+            const snap = this.node.properties.snapValue;
+            this.widthWidget.value = Math.round(this.widthWidget.value / snap) * snap;
+            this.heightWidget.value = Math.round(this.heightWidget.value / snap) * snap;
+            this.applyDimensionChange();
+        }
+    }
+    
+    handleScale() {
+        if (this.widthWidget && this.heightWidget) {
+            const scale = this.node.properties.upscaleValue;
+            this.widthWidget.value = Math.round(this.widthWidget.value * scale);
+            this.heightWidget.value = Math.round(this.heightWidget.value * scale);
+            this.node.properties.upscaleValue = 1.0;
+            this.applyDimensionChange();
+        }
+    }
+
+    handleResolutionScale() {
+        if (this.widthWidget && this.heightWidget) {
+            const scale = this.calculateResolutionScale(this.node.properties.targetResolution);
+            this.widthWidget.value = Math.round(this.widthWidget.value * scale);
+            this.heightWidget.value = Math.round(this.heightWidget.value * scale);
+            this.applyDimensionChange();
+        }
+    }
+
+    handleMegapixelsScale() {
+        if (this.widthWidget && this.heightWidget) {
+            const scale = this.calculateMegapixelsScale(this.node.properties.targetMegapixels);
+            this.widthWidget.value = Math.round(this.widthWidget.value * scale);
+            this.heightWidget.value = Math.round(this.heightWidget.value * scale);
+            this.applyDimensionChange();
+        }
+    }
+    
+    handleAutoFit() {
+        if (!this.detectedDimensions) return;
+        
+        const props = this.node.properties;
+        const category = props.selectedCategory;
+        if (!category) return;
+        
+        const presets = this.presetCategories[category];
+        let closestPreset = null;
+        let closestDistance = Infinity;
+        
+        const detectedAspect = this.detectedDimensions.width / this.detectedDimensions.height;
+        const detectedPixels = this.detectedDimensions.width * this.detectedDimensions.height;
+        
+        Object.entries(presets).forEach(([presetName, preset]) => {
+            // Check both original and flipped orientations
+            const orientations = [
+                { width: preset.width, height: preset.height, flipped: false },
+                { width: preset.height, height: preset.width, flipped: true }
+            ];
+            
+            orientations.forEach(orientation => {
+                const presetAspect = orientation.width / orientation.height;
+                const presetPixels = orientation.width * orientation.height;
+                
+                // Calculate distance based on aspect ratio and total pixels
+                const aspectDiff = Math.abs(detectedAspect - presetAspect);
+                const pixelDiff = Math.abs(Math.log(detectedPixels / presetPixels));
+                const distance = aspectDiff + pixelDiff * 0.5;
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    const orientationSuffix = orientation.flipped ? ' (flipped)' : '';
+                    closestPreset = { 
+                        name: presetName + orientationSuffix, 
+                        width: orientation.width, 
+                        height: orientation.height,
+                        originalName: presetName
+                    };
+                }
+            });
+        });
+        
+        if (closestPreset) {
+            // Apply the closest preset
+            let finalWidth = closestPreset.width;
+            let finalHeight = closestPreset.height;
+            
+            // Apply category-specific scaling if custom calc is enabled
+            if (props.useCustomCalc) {
+                if (category === 'WAN') {
+                    // For WAN mode, scale to optimal "p" resolution based on detected dimensions
+                    const wanResult = this.applyWANCalculation(this.detectedDimensions.width, this.detectedDimensions.height);
+                    finalWidth = wanResult.width;
+                    finalHeight = wanResult.height;
+                    log.debug(`WAN scaling applied: ${this.detectedDimensions.width}x${this.detectedDimensions.height} → ${finalWidth}x${finalHeight}`);
+                } else if (category === 'Flux') {
+                    // For Flux mode, apply constraints while maintaining aspect ratio
+                    const fluxResult = this.applyFluxCalculation(closestPreset.width, closestPreset.height);
+                    finalWidth = fluxResult.width;
+                    finalHeight = fluxResult.height;
+                    log.debug(`Flux constraints applied: ${closestPreset.width}x${closestPreset.height} → ${finalWidth}x${finalHeight}`);
+                }
+                // For other categories with custom calc, use the preset as-is
+            }
+            
+            // Apply the final dimensions
+            if (this.widthWidget && this.heightWidget) {
+                this.widthWidget.value = finalWidth;
+                this.heightWidget.value = finalHeight;
+                
+                // Mark that dimensions were manually set by auto-fit
+                this.manuallySetByAutoFit = true;
+                
+                // Update the preset dropdown - use original name for dropdown selection
+                props.selectedPreset = closestPreset.originalName;
+                
+                // Update node properties
+                props.valueX = finalWidth;
+                props.valueY = finalHeight;
+                
+                // Update UI
+                this.handlePropertyChange();
+                this.updateRescaleValue();
+                
+                log.debug(`Auto-fitted to preset: ${closestPreset.name} with final resolution: ${finalWidth}x${finalHeight}`);
+            }
+        }
+    }
+    
+    applyDimensionChange() {
+        const props = this.node.properties;
+        let { value: width } = this.widthWidget;
+        let { value: height } = this.heightWidget;
+
+        if (props.useCustomCalc && props.selectedCategory) {
+            ({ width, height } = this.applyCustomCalculation(width, height, props.selectedCategory));
+        }
+
+        this.widthWidget.value = Math.max(props.minX, Math.min(props.maxX, width));
+        this.heightWidget.value = Math.max(props.minY, Math.min(props.maxY, height));
+
+        props.valueX = this.widthWidget.value;
+        props.valueY = this.heightWidget.value;
+        
+        this.handlePropertyChange();
+        this.updateRescaleValue();
+    }
+
+    applyPreset(category, presetName) {
+        const props = this.node.properties;
+        const preset = this.presetCategories[category]?.[presetName];
+        if (!preset) return;
+        
+        if (this.widthWidget && this.heightWidget) {
+            this.widthWidget.value = preset.width;
+            this.heightWidget.value = preset.height;
+            props.selectedPreset = presetName;
+            this.applyDimensionChange();
+        }
+    }
+    
+    // Calculation methods
+    applyCustomCalculation(width, height, category) {
+        const calculations = {
+            Flux: () => this.applyFluxCalculation(width, height),
+            WAN: () => this.applyWANCalculation(width, height),
+        };
+        return calculations[category] ? calculations[category]() : { width, height };
+    }
+
+    getClosestPResolution(width, height) {
+        const pValue = Math.sqrt(width * height * 9 / 16);
+        return `(${Math.round(pValue)}p)`;
+    }
+    
+    applyFluxCalculation(width, height) {
+        let newWidth = Math.round(width / 32) * 32;
+        let newHeight = Math.round(height / 32) * 32;
+        
+        const currentMP = (newWidth * newHeight) / 1000000;
+        if (currentMP > 4.0) {
+            const scale = Math.sqrt(4.0 / currentMP);
+            newWidth = Math.round((newWidth * scale) / 32) * 32;
+            newHeight = Math.round((newHeight * scale) / 32) * 32;
+        }
+        
+        return { 
+            width: Math.max(320, Math.min(2560, newWidth)),
+            height: Math.max(320, Math.min(2560, newHeight))
+        };
+    }
+    
+    applyWANCalculation(width, height) {
+        const targetPixels = Math.max(182080, Math.min(1195560, width * height));
+        const aspect = width / height;
+        let targetHeight = Math.sqrt(targetPixels / aspect);
+        let targetWidth = targetHeight * aspect;
+        
+        return { 
+            width: Math.round(targetWidth / 16) * 16,
+            height: Math.round(targetHeight / 16) * 16
+        };
+    }
+    
+    calculateResolutionScale(targetP) {
+        if (!this.widthWidget || !this.heightWidget) return 1.0;
+        const targetPixels = (targetP * (16 / 9)) * targetP;
+        const currentPixels = this.widthWidget.value * this.heightWidget.value;
+        return Math.sqrt(targetPixels / currentPixels);
+    }
+    
+    calculateMegapixelsScale(targetMP) {
+        if (!this.widthWidget || !this.heightWidget) return 1.0;
+        const targetPixels = targetMP * 1000000;
+        const currentPixels = this.widthWidget.value * this.heightWidget.value;
+        return Math.sqrt(targetPixels / currentPixels);
+    }
+    
+    updateRescaleValue() {
+        const props = this.node.properties;
+        const modeCalculations = {
+            manual: () => props.upscaleValue,
+            resolution: () => this.calculateResolutionScale(props.targetResolution),
+            megapixels: () => this.calculateMegapixelsScale(props.targetMegapixels),
+        };
+        const value = modeCalculations[props.rescaleMode]?.() || 1.0;
+        
+        props.rescaleValue = value;
+        if (this.rescaleValueWidget) this.rescaleValueWidget.value = value;
+        if (this.rescaleModeWidget) this.rescaleModeWidget.value = props.rescaleMode;
+    }
+    
+    // Auto-detect methods
+    startAutoDetect() {
+        if (this.dimensionCheckInterval) return;
+        this.checkForImageDimensions();
+        this.dimensionCheckInterval = setInterval(() => this.checkForImageDimensions(), 1000);
+    }
+    
+    stopAutoDetect() {
+        if (this.dimensionCheckInterval) {
+            clearInterval(this.dimensionCheckInterval);
+            this.dimensionCheckInterval = null;
+        }
+    }
+    
+    async checkForImageDimensions() {
+        const node = this.node;
+        try {
+            const inputLink = node.inputs?.[0]?.link;
+            if (!inputLink) {
+                this.detectedDimensions = null;
+                return;
+            }
+            
+            const link = app.graph.links[inputLink];
+            if (link) {
+                const sourceNode = app.graph.getNodeById(link.origin_id);
+                const img = sourceNode?.imgs?.[0];
+                if (img && (!this.detectedDimensions || this.detectedDimensions.width !== img.naturalWidth || this.detectedDimensions.height !== img.naturalHeight)) {
+                    this.detectedDimensions = { width: img.naturalWidth, height: img.naturalHeight };
+                    this.manuallySetByAutoFit = false;
+                    
+                    if (node.properties.autoDetect && this.widthWidget && this.heightWidget) {
+                        this.widthWidget.value = this.detectedDimensions.width;
+                        this.heightWidget.value = this.detectedDimensions.height;
+                        this.applyDimensionChange();
+                    }
+                    
+                    if (node.properties.autoFitOnChange && node.properties.selectedCategory) {
+                        this.handleAutoFit();
+                    }
+                    app.graph.setDirtyCanvas(true);
+                }
+            }
+        } catch (error) {
+            log.error('Error checking for image dimensions:', error);
+        }
+    }
+    
+    isPointInControl(x, y, control) {
+        if (!control) return false;
+        return x >= control.x && x <= control.x + control.w &&
+               y >= control.y && y <= control.y + control.h;
+    }
+}
+
+// Register the extension
 app.registerExtension({
     name: "azResolutionMaster",
     async beforeRegisterNodeDef(nodeType, nodeData, _app) {
         if (nodeData.name === "ResolutionMaster") {
-            // Set default widget options in nodeData to match properties
-            nodeData.input.required.width[1].min = 64;
-            nodeData.input.required.width[1].max = 4096;
-            nodeData.input.required.width[1].step = 128;
-
-            nodeData.input.required.height[1].min = 64;
-            nodeData.input.required.height[1].max = 4096;
-            nodeData.input.required.height[1].step = 128;
-
             const onNodeCreated = nodeType.prototype.onNodeCreated;
-            nodeType.prototype.onNodeCreated = function () {
-                if (onNodeCreated) onNodeCreated.apply(this, []);
-
-                // Set a minimum size for the node to prevent UI cutoff
-                this.min_size = [420, 520];
-
-                // Initialize properties like original Slider2D
-                this.properties = this.properties || {};
-                this.properties.mode = this.properties.mode ?? "Manual";
-                this.properties.valueX = this.properties.valueX ?? 512;
-                this.properties.valueY = this.properties.valueY ?? 512;
-                this.properties.minX = this.properties.minX ?? 64;
-                this.properties.maxX = this.properties.maxX ?? 4096;
-                this.properties.stepX = this.properties.stepX ?? 128;
-                this.properties.minY = this.properties.minY ?? 64;
-                this.properties.maxY = this.properties.maxY ?? 4096;
-                this.properties.stepY = this.properties.stepY ?? 128;
-                this.properties.decimalsX = this.properties.decimalsX ?? 0;
-                this.properties.decimalsY = this.properties.decimalsY ?? 0;
-                this.properties.snap = this.properties.snap ?? true;
-                this.properties.dots = this.properties.dots ?? true;
-                this.properties.frame = this.properties.frame ?? true;
-                // Manual Sliders mode properties
-                this.properties.w_min = this.properties.w_min ?? 64;
-                this.properties.w_max = this.properties.w_max ?? 4096;
-                this.properties.w_step = this.properties.w_step ?? 64;
-                this.properties.h_min = this.properties.h_min ?? 64;
-                this.properties.h_max = this.properties.h_max ?? 4096;
-                this.properties.h_step = this.properties.h_step ?? 64;
-
-                // Internal state
-                this.intpos = { x: 0.5, y: 0.5 };
-                this.capture = false;
-                this.configured = false;
-
-                const node = this;
-                const fontsize = LiteGraph.NODE_SUBTEXT_SIZE;
-                const shiftLeft = 10;
-                const shiftRight = 10; // Reduced since we're not showing values on the right anymore
-
-                // Clear output names for cleaner display (like mxSlider2D)
-                this.outputs[0].name = this.outputs[0].localized_name = "";
-                this.outputs[1].name = this.outputs[1].localized_name = "";
-                this.outputs[2].name = this.outputs[2].localized_name = "";
-
-                // Add onDrawForeground to display live values like mxSlider2D
-                this.onDrawForeground = function(ctx) {
-                    if (this.flags.collapsed) return false;
-
-                    const fontsize = LiteGraph.NODE_SUBTEXT_SIZE;
-                    // Outputs are at the top, starting after the title
-                    const outputStartY = LiteGraph.NODE_TITLE_HEIGHT -25;
-                    
-                    // Display width value next to first output
-                    ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR || "#aeaeae";
-                    ctx.font = fontsize + "px Arial";
-                    ctx.textAlign = "left";
-                    
-                    // Position text to the right of the output slots
-                    const textX = this.size[0] - 45;
-                    
-                    // Width value next to first output
-                    ctx.fillText(
-                        widthWidget.value.toString(),
-                        textX,
-                        outputStartY + LiteGraph.NODE_SLOT_HEIGHT * 0 + fontsize
-                    );
-                    
-                    // Height value next to second output
-                    ctx.fillText(
-                        heightWidget.value.toString(),
-                        textX,
-                        outputStartY + LiteGraph.NODE_SLOT_HEIGHT * 1 + fontsize
-                    );
-                    
-                    // Rescale factor next to third output (with 2 decimal places)
-                    const rescaleValue = rescaleValueWidget ? rescaleValueWidget.value : 1.0;
-                    ctx.fillText(
-                        rescaleValue.toFixed(2),
-                        textX,
-                        outputStartY + LiteGraph.NODE_SLOT_HEIGHT * 2 + fontsize
-                    );
-                };
-
-                const widthWidget = this.widgets.find(w => w.name === 'width');
-                const heightWidget = this.widgets.find(w => w.name === 'height');
-
-                // Hide standard backend sliders like in mxSlider
-                widthWidget.hidden = true;
-                widthWidget.type = "hidden";
-                widthWidget.computeSize = () => [0, -4];
-                heightWidget.hidden = true;
-                heightWidget.type = "hidden";
-                heightWidget.computeSize = () => [0, -4];
-
-                // Hide mode widget
-                const modeWidgetToHide = this.widgets.find(w => w.name === 'mode');
-                if (modeWidgetToHide) {
-                    modeWidgetToHide.hidden = true;
-                    modeWidgetToHide.type = "hidden";
-                    modeWidgetToHide.computeSize = () => [0, -4];
-                }
-
-                // Hide auto_detect widget
-                const autoDetectWidgetToHide = this.widgets.find(w => w.name === 'auto_detect');
-                if (autoDetectWidgetToHide) {
-                    autoDetectWidgetToHide.hidden = true;
-                    autoDetectWidgetToHide.type = "hidden";
-                    autoDetectWidgetToHide.computeSize = () => [0, -4];
-                }
-
-                // Hide rescale_value widget
-                const rescaleValueWidgetToHide = this.widgets.find(w => w.name === 'rescale_value');
-                if (rescaleValueWidgetToHide) {
-                    rescaleValueWidgetToHide.hidden = true;
-                    rescaleValueWidgetToHide.type = "hidden";
-                    rescaleValueWidgetToHide.computeSize = () => [0, -4];
-                }
-
-                // Set widget options to prevent undefined errors
-                widthWidget.options = {
-                    min: this.properties.minX,
-                    max: this.properties.maxX,
-                    step: this.properties.stepX,
-                    precision: this.properties.decimalsX
-                };
-
-                heightWidget.options = {
-                    min: this.properties.minY,
-                    max: this.properties.maxY,
-                    step: this.properties.stepY,
-                    precision: this.properties.decimalsY
-                };
-
-                // Add hidden widgets for rescale mode and value
-                if (!this.widgets.find(w => w.name === 'rescale_mode')) {
-                    this.addWidget("text", "rescale_mode", "resolution", null, { serialize: true });
-                    const rescaleModeWidget = this.widgets.find(w => w.name === 'rescale_mode');
-                    if (rescaleModeWidget) {
-                        rescaleModeWidget.type = "hidden";
-                        rescaleModeWidget.hidden = true;
-                        rescaleModeWidget.computeSize = () => [0, -4];
-                    }
-                }
-
-                if (!this.widgets.find(w => w.name === 'rescale_value')) {
-                    this.addWidget("number", "rescale_value", 1.0, null, { serialize: true });
-                    const rescaleValueWidget = this.widgets.find(w => w.name === 'rescale_value');
-                    if (rescaleValueWidget) {
-                        rescaleValueWidget.type = "hidden";
-                        rescaleValueWidget.hidden = true;
-                        rescaleValueWidget.computeSize = () => [0, -4];
-                    }
-                }
-
-                const rescaleModeWidget = this.widgets.find(w => w.name === 'rescale_mode');
-                const rescaleValueWidget = this.widgets.find(w => w.name === 'rescale_value');
-
-                // Update intpos based on current values
-                this.intpos.x = (widthWidget.value - this.properties.minX) / (this.properties.maxX - this.properties.minX);
-                this.intpos.y = (heightWidget.value - this.properties.minY) / (this.properties.maxY - this.properties.minY);
-
-                // Create container for centering
-                const container = document.createElement('div');
-                container.className = 'uar-container';
-                container.style.overflow = 'visible'; // Changed from 'hidden' to 'visible' to prevent clipping
-
-                const baseWidth = 400;
-                const scalingContainer = document.createElement('div');
-                scalingContainer.style.width = `${baseWidth}px`;
-                scalingContainer.style.transformOrigin = 'top left';
-                container.appendChild(scalingContainer);
-
-                // Create HTML canvas element
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.className = 'uar-canvas';
-
-                scalingContainer.appendChild(canvas);
-                
-                // Observe content size changes to keep node height in sync
-                const resizeObserver = new ResizeObserver(() => {
-                    updateCanvasSize();
-                });
-                resizeObserver.observe(scalingContainer);
-                this._uarResizeObserver = resizeObserver;
-
-                const swapButton = document.createElement('button');
-                swapButton.textContent = '⇄ Swap';
-                swapButton.className = 'uar-button';
-                swapButton.title = 'Swap width and height dimensions';
-                // Visibility is now controlled by the primaryControls container
-
-                // Swap dimensions on click
-                swapButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    // Swap the widget values
-                    const tempValue = widthWidget.value;
-                    widthWidget.value = heightWidget.value;
-                    heightWidget.value = tempValue;
-
-                    updateWidgetValues();
-                    updateAllScaleLabels();
-                    updateCanvas();
-                });
-
-                // Create primary controls row
-                const primaryControls = document.createElement('div');
-                primaryControls.className = 'uar-flex-row';
-
-                primaryControls.appendChild(swapButton);
-
-                const snapButton = document.createElement('button');
-                snapButton.textContent = '⊞ Snap';
-                snapButton.className = 'uar-button';
-                snapButton.title = 'Snap dimensions to nearest multiple of snap value';
-
-                const snapSlider = document.createElement('input');
-                snapSlider.type = 'range';
-                snapSlider.min = '16';
-                snapSlider.max = '256';
-                snapSlider.step = '16';
-                snapSlider.value = '64';
-                snapSlider.className = 'uar-slider';
-                snapSlider.title = 'Snap step size';
-
-                // Create snap value label
-                const snapLabel = document.createElement('span');
-                snapLabel.textContent = '64';
-                snapLabel.className = 'uar-label';
-
-                // Update label when slider changes
-                snapSlider.addEventListener('input', (e) => {
-                    snapLabel.textContent = e.target.value;
-                });
-
-                // Snap values on click
-                snapButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const selectedCategory = categoryDropdown.value;
-                    const useCustomCalc = customCalcCheckbox.checked;
-                    
-                    // Use 32px for Flux with custom calc, otherwise use slider value
-                    const snapValue = (selectedCategory === 'Flux' && useCustomCalc) ? 32 : parseInt(snapSlider.value);
-
-                    // Round width to nearest snap value
-                    widthWidget.value = Math.round(widthWidget.value / snapValue) * snapValue;
-                    heightWidget.value = Math.round(heightWidget.value / snapValue) * snapValue;
-                    
-                    // Apply Flux limits if custom calc is enabled
-                    if (selectedCategory === 'Flux' && useCustomCalc) {
-                        const fluxMin = 320;
-                        const fluxMax = 2560;
-                        
-                        widthWidget.value = Math.max(fluxMin, Math.min(fluxMax, widthWidget.value));
-                        heightWidget.value = Math.max(fluxMin, Math.min(fluxMax, heightWidget.value));
-                    }
-
-                    ensureValuesWithinBounds();
-                    updateWidgetValues();
-                    updateAllScaleLabels();
-                    updateCanvas();
-                });
-
-                primaryControls.appendChild(snapButton);
-                primaryControls.appendChild(snapSlider);
-                primaryControls.appendChild(snapLabel);
-
-                scalingContainer.appendChild(primaryControls);
-
-                // Create scaling grid container
-                const scalingGrid = document.createElement('div');
-                scalingGrid.className = 'uar-grid-container';
-
-                // --- Upscale Row ---
-                const upscaleButton = document.createElement('button');
-                upscaleButton.textContent = '⬆ Scale';
-                upscaleButton.className = 'uar-button';
-                upscaleButton.title = 'Apply upscale factor to dimensions';
-
-                const upscaleSlider = document.createElement('input');
-                upscaleSlider.type = 'range';
-                upscaleSlider.min = '0.1';
-                upscaleSlider.max = '4';
-                upscaleSlider.step = '0.1';
-                upscaleSlider.value = '1.0';
-                upscaleSlider.className = 'uar-slider';
-                upscaleSlider.style.width = '100%'; // Make slider flexible
-                upscaleSlider.title = 'Upscale factor';
-
-                const upscaleLabel = document.createElement('span');
-                upscaleLabel.textContent = '1.0x';
-                upscaleLabel.className = 'uar-label-value';
-
-                const upscalePreviewLabel = document.createElement('span');
-                upscalePreviewLabel.textContent = '';
-                upscalePreviewLabel.className = 'uar-preview';
-
-                const upscaleCheckbox = document.createElement('input');
-                upscaleCheckbox.type = 'radio';
-                upscaleCheckbox.name = 'rescale_mode_' + node.id;
-                upscaleCheckbox.value = 'manual';
-                upscaleCheckbox.className = 'uar-radio';
-                upscaleCheckbox.title = 'Use manual scale for rescale_factor';
-
-                // Update label when slider changes
-                upscaleSlider.addEventListener('input', (e) => {
-                    const value = parseFloat(e.target.value);
-                    upscaleLabel.textContent = value.toFixed(1) + 'x';
-
-                    // Update preview with calculated resolution
-                    const newWidth = Math.round(widthWidget.value * value);
-                    const newHeight = Math.round(heightWidget.value * value);
-                    upscalePreviewLabel.textContent = `${newWidth}×${newHeight}`;
-
-                    // Update hidden widget if manual mode is selected
-                    if (upscaleCheckbox.checked && rescaleValueWidget) {
-                        rescaleValueWidget.value = value;
-                    }
-                });
-
-                // Scale values on click
-                upscaleButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const scaleFactor = parseFloat(upscaleSlider.value);
-                    const selectedCategory = categoryDropdown.value;
-                    const useCustomCalc = customCalcCheckbox.checked;
-                    
-                    // Scale width and height
-                    let newWidth = Math.round(widthWidget.value * scaleFactor);
-                    let newHeight = Math.round(heightWidget.value * scaleFactor);
-                    
-                    // Apply custom calculation if enabled
-                    if (selectedCategory === 'Flux' && useCustomCalc) {
-                        const fluxResult = applyFluxCustomCalculation(newWidth, newHeight);
-                        newWidth = fluxResult.width;
-                        newHeight = fluxResult.height;
-                    } else if (selectedCategory === 'WAN' && useCustomCalc) {
-                        const wanResult = applyWANCustomCalculation(newWidth, newHeight);
-                        newWidth = wanResult.width;
-                        newHeight = wanResult.height;
-                    }
-                    
-                    widthWidget.value = newWidth;
-                    heightWidget.value = newHeight;
-
-                    ensureValuesWithinBounds();
-                    updateWidgetValues();
-                    updateCanvas();
-
-                    // Reset slider to 1.0 after use
-                    upscaleSlider.value = '1.0';
-                    upscaleLabel.textContent = '1.0x';
-                });
-
-                const emptyCell = () => document.createElement('div'); // Helper for placeholders
-                
-                // Helper function for Flux custom calculation
-                const applyFluxCustomCalculation = (width, height) => {
-                    // Round to 32px increments
-                    let newWidth = Math.round(width / 32) * 32;
-                    let newHeight = Math.round(height / 32) * 32;
-                    
-                    // Flux practical limits based on community testing
-                    const fluxMin = 320; // ~0.1 MP minimum
-                    const fluxMaxPractical = 2560; // Practical max before quality degrades
-                    
-                    // Calculate megapixels
-                    const currentMP = (newWidth * newHeight) / 1000000;
-                    
-                    // If over 4.0 MP (practical limit), scale down
-                    if (currentMP > 4.0) {
-                        const scaleFactor = Math.sqrt(4.0 / currentMP);
-                        newWidth = Math.round((newWidth * scaleFactor) / 32) * 32;
-                        newHeight = Math.round((newHeight * scaleFactor) / 32) * 32;
-                    }
-                    
-                    // If any dimension exceeds practical max, scale to fit
-                    if (newWidth > fluxMaxPractical || newHeight > fluxMaxPractical) {
-                        const scaleDown = Math.min(fluxMaxPractical / newWidth, fluxMaxPractical / newHeight);
-                        newWidth = Math.round((newWidth * scaleDown) / 32) * 32;
-                        newHeight = Math.round((newHeight * scaleDown) / 32) * 32;
-                    }
-                    
-                    // Ensure minimum dimensions (0.1 MP = ~316x316)
-                    if (newWidth < fluxMin || newHeight < fluxMin) {
-                        const scaleUp = Math.max(fluxMin / newWidth, fluxMin / newHeight);
-                        newWidth = Math.round((newWidth * scaleUp) / 32) * 32;
-                        newHeight = Math.round((newHeight * scaleUp) / 32) * 32;
-                    }
-                    
-                    // Final clamp to ensure within practical limits
-                    newWidth = Math.max(fluxMin, Math.min(fluxMaxPractical, newWidth));
-                    newHeight = Math.max(fluxMin, Math.min(fluxMaxPractical, newHeight));
-                    
-                    return { width: newWidth, height: newHeight };
-                };
-
-                // Helper function for WAN custom calculation
-                const applyWANCustomCalculation = (width, height) => {
-                    // WAN flexible resolution range: 320p to 820p
-                    // "p" resolution is based on total pixel count, not just height
-                    // 320p at 16:9 = 569x320 = 182,080 pixels
-                    // 480p at 16:9 = 853x480 = 409,440 pixels  
-                    // 720p at 16:9 = 1280x720 = 921,600 pixels
-                    // 820p at 16:9 = 1458x820 = 1,195,560 pixels
-                    
-                    const minPixels = 182080;  // 320p equivalent
-                    const maxPixels = 1195560; // 820p equivalent
-                    
-                    // Calculate current aspect ratio
-                    const currentAspectRatio = width / height;
-                    const currentPixels = width * height;
-                    
-                    // Determine target pixel count within WAN range
-                    let targetPixels = Math.max(minPixels, Math.min(maxPixels, currentPixels));
-                    
-                    // Calculate dimensions maintaining aspect ratio
-                    let targetWidth, targetHeight;
-                    
-                    if (currentAspectRatio >= 1) {
-                        // Landscape or square
-                        targetHeight = Math.sqrt(targetPixels / currentAspectRatio);
-                        targetWidth = targetHeight * currentAspectRatio;
-                    } else {
-                        // Portrait
-                        targetWidth = Math.sqrt(targetPixels * currentAspectRatio);
-                        targetHeight = targetWidth / currentAspectRatio;
-                    }
-                    
-                    // Round to 16px increments (common for video encoding)
-                    targetWidth = Math.round(targetWidth / 16) * 16;
-                    targetHeight = Math.round(targetHeight / 16) * 16;
-                    
-                    // Recalculate actual pixels after rounding
-                    const actualPixels = targetWidth * targetHeight;
-                    
-                    // If rounding pushed us too far out of range, adjust
-                    if (actualPixels > maxPixels * 1.1) {
-                        // Scale down to fit within range
-                        const scaleFactor = Math.sqrt(maxPixels / actualPixels);
-                        targetWidth = Math.round((targetWidth * scaleFactor) / 16) * 16;
-                        targetHeight = Math.round((targetHeight * scaleFactor) / 16) * 16;
-                    } else if (actualPixels < minPixels * 0.9) {
-                        // Scale up to fit within range
-                        const scaleFactor = Math.sqrt(minPixels / actualPixels);
-                        targetWidth = Math.round((targetWidth * scaleFactor) / 16) * 16;
-                        targetHeight = Math.round((targetHeight * scaleFactor) / 16) * 16;
-                    }
-                    
-                    // Final safety clamps
-                    targetWidth = Math.max(320, Math.min(2048, targetWidth));
-                    targetHeight = Math.max(320, Math.min(2048, targetHeight));
-                    
-                    // Determine recommended model based on final resolution
-                    const pixels480p = 409440; // 480p at 16:9
-                    const pixels720p = 921600; // 720p at 16:9
-                    const finalPixels = targetWidth * targetHeight;
-                    
-                    // Calculate which resolution is closer
-                    const dist480p = Math.abs(finalPixels - pixels480p);
-                    const dist720p = Math.abs(finalPixels - pixels720p);
-                    
-                    const recommendedModel = dist480p < dist720p ? "480p" : "720p";
-                    
-                    // Calculate equivalent "p" value for logging
-                    const equivalentP = Math.round(Math.sqrt(finalPixels * 9 / 16));
-                    
-                    return { 
-                        width: targetWidth, 
-                        height: targetHeight,
-                        recommendedModel: recommendedModel,
-                        equivalentP: equivalentP
-                    };
-                };
-
-                // Helper function to ensure values are within bounds
-                const ensureValuesWithinBounds = () => {
-                    widthWidget.value = Math.max(node.properties.minX,
-                        Math.min(node.properties.maxX, widthWidget.value));
-                    heightWidget.value = Math.max(node.properties.minY,
-                        Math.min(node.properties.maxY, heightWidget.value));
-                };
-
-                // Helper function to update widget values and internal state
-                const updateWidgetValues = () => {
-                    // Update intpos based on new values
-                    node.intpos.x = (widthWidget.value - node.properties.minX) /
-                        (node.properties.maxX - node.properties.minX);
-                    node.intpos.y = (heightWidget.value - node.properties.minY) /
-                        (node.properties.maxY - node.properties.minY);
-
-                    node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
-                    node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
-
-                    // Update node properties
-                    node.properties.valueX = widthWidget.value;
-                    node.properties.valueY = heightWidget.value;
-
-                    // Trigger property change handlers
-                    node.onPropertyChanged('valueX');
-                    node.onPropertyChanged('valueY');
-
-                    // Force widget UI update
-                    if (widthWidget.inputEl) {
-                        widthWidget.inputEl.value = widthWidget.value;
-                    }
-                    if (heightWidget.inputEl) {
-                        heightWidget.inputEl.value = heightWidget.value;
-                    }
-                    
-                    // Update WAN mode info message with current recommended model
-                    const selectedCategory = categoryDropdown.value;
-                    const useCustomCalc = customCalcCheckbox.checked;
-                    if (selectedCategory === 'WAN' && useCustomCalc) {
-                        // Calculate which model is recommended for current resolution
-                        const pixels480p = 832 * 480; // 399,360
-                        const pixels720p = 1280 * 720; // 921,600
-                        const currentPixels = widthWidget.value * heightWidget.value;
-                        
-                        // Calculate which resolution is closer
-                        const dist480p = Math.abs(currentPixels - pixels480p);
-                        const dist720p = Math.abs(currentPixels - pixels720p);
-                        
-                        const recommendedModel = dist480p < dist720p ? "480p" : "720p";
-                        const currentResolution = `${widthWidget.value}×${heightWidget.value}`;
-                        
-                        // Update info message with current recommendation
-                        infoMessage.innerHTML = `💡 WAN Mode: Current ${currentResolution} → <strong>Use ${recommendedModel} model</strong> • 320p-820p flexible range • 16px increments`;
-                        infoMessage.style.display = 'block';
-                    }
-                };
-
-                // Helper function to update all scale labels
-                const updateAllScaleLabels = () => {
-                    updateResolutionScaleLabel();
-                    updateMegapixelsScaleLabel();
-                    updateUpscalePreview();
-                };
-
-                // Helper function to render and update canvas
-                const updateCanvas = () => {
-                    renderCanvas();
-                    app.graph.setDirtyCanvas(true);
-                };
-
-                scalingGrid.appendChild(upscaleButton);
-                scalingGrid.appendChild(upscaleSlider);
-                scalingGrid.appendChild(upscaleLabel);
-                scalingGrid.appendChild(emptyCell()); // Placeholder for scale
-                scalingGrid.appendChild(upscalePreviewLabel);
-                scalingGrid.appendChild(upscaleCheckbox);
-
-                // --- Resolution Row ---
-                const resolutionButton = document.createElement('button');
-                resolutionButton.textContent = '📺 Res';
-                resolutionButton.className = 'uar-button';
-                resolutionButton.title = 'Scale to target resolution height';
-
-                const resolutionDropdown = document.createElement('select');
-                resolutionDropdown.className = 'uar-dropdown uar-dropdown-small';
-                resolutionDropdown.title = 'Target resolution';
-
-                const resolutions = [
-                    { label: '480p', value: 480 }, { label: '720p', value: 720 }, { label: '820p', value: 820 },
-                    { label: '1080p', value: 1080 }, { label: '1440p', value: 1440 },
-                    { label: '2160p', value: 2160 }, { label: '4320p', value: 4320 }
-                ];
-
-                resolutions.forEach(res => {
-                    const option = document.createElement('option');
-                    option.value = res.value;
-                    option.textContent = res.label;
-                    resolutionDropdown.appendChild(option);
-                });
-                resolutionDropdown.value = '1080';
-
-                const resolutionScaleLabel = document.createElement('span');
-                resolutionScaleLabel.textContent = '';
-                resolutionScaleLabel.className = 'uar-label-small';
-
-                const resolutionPreviewLabel = document.createElement('span');
-                resolutionPreviewLabel.textContent = '';
-                resolutionPreviewLabel.className = 'uar-preview';
-
-                const resolutionCheckbox = document.createElement('input');
-                resolutionCheckbox.type = 'radio';
-                resolutionCheckbox.name = 'rescale_mode_' + node.id;
-                resolutionCheckbox.value = 'resolution';
-                resolutionCheckbox.checked = true;
-                resolutionCheckbox.className = 'uar-radio';
-                resolutionCheckbox.title = 'Use resolution scale for rescale_factor';
-
-                const calculateResolutionScale = (targetP, currentWidth, currentHeight) => {
-                    const targetPixels = (targetP * (16 / 9)) * targetP;
-                    const currentPixels = currentWidth * currentHeight;
-                    return Math.sqrt(targetPixels / currentPixels);
-                };
-
-                const updateResolutionScaleLabel = () => {
-                    const targetP = parseInt(resolutionDropdown.value);
-                    const scaleFactor = calculateResolutionScale(targetP, widthWidget.value, heightWidget.value);
-                    resolutionScaleLabel.textContent = `×${scaleFactor.toFixed(2)}`;
-
-                    const newWidth = Math.round(widthWidget.value * scaleFactor);
-                    const newHeight = Math.round(heightWidget.value * scaleFactor);
-                    resolutionPreviewLabel.textContent = `${newWidth}×${newHeight}`;
-
-                    if (resolutionCheckbox.checked && rescaleValueWidget) {
-                        rescaleValueWidget.value = scaleFactor;
-                    }
-                };
-
-                resolutionDropdown.addEventListener('change', updateResolutionScaleLabel);
-
-                resolutionButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const targetP = parseInt(resolutionDropdown.value);
-                    const scaleFactor = calculateResolutionScale(targetP, widthWidget.value, heightWidget.value);
-                    const selectedCategory = categoryDropdown.value;
-                    const useCustomCalc = customCalcCheckbox.checked;
-
-                    let newWidth = Math.round(widthWidget.value * scaleFactor);
-                    let newHeight = Math.round(heightWidget.value * scaleFactor);
-                    
-                    // Apply custom calculation if enabled
-                    if (selectedCategory === 'Flux' && useCustomCalc) {
-                        const fluxResult = applyFluxCustomCalculation(newWidth, newHeight);
-                        newWidth = fluxResult.width;
-                        newHeight = fluxResult.height;
-                    } else if (selectedCategory === 'WAN' && useCustomCalc) {
-                        const wanResult = applyWANCustomCalculation(newWidth, newHeight);
-                        newWidth = wanResult.width;
-                        newHeight = wanResult.height;
-                    }
-                    
-                    widthWidget.value = newWidth;
-                    heightWidget.value = newHeight;
-
-                    ensureValuesWithinBounds();
-                    updateWidgetValues();
-                    updateCanvas();
-                    updateAllScaleLabels();
-                });
-
-                scalingGrid.appendChild(resolutionButton);
-                scalingGrid.appendChild(resolutionDropdown);
-                scalingGrid.appendChild(emptyCell()); // Placeholder for value
-                scalingGrid.appendChild(resolutionScaleLabel);
-                scalingGrid.appendChild(resolutionPreviewLabel);
-                scalingGrid.appendChild(resolutionCheckbox);
-
-                // --- Megapixels Row ---
-                const megapixelsButton = document.createElement('button');
-                megapixelsButton.textContent = '📷 MP';
-                megapixelsButton.className = 'uar-button';
-                megapixelsButton.title = 'Scale to target megapixels';
-
-                const megapixelsSlider = document.createElement('input');
-                megapixelsSlider.type = 'range';
-                megapixelsSlider.min = '0.5';
-                megapixelsSlider.max = '12';
-                megapixelsSlider.step = '0.1';
-                megapixelsSlider.value = '2';
-                megapixelsSlider.className = 'uar-slider';
-                megapixelsSlider.style.width = '100%'; // Make slider flexible
-                megapixelsSlider.title = 'Target megapixels';
-
-                const megapixelsLabel = document.createElement('span');
-                megapixelsLabel.textContent = '2.0 MP';
-                megapixelsLabel.className = 'uar-label-small';
-
-                const megapixelsScaleLabel = document.createElement('span');
-                megapixelsScaleLabel.textContent = '';
-                megapixelsScaleLabel.className = 'uar-label-small';
-
-                const megapixelsPreviewLabel = document.createElement('span');
-                megapixelsPreviewLabel.textContent = '';
-                megapixelsPreviewLabel.className = 'uar-preview';
-
-                const megapixelsCheckbox = document.createElement('input');
-                megapixelsCheckbox.type = 'radio';
-                megapixelsCheckbox.name = 'rescale_mode_' + node.id;
-                megapixelsCheckbox.value = 'megapixels';
-                megapixelsCheckbox.className = 'uar-radio';
-                megapixelsCheckbox.title = 'Use megapixels scale for rescale_factor';
-
-                const calculateMegapixelsScale = (targetMP, currentWidth, currentHeight) => {
-                    const targetPixels = targetMP * 1000000;
-                    const currentPixels = currentWidth * currentHeight;
-                    return Math.sqrt(targetPixels / currentPixels);
-                };
-
-                const updateMegapixelsScaleLabel = () => {
-                    const targetMP = parseFloat(megapixelsSlider.value);
-                    const scaleFactor = calculateMegapixelsScale(targetMP, widthWidget.value, heightWidget.value);
-                    megapixelsScaleLabel.textContent = `×${scaleFactor.toFixed(2)}`;
-
-                    const newWidth = Math.round(widthWidget.value * scaleFactor);
-                    const newHeight = Math.round(heightWidget.value * scaleFactor);
-                    megapixelsPreviewLabel.textContent = `${newWidth}×${newHeight}`;
-
-                    if (megapixelsCheckbox.checked && rescaleValueWidget) {
-                        rescaleValueWidget.value = scaleFactor;
-                    }
-                };
-
-                megapixelsSlider.addEventListener('input', (e) => {
-                    const value = parseFloat(e.target.value);
-                    megapixelsLabel.textContent = value.toFixed(1) + ' MP';
-                    updateMegapixelsScaleLabel();
-
-                    if (megapixelsCheckbox.checked && rescaleValueWidget) {
-                        const scaleFactor = calculateMegapixelsScale(value, widthWidget.value, heightWidget.value);
-                        rescaleValueWidget.value = scaleFactor;
-                    }
-                });
-
-                megapixelsButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    const targetMP = parseFloat(megapixelsSlider.value);
-                    const scaleFactor = calculateMegapixelsScale(targetMP, widthWidget.value, heightWidget.value);
-                    const selectedCategory = categoryDropdown.value;
-                    const useCustomCalc = customCalcCheckbox.checked;
-
-                    let newWidth = Math.round(widthWidget.value * scaleFactor);
-                    let newHeight = Math.round(heightWidget.value * scaleFactor);
-                    
-                    // Apply custom calculation if enabled
-                    if (selectedCategory === 'Flux' && useCustomCalc) {
-                        const fluxResult = applyFluxCustomCalculation(newWidth, newHeight);
-                        newWidth = fluxResult.width;
-                        newHeight = fluxResult.height;
-                    } else if (selectedCategory === 'WAN' && useCustomCalc) {
-                        const wanResult = applyWANCustomCalculation(newWidth, newHeight);
-                        newWidth = wanResult.width;
-                        newHeight = wanResult.height;
-                    }
-                    
-                    widthWidget.value = newWidth;
-                    heightWidget.value = newHeight;
-
-                    ensureValuesWithinBounds();
-                    updateWidgetValues();
-                    updateCanvas();
-                    updateAllScaleLabels();
-                });
-
-                scalingGrid.appendChild(megapixelsButton);
-                scalingGrid.appendChild(megapixelsSlider);
-                scalingGrid.appendChild(megapixelsLabel);
-                scalingGrid.appendChild(megapixelsScaleLabel);
-                scalingGrid.appendChild(megapixelsPreviewLabel);
-                scalingGrid.appendChild(megapixelsCheckbox);
-
-                scalingContainer.appendChild(scalingGrid);
-
-                const updateUpscalePreview = () => {
-                    const value = parseFloat(upscaleSlider.value);
-                    const newWidth = Math.round(widthWidget.value * value);
-                    const newHeight = Math.round(heightWidget.value * value);
-                    upscalePreviewLabel.textContent = `${newWidth}×${newHeight}`;
-                };
-
-                const updateScaleModeVisuals = () => {
-                    if (upscaleCheckbox.checked) {
-                        upscaleLabel.style.opacity = '1';
-                        resolutionScaleLabel.style.opacity = '0.5';
-                        megapixelsScaleLabel.style.opacity = '0.5';
-                        if (rescaleModeWidget) rescaleModeWidget.value = 'manual';
-                        if (rescaleValueWidget) rescaleValueWidget.value = parseFloat(upscaleSlider.value);
-                    } else if (resolutionCheckbox.checked) {
-                        upscaleLabel.style.opacity = '0.5';
-                        resolutionScaleLabel.style.opacity = '1';
-                        megapixelsScaleLabel.style.opacity = '0.5';
-                        if (rescaleModeWidget) rescaleModeWidget.value = 'resolution';
-                        const targetP = parseInt(resolutionDropdown.value);
-                        const scaleFactor = calculateResolutionScale(targetP, widthWidget.value, heightWidget.value);
-                        if (rescaleValueWidget) rescaleValueWidget.value = scaleFactor;
-                    } else if (megapixelsCheckbox.checked) {
-                        upscaleLabel.style.opacity = '0.5';
-                        resolutionScaleLabel.style.opacity = '0.5';
-                        megapixelsScaleLabel.style.opacity = '1';
-                        if (rescaleModeWidget) rescaleModeWidget.value = 'megapixels';
-                        const targetMP = parseFloat(megapixelsSlider.value);
-                        const scaleFactor = calculateMegapixelsScale(targetMP, widthWidget.value, heightWidget.value);
-                        if (rescaleValueWidget) rescaleValueWidget.value = scaleFactor;
-                    }
-                };
-
-                upscaleCheckbox.addEventListener('change', updateScaleModeVisuals);
-                resolutionCheckbox.addEventListener('change', updateScaleModeVisuals);
-                megapixelsCheckbox.addEventListener('change', updateScaleModeVisuals);
-
-                // Initial scale label updates
-                setTimeout(() => {
-                    updateResolutionScaleLabel();
-                    updateMegapixelsScaleLabel();
-                    updateUpscalePreview();
-                    // Set initial opacity
-                    megapixelsScaleLabel.style.opacity = '0.5';
-                }, 100);
-
-                // Create auto-detect controls
-                const autoDetectContainer = document.createElement('div');
-                autoDetectContainer.className = 'uar-flex-row';
-                autoDetectContainer.style.marginTop = '5px';
-                autoDetectContainer.style.alignItems = 'center';
-                autoDetectContainer.style.gap = '10px';
-
-                // Create a dedicated container for auto-fit controls
-                const autoFitContainer = document.createElement('div');
-                autoFitContainer.className = 'uar-flex-row';
-                autoFitContainer.style.justifyContent = 'space-around';
-                autoFitContainer.style.width = '100%';
-
-                // Auto-detect switch (replacing checkbox)
-                const autoDetectSwitch = document.createElement('div');
-                autoDetectSwitch.className = 'uar-switch';
-                autoDetectSwitch.style.width = '140px'; // Wider for text
-                autoDetectSwitch.title = 'Automatically detect dimensions from input image';
-
-                const autoDetectCheckbox = document.createElement('input');
-                autoDetectCheckbox.type = 'checkbox';
-                autoDetectCheckbox.id = 'auto-detect-' + node.id;
-                
-                const autoDetectKnob = document.createElement('div');
-                autoDetectKnob.className = 'switch-knob';
-                
-                const autoDetectLabels = document.createElement('div');
-                autoDetectLabels.className = 'switch-labels';
-                autoDetectLabels.innerHTML = `
-                    <span class="text-off">Manual</span>
-                    <span class="text-on">Auto-detect</span>
-                `;
-                
-                autoDetectSwitch.appendChild(autoDetectCheckbox);
-                autoDetectSwitch.appendChild(autoDetectKnob);
-                autoDetectSwitch.appendChild(autoDetectLabels);
-                
-                // Make the switch clickable
-                autoDetectSwitch.addEventListener('click', (e) => {
-                    if (!e.target.matches('input')) {
-                        autoDetectCheckbox.checked = !autoDetectCheckbox.checked;
-                        autoDetectCheckbox.dispatchEvent(new Event('change'));
-                    }
-                });
-
-                // Auto-fit to preset button
-                const autoFitButton = document.createElement('button');
-                autoFitButton.textContent = '🎯 Auto-fit to preset';
-                autoFitButton.className = 'uar-button';
-                autoFitButton.title = 'Automatically find closest resolution in selected preset category';
-                autoFitButton.disabled = true; // Disabled by default
-
-                // Auto-fit on change switch (replacing checkbox)
-                const autoFitOnChangeSwitch = document.createElement('div');
-                autoFitOnChangeSwitch.className = 'uar-switch compact';
-                autoFitOnChangeSwitch.title = 'Automatically run auto-fit when new image is detected';
-                
-                const autoFitOnChangeCheckbox = document.createElement('input');
-                autoFitOnChangeCheckbox.type = 'checkbox';
-                autoFitOnChangeCheckbox.id = 'auto-fit-change-' + node.id;
-                
-                const autoFitOnChangeKnob = document.createElement('div');
-                autoFitOnChangeKnob.className = 'switch-knob';
-                
-                const autoFitOnChangeLabels = document.createElement('div');
-                autoFitOnChangeLabels.className = 'switch-labels';
-                autoFitOnChangeLabels.innerHTML = `
-                    <span class="text-off">Off</span>
-                    <span class="text-on">Auto</span>
-                `;
-                
-                autoFitOnChangeSwitch.appendChild(autoFitOnChangeCheckbox);
-                autoFitOnChangeSwitch.appendChild(autoFitOnChangeKnob);
-                autoFitOnChangeSwitch.appendChild(autoFitOnChangeLabels);
-                
-                // Make the switch clickable
-                autoFitOnChangeSwitch.addEventListener('click', (e) => {
-                    if (!e.target.matches('input')) {
-                        autoFitOnChangeCheckbox.checked = !autoFitOnChangeCheckbox.checked;
-                        autoFitOnChangeCheckbox.dispatchEvent(new Event('change'));
-                    }
-                });
-
-                // Variables to track detected dimensions
-                let detectedDimensions = null;
-                let dimensionCheckInterval = null;
-                let manuallySetByAutoFit = false; // Track if dimensions were set by auto-fit
-
-                // Function to check for image dimensions from connected input
-                const checkForImageDimensions = async () => {
-                    try {
-                        // Check if there's an input image connected
-                        if (!node.inputs || !node.inputs[0] || !node.inputs[0].link) {
-                            // No image input connected
-                            detectedDimensions = null;
-                            if (autoDetectCheckbox.checked) {
-                                // Reset to default values when no image is connected
-                                widthWidget.value = 512;
-                                heightWidget.value = 512;
-                                updateWidgetValues();
-                                updateAllScaleLabels();
-                                updateCanvas();
-                            }
-                            return;
-                        }
-
-                        // Get the link ID to check if image has changed
-                        const linkId = node.inputs[0].link;
-                        const graph = app.graph;
-                        
-                        if (graph) {
-                            const link = graph.links[linkId];
-                            if (link) {
-                                const sourceNode = graph.getNodeById(link.origin_id);
-                                if (sourceNode && sourceNode.imgs && sourceNode.imgs.length > 0) {
-                                    // Get dimensions from the first image
-                                    const img = sourceNode.imgs[0];
-                                    
-                                    // Check if dimensions have changed
-                                    if (!detectedDimensions || 
-                                        detectedDimensions.width !== img.naturalWidth || 
-                                        detectedDimensions.height !== img.naturalHeight) {
-                                        
-                                        detectedDimensions = {
-                                            width: img.naturalWidth,
-                                            height: img.naturalHeight
-                                        };
-
-                                        // Reset auto-fit flag when image changes - allow auto-detect to work again
-                                        manuallySetByAutoFit = false;
-
-                        // If auto-detect is enabled and dimensions weren't manually set by auto-fit, update the dimensions
-                        if (autoDetectCheckbox.checked && !manuallySetByAutoFit) {
-                            widthWidget.value = detectedDimensions.width;
-                            heightWidget.value = detectedDimensions.height;
-                            
-                            // Update UI
-                            updateWidgetValues();
-                            updateAllScaleLabels();
-                            updateCanvas();
-                            
-                            console.log(`[ResolutionMaster] Auto-detected dimensions: ${detectedDimensions.width}x${detectedDimensions.height}`);
-                        }
-
-                                        // Enable or disable auto-fit controls based on detected dimensions
-                                        autoFitButton.disabled = !detectedDimensions;
-                                        autoFitOnChangeCheckbox.disabled = !detectedDimensions;
-                                        
-                                        // Update visual state of the switch
-                                        if (!detectedDimensions) {
-                                            autoFitOnChangeSwitch.classList.add('disabled');
-                                        } else {
-                                            autoFitOnChangeSwitch.classList.remove('disabled');
-                                        }
-
-                                        // If auto-fit on change is enabled and we have a category selected, automatically run auto-fit
-                                        if (autoFitOnChangeCheckbox.checked && categoryDropdown.value && detectedDimensions) {
-                                            // Trigger auto-fit automatically
-                                            autoFitButton.click();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.error('[ResolutionMaster] Error checking for image dimensions:', error);
-                    }
-                };
-
-                // Initialize auto-detect checkbox state from widget
-                const autoDetectWidget = node.widgets.find(w => w.name === 'auto_detect');
-                if (autoDetectWidget) {
-                    autoDetectCheckbox.checked = autoDetectWidget.value;
-                    
-                    // If auto-detect is initially enabled, start checking
-                    if (autoDetectWidget.value) {
-                        checkForImageDimensions();
-                        dimensionCheckInterval = setInterval(checkForImageDimensions, 1000);
-                        widthWidget.disabled = true;
-                        heightWidget.disabled = true;
-                    }
-                }
-
-                // Auto-detect checkbox change handler
-                autoDetectCheckbox.addEventListener('change', (e) => {
-                    const autoDetectWidget = node.widgets.find(w => w.name === 'auto_detect');
-                    if (autoDetectWidget) {
-                        autoDetectWidget.value = e.target.checked;
-                    }
-
-                    if (e.target.checked) {
-                        // Start checking for dimensions every second
-                        checkForImageDimensions();
-                        dimensionCheckInterval = setInterval(checkForImageDimensions, 1000);
-                        
-                        // Disable manual controls
-                        widthWidget.disabled = true;
-                        heightWidget.disabled = true;
-                        
-                        // Enable auto-fit button if we have detected dimensions
-                        if (detectedDimensions) {
-                            autoFitButton.disabled = false;
-                            autoFitOnChangeCheckbox.disabled = false;
-                            autoFitOnChangeSwitch.classList.remove('disabled');
-                        }
-                    } else {
-                        // Stop checking for dimensions
-                        if (dimensionCheckInterval) {
-                            clearInterval(dimensionCheckInterval);
-                            dimensionCheckInterval = null;
-                        }
-                        
-                        // Enable manual controls
-                        widthWidget.disabled = false;
-                        heightWidget.disabled = false;
-
-                        // Disable the auto-fit controls when in manual mode
-                        autoFitButton.disabled = true;
-                        autoFitOnChangeCheckbox.disabled = true;
-                        
-                        // Also disable the switch visually
-                        if (!autoFitOnChangeSwitch.classList.contains('disabled')) {
-                            autoFitOnChangeSwitch.classList.add('disabled');
-                        }
-                    }
-                });
-
-                // Auto-fit button click handler
-                autoFitButton.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-
-                    if (!detectedDimensions) {
-                        console.warn('[ResolutionMaster] No detected dimensions available');
-                        return;
-                    }
-
-                    const selectedCategory = categoryDropdown.value;
-                    if (!selectedCategory) {
-                        alert('Please select a preset category first');
-                        return;
-                    }
-
-                    const presets = presetCategories[selectedCategory];
-                    if (!presets) {
-                        console.warn('[ResolutionMaster] Invalid category selected');
-                        return;
-                    }
-
-                    // Find the closest preset to the detected dimensions
-                    let closestPreset = null;
-                    let closestDistance = Infinity;
-                    const detectedAspect = detectedDimensions.width / detectedDimensions.height;
-                    const detectedPixels = detectedDimensions.width * detectedDimensions.height;
-
-                    Object.keys(presets).forEach(presetName => {
-                        const preset = presets[presetName];
-                        
-                        // Check both original and flipped orientations
-                        const orientations = [
-                            { width: preset.width, height: preset.height, flipped: false },
-                            { width: preset.height, height: preset.width, flipped: true }
-                        ];
-                        
-                        orientations.forEach(orientation => {
-                            const presetAspect = orientation.width / orientation.height;
-                            const presetPixels = orientation.width * orientation.height;
-                            
-                            // Calculate distance based on aspect ratio and total pixels
-                            const aspectDiff = Math.abs(detectedAspect - presetAspect);
-                            const pixelDiff = Math.abs(Math.log(detectedPixels / presetPixels));
-                            const distance = aspectDiff + pixelDiff * 0.5;
-                            
-                            if (distance < closestDistance) {
-                                closestDistance = distance;
-                                const orientationSuffix = orientation.flipped ? ' (flipped)' : '';
-                                closestPreset = { 
-                                    name: presetName + orientationSuffix, 
-                                    width: orientation.width, 
-                                    height: orientation.height,
-                                    originalName: presetName
-                                };
-                            }
-                        });
-                    });
-
-                    if (closestPreset) {
-                        // Apply the closest preset
-                        let finalWidth = closestPreset.width;
-                        let finalHeight = closestPreset.height;
-                        
-                        // Apply category-specific scaling if custom calc is enabled
-                        const useCustomCalc = customCalcCheckbox.checked;
-                        if (useCustomCalc) {
-                            if (selectedCategory === 'WAN') {
-                                // For WAN mode, scale to optimal "p" resolution based on detected dimensions
-                                const wanResult = applyWANCustomCalculation(detectedDimensions.width, detectedDimensions.height);
-                                finalWidth = wanResult.width;
-                                finalHeight = wanResult.height;
-                                console.log(`[ResolutionMaster] WAN scaling applied: ${detectedDimensions.width}x${detectedDimensions.height} → ${finalWidth}x${finalHeight} (${wanResult.recommendedModel} model)`);
-                            } else if (selectedCategory === 'Flux') {
-                                // For Flux mode, apply constraints while maintaining aspect ratio
-                                const fluxResult = applyFluxCustomCalculation(closestPreset.width, closestPreset.height);
-                                finalWidth = fluxResult.width;
-                                finalHeight = fluxResult.height;
-                                console.log(`[ResolutionMaster] Flux constraints applied: ${closestPreset.width}x${closestPreset.height} → ${finalWidth}x${finalHeight}`);
-                            }
-                            // For other categories with custom calc, use the preset as-is
-                        }
-                        
-                        // Apply the final dimensions
-                        widthWidget.value = finalWidth;
-                        heightWidget.value = finalHeight;
-                        
-                        // Mark that dimensions were manually set by auto-fit
-                        manuallySetByAutoFit = true;
-                        
-                        // Update the preset dropdown - use original name for dropdown selection
-                        presetDropdown.value = closestPreset.originalName;
-                        
-                        // Update UI
-                        updateWidgetValues();
-                        updateAllScaleLabels();
-                        updateCanvas();
-                        
-                        console.log(`[ResolutionMaster] Auto-fitted to preset: ${closestPreset.name} with final resolution: ${finalWidth}x${finalHeight}`);
-                    }
-                });
-
-                // Add a visual separator
-                scalingContainer.appendChild(document.createElement('hr'));
-
-                // Group all auto controls in a sub-container for better organization
-                const autoControlsSubContainer = document.createElement('div');
-                autoControlsSubContainer.style.display = 'flex';
-                autoControlsSubContainer.style.flexDirection = 'column';
-                autoControlsSubContainer.style.gap = '5px';
-                autoControlsSubContainer.style.width = '100%';
-
-                autoControlsSubContainer.appendChild(autoDetectContainer);
-                autoControlsSubContainer.appendChild(autoFitContainer);
-
-                // Add controls to their respective containers
-                autoDetectContainer.appendChild(autoDetectSwitch);
-                
-                autoFitContainer.appendChild(autoFitButton);
-                autoFitContainer.appendChild(autoFitOnChangeSwitch);
-                
-                scalingContainer.appendChild(autoControlsSubContainer);
-
-                // Create preset aspect ratio controls
-                const presetContainer = document.createElement('div');
-                presetContainer.className = 'uar-flex-row'; // Use flex-row for side-by-side layout
-                presetContainer.style.marginTop = '5px';
-                presetContainer.style.alignItems = 'center'; // Ensure vertical alignment
-
-                // Preset categories
-                const presetCategories = {
-                    'Standard': {
-                        '1:1 Square': { width: 512, height: 512 },
-                        '1:2 Tall': { width: 512, height: 1024 },
-                        '1:3 Ultra Tall': { width: 512, height: 1536 },
-                        '2:3 Portrait': { width: 512, height: 768 },
-                        '3:4 Portrait': { width: 576, height: 768 },
-                        '4:5 Portrait': { width: 512, height: 640 },
-                        '4:7 Phone': { width: 512, height: 896 },
-                        '5:12 Banner': { width: 512, height: 1228 },
-                        '7:9 Vertical': { width: 512, height: 658 },
-                        '9:16 Mobile': { width: 576, height: 1024 },
-                        '9:21 Ultra Mobile': { width: 512, height: 1194 },
-                        '10:16 Monitor': { width: 640, height: 1024 },
-                        '13:19 Tall Screen': { width: 512, height: 748 },
-                        '3:2 Landscape': { width: 768, height: 512 },
-                        '4:3 Classic': { width: 512, height: 384 },
-                        '16:9 Widescreen': { width: 768, height: 432 },
-                        '21:9 Ultrawide': { width: 1024, height: 439 }
-                    },
-                    'SDXL': {
-                        '1:1 Square': { width: 1024, height: 1024 },
-                        '3:4 Portrait': { width: 768, height: 1024 },
-                        '4:5 Portrait': { width: 915, height: 1144 },
-                        '5:12 Portrait': { width: 640, height: 1536 },
-                        '7:9 Portrait': { width: 896, height: 1152 },
-                        '9:16 Portrait': { width: 768, height: 1344 },
-                        '13:19 Portrait': { width: 832, height: 1216 },
-                        '3:2 Landscape': { width: 1254, height: 836 }
-                    },
-                    'Flux': {
-                        '1:1 Square': { width: 1024, height: 1024 },
-                        '2:3 Portrait': { width: 832, height: 1248 },
-                        '3:4 Portrait': { width: 896, height: 1184 },
-                        '4:5 Portrait': { width: 928, height: 1152 },
-                        '9:16 Portrait': { width: 768, height: 1344 },
-                        '9:21 Portrait': { width: 672, height: 1440 },
-                    },
-                    'WAN': {
-                        '1:1 Square': { width: 720, height: 720 },
-                        '2:3 Portrait': { width: 588, height: 882 },
-                        '3:4 Portrait': { width: 624, height: 832 },
-                        '9:16 Portrait': { width: 720, height: 1280 },
-                        '9:21 Portrait': { width: 549, height: 1280 },
-                        '3:2 Landscape': { width: 1080, height: 720 },
-                        '4:3 Landscape': { width: 960, height: 720 },
-                        '16:9 Landscape': { width: 1280, height: 720 },
-                        '21:9 Landscape': { width: 1680, height: 720 }
-                    },
-                    'Social Media': {
-                        'Instagram Square': { width: 1080, height: 1080 },
-                        'Instagram Portrait': { width: 1080, height: 1350 },
-                        'Twitter Post': { width: 1200, height: 675 },
-                        'Facebook Cover': { width: 1200, height: 630 },
-                        'YouTube Thumbnail': { width: 1280, height: 720 }
-                    },
-                    'Print': {
-                        'A4 Portrait': { width: 2480, height: 3508 },
-                        'A4 Landscape': { width: 3508, height: 2480 },
-                        'Letter Portrait': { width: 2550, height: 3300 },
-                        '4x6 Photo': { width: 1200, height: 1800 },
-                        '8x10 Photo': { width: 2400, height: 3000 }
-                    },
-                    'Cinema': {
-                        '2.39:1 Anamorphic': { width: 2048, height: 858 },
-                        '1.85:1 Standard': { width: 1998, height: 1080 },
-                        '2:1 Univisium': { width: 2048, height: 1024 },
-                        '4:3 Academy': { width: 1440, height: 1080 },
-                        '1.33:1 Classic': { width: 1436, height: 1080 }
-                    }
-                };
-
-                const categoryDropdown = document.createElement('select');
-                categoryDropdown.className = 'uar-dropdown uar-dropdown-medium';
-                categoryDropdown.title = 'Select preset category';
-
-                // Add default option
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = 'Select Category...';
-                categoryDropdown.appendChild(defaultOption);
-
-                // Add category options
-                Object.keys(presetCategories).forEach(category => {
-                    const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
-                    categoryDropdown.appendChild(option);
-                });
-
-                const presetDropdown = document.createElement('select');
-                presetDropdown.className = 'uar-dropdown uar-dropdown-medium';
-                presetDropdown.style.display = 'none';
-                presetDropdown.title = 'Select aspect ratio preset';
-
-                // Create custom calculation switch
-                const customCalcSwitch = document.createElement('div');
-                customCalcSwitch.className = 'uar-switch compact';
-                customCalcSwitch.style.display = 'none';
-                customCalcSwitch.style.marginLeft = '10px';
-                customCalcSwitch.title = 'Enable custom resolution calculation for this category';
-                
-                const customCalcCheckbox = document.createElement('input');
-                customCalcCheckbox.type = 'checkbox';
-                customCalcCheckbox.id = 'custom-calc-' + node.id;
-                
-                const customCalcKnob = document.createElement('div');
-                customCalcKnob.className = 'switch-knob';
-                
-                const customCalcLabels = document.createElement('div');
-                customCalcLabels.className = 'switch-labels';
-                customCalcLabels.innerHTML = `
-                    <span class="text-off">Off</span>
-                    <span class="text-on">Calc</span>
-                `;
-                
-                customCalcSwitch.appendChild(customCalcCheckbox);
-                customCalcSwitch.appendChild(customCalcKnob);
-                customCalcSwitch.appendChild(customCalcLabels);
-                
-                // Make the switch clickable
-                customCalcSwitch.addEventListener('click', (e) => {
-                    if (!e.target.matches('input')) {
-                        customCalcCheckbox.checked = !customCalcCheckbox.checked;
-                        customCalcCheckbox.dispatchEvent(new Event('change'));
-                    }
-                });
-                
-                // Store custom calculation settings per category
-                const categoryCustomCalc = {};
-                
-                // Create info message element
-                const infoMessage = document.createElement('div');
-                infoMessage.className = 'uar-info-message';
-                infoMessage.style.display = 'none';
-
-                // Category change handler
-                categoryDropdown.addEventListener('change', (e) => {
-                    const selectedCategory = e.target.value;
-
-                    // Clear preset dropdown
-                    presetDropdown.innerHTML = '';
-
-                    if (selectedCategory) {
-                        // Show preset dropdown and custom calc switch
-                        presetDropdown.style.display = 'block';
-                        customCalcSwitch.style.display = 'inline-flex';
-                        
-                        // Restore checkbox state for this category
-                        customCalcCheckbox.checked = categoryCustomCalc[selectedCategory] || false;
-
-                        // Add default option
-                        const defaultPreset = document.createElement('option');
-                        defaultPreset.value = '';
-                        defaultPreset.textContent = 'Select Preset...';
-                        presetDropdown.appendChild(defaultPreset);
-
-                        // Add presets for selected category
-                        const presets = presetCategories[selectedCategory];
-                        Object.keys(presets).forEach(presetName => {
-                            const option = document.createElement('option');
-                            option.value = presetName;
-                            const preset = presets[presetName];
-                            option.textContent = `${presetName} (${preset.width}x${preset.height})`;
-                            presetDropdown.appendChild(option);
-                        });
-
-                        // Update button states and info message based on new category and checkbox state
-                        const useCustomCalc = customCalcCheckbox.checked;
-                        if (selectedCategory === 'SDXL' && useCustomCalc) {
-                            // Disable scale buttons and snap button for SDXL
-                            upscaleButton.disabled = true;
-                            resolutionButton.disabled = true;
-                            megapixelsButton.disabled = true;
-                            snapButton.disabled = true;
-                            
-                            // Show info message for SDXL
-                            infoMessage.innerHTML = '💡 SDXL Mode: Only officially supported resolutions shown • Fixed dimensions';
-                            infoMessage.style.display = 'block';
-                        } else if (selectedCategory === 'Flux' && useCustomCalc) {
-                            // Keep buttons enabled for Flux but show info
-                            upscaleButton.disabled = false;
-                            resolutionButton.disabled = false;
-                            megapixelsButton.disabled = false;
-                            snapButton.disabled = false;
-                            
-                            // Show info message for Flux
-                            infoMessage.innerHTML = '💡 Flux Mode: 32px increments • 320-2560px limits • Max 4.0 MP • Sweet spot: 1920×1080';
-                            infoMessage.style.display = 'block';
-                        } else if (selectedCategory === 'WAN' && useCustomCalc) {
-                            // Keep buttons enabled for WAN but show info
-                            upscaleButton.disabled = false;
-                            resolutionButton.disabled = false;
-                            megapixelsButton.disabled = false;
-                            snapButton.disabled = false;
-                            
-                            // Calculate which model is recommended for current resolution
-                            const pixels480p = 832 * 480; // 399,360
-                            const pixels720p = 1280 * 720; // 921,600
-                            const currentPixels = widthWidget.value * heightWidget.value;
-                            
-                            // Calculate which resolution is closer
-                            const dist480p = Math.abs(currentPixels - pixels480p);
-                            const dist720p = Math.abs(currentPixels - pixels720p);
-                            
-                            const recommendedModel = dist480p < dist720p ? "480p" : "720p";
-                            const currentResolution = `${widthWidget.value}×${heightWidget.value}`;
-                            
-                            // Show info message for WAN with current recommendation
-                            infoMessage.innerHTML = `💡 WAN Mode: Current ${currentResolution} → <strong>Use ${recommendedModel} model</strong> • 320p-820p flexible range • 16px increments`;
-                            infoMessage.style.display = 'block';
-                        } else {
-                            // Re-enable scale buttons and snap button for other categories or when custom calc is off
-                            upscaleButton.disabled = false;
-                            resolutionButton.disabled = false;
-                            megapixelsButton.disabled = false;
-                            snapButton.disabled = false;
-                            
-                            // Hide info message
-                            infoMessage.style.display = 'none';
-                        }
-                    } else {
-                        // Hide preset dropdown and custom calc switch
-                        presetDropdown.style.display = 'none';
-                        customCalcSwitch.style.display = 'none';
-                        
-                        // Re-enable all buttons when no category is selected
-                        upscaleButton.disabled = false;
-                        resolutionButton.disabled = false;
-                        megapixelsButton.disabled = false;
-                        snapButton.disabled = false;
-                        
-                        // Hide info message
-                        infoMessage.style.display = 'none';
-                    }
-                });
-
-                // Custom calculation checkbox handler
-                customCalcCheckbox.addEventListener('change', (e) => {
-                    const selectedCategory = categoryDropdown.value;
-                    if (selectedCategory) {
-                        categoryCustomCalc[selectedCategory] = e.target.checked;
-                        
-                        // Log the state for debugging
-                        console.log(`Custom calculation for ${selectedCategory}: ${e.target.checked}`);
-                        
-                        // Handle category-specific custom calculation modes
-                        if (selectedCategory === 'SDXL' && e.target.checked) {
-                            // Disable scale buttons and snap button for SDXL
-                            upscaleButton.disabled = true;
-                            resolutionButton.disabled = true;
-                            megapixelsButton.disabled = true;
-                            snapButton.disabled = true;
-                            
-                            // Show info message for SDXL
-                            infoMessage.innerHTML = '💡 SDXL Mode: Only officially supported resolutions shown • Fixed dimensions';
-                            infoMessage.style.display = 'block';
-                        } else if (selectedCategory === 'Flux' && e.target.checked) {
-                            // Keep buttons enabled for Flux but show info
-                            upscaleButton.disabled = false;
-                            resolutionButton.disabled = false;
-                            megapixelsButton.disabled = false;
-                            snapButton.disabled = false;
-                            
-                            // Show info message for Flux
-                            infoMessage.innerHTML = '💡 Flux Mode: 32px increments • 320-2560px limits • Max 4.0 MP • Sweet spot: 1920×1080';
-                            infoMessage.style.display = 'block';
-                        } else if (selectedCategory === 'WAN' && e.target.checked) {
-                            // Keep buttons enabled for WAN but show info
-                            upscaleButton.disabled = false;
-                            resolutionButton.disabled = false;
-                            megapixelsButton.disabled = false;
-                            snapButton.disabled = false;
-                            
-                            // Calculate which model is recommended for current resolution
-                            const pixels480p = 832 * 480; // 399,360
-                            const pixels720p = 1280 * 720; // 921,600
-                            const currentPixels = widthWidget.value * heightWidget.value;
-                            
-                            // Calculate which resolution is closer
-                            const dist480p = Math.abs(currentPixels - pixels480p);
-                            const dist720p = Math.abs(currentPixels - pixels720p);
-                            
-                            const recommendedModel = dist480p < dist720p ? "480p" : "720p";
-                            const currentResolution = `${widthWidget.value}×${heightWidget.value}`;
-                            
-                            // Show info message for WAN with current recommendation
-                            infoMessage.innerHTML = `💡 WAN Mode: Current ${currentResolution} → <strong>Use ${recommendedModel} model</strong> • 320p-820p flexible range • 16px increments`;
-                            infoMessage.style.display = 'block';
-                        } else {
-                            // Re-enable scale buttons and snap button
-                            upscaleButton.disabled = false;
-                            resolutionButton.disabled = false;
-                            megapixelsButton.disabled = false;
-                            snapButton.disabled = false;
-                            
-                            // Hide info message
-                            infoMessage.style.display = 'none';
-                        }
-                        
-                        // Don't reapply preset when toggling checkbox - just control button states
-                        // Custom calculation will only be applied when using Scale/Res/MP buttons in the future
-                    }
-                });
-
-
-                // Function to apply preset with optional custom calculation
-                const applyPreset = (category, presetName, useCustomCalc) => {
-                    if (!category || !presetName) return;
-                    
-                    const preset = presetCategories[category][presetName];
-                    let finalWidth = preset.width;
-                    let finalHeight = preset.height;
-                    
-                    if (useCustomCalc) {
-                        // Custom calculation logic based on category
-                        switch(category) {
-                            case 'SDXL':
-                                break;                                
-                            case 'Flux':
-                                break;                                
-                            case 'Social Media':
-                                break;
-                                
-                            case 'Print':
-                                break;
-                                
-                            case 'Cinema':
-                                break;
-                                
-                            default:
-                                break;
-                        }
-                        
-                        // Ensure values are within bounds
-                        finalWidth = Math.max(node.properties.minX, Math.min(node.properties.maxX, finalWidth));
-                        finalHeight = Math.max(node.properties.minY, Math.min(node.properties.maxY, finalHeight));
-                    }
-                    
-                    // Apply calculated values
-                    widthWidget.value = finalWidth;
-                    heightWidget.value = finalHeight;
-
-                    // Update node properties
-                    node.properties.valueX = finalWidth;
-                    node.properties.valueY = finalHeight;
-
-                    // Update intpos based on new values
-                    node.intpos.x = (widthWidget.value - node.properties.minX) /
-                        (node.properties.maxX - node.properties.minX);
-                    node.intpos.y = (heightWidget.value - node.properties.minY) /
-                        (node.properties.maxY - node.properties.minY);
-
-                    node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
-                    node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
-
-                    // Force widget UI update
-                    if (widthWidget.inputEl) {
-                        widthWidget.inputEl.value = widthWidget.value;
-                    }
-                    if (heightWidget.inputEl) {
-                        heightWidget.inputEl.value = heightWidget.value;
-                    }
-
-                    // Update all scale labels
-                    updateResolutionScaleLabel();
-                    updateMegapixelsScaleLabel();
-                    updateUpscalePreview();
-
-                    // Re-render canvas
-                    renderCanvas();
-                    app.graph.setDirtyCanvas(true);
-                };
-
-                // Preset change handler
-                presetDropdown.addEventListener('change', (e) => {
-                    const selectedCategory = categoryDropdown.value;
-                    const selectedPreset = e.target.value;
-                    const useCustomCalc = customCalcCheckbox.checked;
-
-                    if (selectedCategory && selectedPreset) {
-                        applyPreset(selectedCategory, selectedPreset, useCustomCalc);
-                    }
-                });
-
-                // Add dropdowns and switch to container
-                presetContainer.appendChild(categoryDropdown);
-                presetContainer.appendChild(presetDropdown);
-                presetContainer.appendChild(customCalcSwitch);
-
-                scalingContainer.appendChild(presetContainer);
-                
-                // Add info message after preset container
-                scalingContainer.appendChild(infoMessage);
-
-                // Store button references
-                this.swapButton = swapButton;
-                this.snapSlider = snapSlider;
-                this.snapLabel = snapLabel;
-                this.upscaleSlider = upscaleSlider;
-                this.upscaleLabel = upscaleLabel;
-                this.resolutionDropdown = resolutionDropdown;
-                this.resolutionScaleLabel = resolutionScaleLabel;
-                this.megapixelsSlider = megapixelsSlider;
-                this.megapixelsScaleLabel = megapixelsScaleLabel;
-                this.megapixelsCheckbox = megapixelsCheckbox;
-                this.upscaleCheckbox = upscaleCheckbox;
-                this.resolutionCheckbox = resolutionCheckbox;
-                this.presetContainer = presetContainer;
-                this.categoryDropdown = categoryDropdown;
-                this.presetDropdown = presetDropdown;
-                this.customCalcCheckbox = customCalcCheckbox;
-                this.customCalcSwitch = customCalcSwitch;
-
-                // Store canvas reference
-                this.sliderCanvas = canvas;
-                this.sliderCtx = ctx;
-
-                // Function to update canvas size based on mode
-                const updateCanvasSize = () => {
-                    log.debug('updateCanvasSize: Starting canvas size update');
-                    
-                    const nodeWidth = (node.size && node.size[0]) || baseWidth + 20;
-                    log.debug('updateCanvasSize: Node width detected', { nodeWidth, baseWidth });
-
-                    let scale = 1;
-                    let minNodeWidth = 200; // Default minimum width
-                    
-                    // Always use flex-start alignment for consistent positioning
-                    container.style.alignItems = 'flex-start';
-                    
-                    if (nodeWidth < baseWidth + 20 ) {
-                        scale = nodeWidth / (baseWidth + 20);
-                        // When scaling starts, add extra width to prevent clipping
-                        // The more we scale down, the more extra width we need
-                        const extraWidth = Math.max(0, (1 - scale) * 350); // Up to 350px extra when fully scaled down
-                        minNodeWidth = Math.min(baseWidth + 150, nodeWidth + extraWidth); // Maximum increased to ensure radio buttons never clip
-                        
-                        log.debug('updateCanvasSize: Scaling applied', { 
-                            scale: scale.toFixed(3), 
-                            extraWidth: extraWidth.toFixed(1), 
-                            minNodeWidth 
-                        });
-                        
-                        // When scaling, don't add any margin - keep content at left edge
-                        scalingContainer.style.marginLeft = '0';
-                    } else {
-                        // When not scaling, also keep at left edge with no margin
-                        scalingContainer.style.marginLeft = '0';
-                        minNodeWidth = 420; // Original minimum when not scaling
-                        log.debug('updateCanvasSize: No scaling needed', { minNodeWidth });
-                    }
-                    
-                    scalingContainer.style.transform = `scale(${scale})`;
-
-                    // Show/hide controls based on mode
-                    const isManual = node.properties.mode === 'Manual';
-                    primaryControls.style.display = isManual ? 'flex' : 'none';
-                    scalingGrid.style.display = isManual ? 'grid' : 'none';
-                    if (node.presetContainer) {
-                        node.presetContainer.style.display = isManual ? 'flex' : 'none';
-                    }
-                    
-                    log.debug('updateCanvasSize: Controls visibility set', { 
-                        mode: node.properties.mode, 
-                        isManual, 
-                        primaryControlsDisplay: primaryControls.style.display,
-                        scalingGridDisplay: scalingGrid.style.display
-                    });
-
-                    let canvasWidth = baseWidth;
-                    let canvasHeight = 0;
-                    let unscaledHeight = 0;
-
-                    if (node.properties.mode === 'Manual Sliders') {
-                        canvasHeight = 80;
-                        unscaledHeight = canvasHeight;
-                        log.debug('updateCanvasSize: Manual Sliders mode dimensions', { canvasHeight, unscaledHeight });
-                    } else if (node.properties.mode === 'Manual') {
-                        const rangeX = node.properties.maxX - node.properties.minX;
-                        const rangeY = node.properties.maxY - node.properties.minY;
-                        const aspectRatio = rangeX / rangeY;
-
-                        const internalBaseSize = baseWidth - 70 - 20;
-
-                        let tempCanvasWidth, tempCanvasHeight;
-                        if (aspectRatio > 1) {
-                            tempCanvasWidth = internalBaseSize;
-                            tempCanvasHeight = tempCanvasWidth / aspectRatio;
-                        } else {
-                            tempCanvasHeight = internalBaseSize;
-                            tempCanvasWidth = tempCanvasHeight * aspectRatio;
-                        }
-
-                        canvasWidth = tempCanvasWidth + 70;
-                        canvasHeight = tempCanvasHeight + 20;
-
-                        unscaledHeight = canvasHeight + 190;
-                        
-                        log.debug('updateCanvasSize: Manual mode dimensions calculated', {
-                            rangeX,
-                            rangeY,
-                            aspectRatio: aspectRatio.toFixed(3),
-                            internalBaseSize,
-                            tempCanvasWidth: tempCanvasWidth.toFixed(1),
-                            tempCanvasHeight: tempCanvasHeight.toFixed(1),
-                            canvasWidth: canvasWidth.toFixed(1),
-                            canvasHeight: canvasHeight.toFixed(1),
-                            unscaledHeight
-                        });
-                    }
-
-                    // Set internal canvas resolution
-                    canvas.width = canvasWidth;
-                    canvas.height = canvasHeight;
-
-                    // Set display size (unscaled, as it's inside the scaling container)
-                    canvas.style.width = canvasWidth + 'px';
-                    canvas.style.height = canvasHeight + 'px';
-                    canvas.style.maxWidth = '100%';
-                    canvas.style.margin = '0 auto';
-                    canvas.style.display = 'block';
-
-                    // Measure actual content height (unaffected by CSS transform)
-                    const unscaledContentHeight = scalingContainer.scrollHeight || unscaledHeight;
-                    const finalScaledHeight = Math.ceil(unscaledContentHeight * scale);
-                    
-                    log.debug('updateCanvasSize: Height calculations', {
-                        unscaledContentHeight,
-                        scale: scale.toFixed(3),
-                        finalScaledHeight
-                    });
-                    
-                    // Clamp container to the scaled content height
-                    container.style.height = finalScaledHeight + 'px';
-
-                    // Make the DOM widget report the real height so the node expands to fit
-                    if (node.canvasWidget) {
-                        node.canvasWidget.computeSize = () => [nodeWidth, finalScaledHeight];
-                    }
-
-                    // Dynamically set min node size to prevent clipping
-                    const padding = 10; // small bottom padding
-                    const neededMinHeight = finalScaledHeight + padding;
-                    node.min_size = [minNodeWidth, neededMinHeight];
-                    
-                    log.debug('updateCanvasSize: Final node size set', {
-                        minNodeWidth,
-                        neededMinHeight,
-                        finalNodeSize: `[${minNodeWidth}, ${neededMinHeight}]`
-                    });
-
-                    app.graph.setDirtyCanvas(true, true);
-                    renderCanvas();
-                    
-                    log.debug('updateCanvasSize: Canvas size update completed');
-                };
-
-                // Render function for the canvas
-                const renderCanvas = () => {
-                    if (!ctx) return;
-
-                    const props = node.properties;
-                    const width = canvas.width;
-                    const height = canvas.height;
-
-                    // Clear canvas
-                    ctx.clearRect(0, 0, width, height);
-
-                    if (props.mode === 'Manual') {
-                        // Draw 2D Slider
-                        const panelWidth = width - shiftRight - shiftLeft;
-                        const panelHeight = height - 20;
-
-                        // Background panel
-                        ctx.fillStyle = "rgba(20,20,20,0.8)";
-                        ctx.beginPath();
-                        ctx.roundRect(shiftLeft - 4, shiftLeft - 4, panelWidth + 8, panelHeight + 8, 4);
-                        ctx.fill();
-
-                        // Dots
-                        if (props.dots) {
-                            ctx.fillStyle = "rgba(200,200,200,0.7)";
-                            ctx.beginPath();
-                            let stX = (panelWidth * props.stepX / (props.maxX - props.minX));
-                            let stY = (panelHeight * props.stepY / (props.maxY - props.minY));
-                            for (let ix = 0; ix < panelWidth + stX / 2; ix += stX) {
-                                for (let iy = 0; iy < panelHeight + stY / 2; iy += stY) {
-                                    ctx.rect(shiftLeft + ix - 0.5, shiftLeft + iy - 0.5, 1, 1);
-                                }
-                            }
-                            ctx.fill();
-                        }
-
-                        // Frame
-                        if (props.frame) {
-                            ctx.fillStyle = "rgba(200,200,200,0.1)";
-                            ctx.strokeStyle = "rgba(200,200,200,0.7)";
-                            ctx.beginPath();
-                            ctx.rect(shiftLeft, shiftLeft + panelHeight * (1 - node.intpos.y),
-                                panelWidth * node.intpos.x, panelHeight * node.intpos.y);
-                            ctx.fill();
-                            ctx.stroke();
-                        }
-
-                        // Knob
-                        ctx.fillStyle = "#aeaeae"; // LiteGraph.NODE_TEXT_COLOR equivalent
-                        ctx.beginPath();
-                        ctx.arc(shiftLeft + panelWidth * node.intpos.x,
-                            shiftLeft + panelHeight * (1 - node.intpos.y), 7, 0, 2 * Math.PI);
-                        ctx.fill();
-
-                        ctx.lineWidth = 1.5;
-                        ctx.strokeStyle = node.bgcolor || "#2e3440"; // LiteGraph.NODE_DEFAULT_BGCOLOR equivalent
-                        ctx.beginPath();
-                        ctx.arc(shiftLeft + panelWidth * node.intpos.x,
-                            shiftLeft + panelHeight * (1 - node.intpos.y), 5, 0, 2 * Math.PI);
-                        ctx.stroke();
-
-                        // Values on the right - REMOVED as they are now shown at outputs
-
-                    } else if (props.mode === 'Manual Sliders') {
-                        // Draw two separate sliders
-                        const drawSlider = (sliderY, value, min, max, label) => {
-                            const panelWidth = width - shiftRight - shiftLeft;
-                            const intpos = (value - min) / (max - min);
-
-                            // Track background
-                            ctx.fillStyle = "rgba(20,20,20,0.5)";
-                            ctx.beginPath();
-                            ctx.roundRect(shiftLeft, sliderY - 1, panelWidth, 4, 2);
-                            ctx.fill();
-
-                            // Knob
-                            ctx.fillStyle = "#aeaeae";
-                            ctx.beginPath();
-                            ctx.arc(shiftLeft + panelWidth * intpos, sliderY + 1, 7, 0, 2 * Math.PI);
-                            ctx.fill();
-
-                            ctx.lineWidth = 1.5;
-                            ctx.strokeStyle = node.bgcolor || "#2e3440";
-                            ctx.beginPath();
-                            ctx.arc(shiftLeft + panelWidth * intpos, sliderY + 1, 5, 0, 2 * Math.PI);
-                            ctx.stroke();
-
-                            // Value
-                            ctx.fillStyle = "#aeaeae";
-                            ctx.font = fontsize + "px Arial";
-                            ctx.textAlign = "center";
-                            ctx.fillText(value, width - shiftRight + 24, sliderY + 5);
-                        };
-
-                        const sliderSpacing = 40;
-                        drawSlider(20, widthWidget.value, props.w_min, props.w_max, "Width");
-                        drawSlider(20 + sliderSpacing, heightWidget.value, props.h_min, props.h_max, "Height");
-                    }
-                };
-
-                // Mouse event handlers for the canvas element
-                const getInternalCoordinates = (e) => {
-                    // Prefer offsetX/offsetY for precise coordinates relative to the canvas box
-                    const cw = canvas.clientWidth || canvas.offsetWidth || 1;
-                    const ch = canvas.clientHeight || canvas.offsetHeight || 1;
-                    const scaleX = canvas.width / cw;
-                    const scaleY = canvas.height / ch;
-
-                    // Some browsers always provide offsetX/offsetY on canvas events
-                    let x = (typeof e.offsetX === "number") ? e.offsetX : 0;
-                    let y = (typeof e.offsetY === "number") ? e.offsetY : 0;
-
-                    // Fallback if offsetX/offsetY are not available (rare)
-                    if (x === 0 && y === 0 && e.clientX !== undefined) {
-                        const rect = canvas.getBoundingClientRect();
-                        x = (e.clientX - rect.left) * (cw / rect.width);
-                        y = (e.clientY - rect.top) * (ch / rect.height);
-                    }
-
-                    return { x: x * scaleX, y: y * scaleY };
-                };
-
-                const handleMouseDown = (e) => {
-                    const coords = getInternalCoordinates(e);
-                    if (!coords) return;
-
-                    const { x, y } = coords;
-
-                    let shouldCapture = false;
-                    if (node.properties.mode === 'Manual') {
-                        if (x >= shiftLeft - 5 && x <= canvas.width - shiftRight + 5 &&
-                            y >= shiftLeft - 5 && y <= canvas.height - shiftLeft + 5) {
-                            node.capture = true;
-                            shouldCapture = true;
-                        }
-                    } else if (node.properties.mode === 'Manual Sliders') {
-                        const sliderY1 = 20;
-                        const sliderY2 = 60;
-                        if (Math.abs(y - sliderY1) < 10) {
-                            node.capture = 'width';
-                            shouldCapture = true;
-                        } else if (Math.abs(y - sliderY2) < 10) {
-                            node.capture = 'height';
-                            shouldCapture = true;
-                        }
-                    }
-
-                    if (shouldCapture) {
-                        updateValue(x, y, e.shiftKey);
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                };
-
-                const handleMouseMove = (e) => {
-                    if (!node.capture) return;
-                    const coords = getInternalCoordinates(e);
-                    if (!coords) return;
-                    const { x, y } = coords;
-                    updateValue(x, y, e.shiftKey);
-                    e.preventDefault();
-                    e.stopPropagation();
-                };
-
-                const handleMouseUp = (e) => {
-                    if (!node.capture) return;
-                    node.capture = false;
-                    e.preventDefault();
-                    e.stopPropagation();
-                };
-
-                const handleMouseLeave = (e) => {
-                    if (!node.capture) return;
-                    // Keep capture on leave for better usability
-                };
-
-                const updateValue = (internalX, internalY, shiftKey) => {
-                    if (node.properties.mode === 'Manual' && node.capture === true) {
-                        const panelWidth = canvas.width - shiftRight - shiftLeft;
-                        const panelHeight = canvas.height - 20;
-
-                        let vX = (internalX - shiftLeft) / panelWidth;
-                        let vY = 1 - (internalY - shiftLeft) / panelHeight;
-
-                        if (shiftKey !== node.properties.snap) {
-                            let sX = node.properties.stepX / (node.properties.maxX - node.properties.minX);
-                            let sY = node.properties.stepY / (node.properties.maxY - node.properties.minY);
-                            vX = Math.round(vX / sX) * sX;
-                            vY = Math.round(vY / sY) * sY;
-                        }
-
-                        vX = Math.max(0, Math.min(1, vX));
-                        vY = Math.max(0, Math.min(1, vY));
-
-                        node.intpos.x = vX;
-                        node.intpos.y = vY;
-
-                        let newX = node.properties.minX + (node.properties.maxX - node.properties.minX) * vX;
-                        let newY = node.properties.minY + (node.properties.maxY - node.properties.minY) * vY;
-
-                        const rnX = Math.pow(10, node.properties.decimalsX);
-                        const rnY = Math.pow(10, node.properties.decimalsY);
-                        newX = Math.round(rnX * newX) / rnX;
-                        newY = Math.round(rnY * newY) / rnY;
-
-                        widthWidget.value = newX;
-                        heightWidget.value = newY;
-
-                        // Update all scale labels when dragging in canvas
-                        if (updateResolutionScaleLabel) {
-                            updateResolutionScaleLabel();
-                        }
-                        if (updateMegapixelsScaleLabel) {
-                            updateMegapixelsScaleLabel();
-                        }
-                        if (updateUpscalePreview) {
-                            updateUpscalePreview();
-                        }
-
-                    } else if (node.properties.mode === 'Manual Sliders') {
-                        const panelWidth = canvas.width - shiftRight - shiftLeft;
-                        let vX = (internalX - shiftLeft) / panelWidth;
-                        vX = Math.max(0, Math.min(1, vX));
-
-                        if (node.capture === 'width') {
-                            if (shiftKey !== node.properties.snap) {
-                                let step = node.properties.w_step / (node.properties.w_max - node.properties.w_min);
-                                vX = Math.round(vX / step) * step;
-                            }
-                            widthWidget.value = Math.round(node.properties.w_min +
-                                (node.properties.w_max - node.properties.w_min) * vX);
-                        } else if (node.capture === 'height') {
-                            if (shiftKey !== node.properties.snap) {
-                                let step = node.properties.h_step / (node.properties.h_max - node.properties.h_min);
-                                vX = Math.round(vX / step) * step;
-                            }
-                            heightWidget.value = Math.round(node.properties.h_min +
-                                (node.properties.h_max - node.properties.h_min) * vX);
-                        }
-
-                        // Update all scale labels when using sliders mode
-                        if (updateResolutionScaleLabel) {
-                            updateResolutionScaleLabel();
-                        }
-                        if (updateMegapixelsScaleLabel) {
-                            updateMegapixelsScaleLabel();
-                        }
-                        if (updateUpscalePreview) {
-                            updateUpscalePreview();
-                        }
-                    }
-
-                    renderCanvas();
-                    app.graph.setDirtyCanvas(true);
-                };
-
-                // Attach event listeners to canvas
-                canvas.addEventListener('mousedown', handleMouseDown);
-                canvas.addEventListener('mousemove', handleMouseMove);
-                canvas.addEventListener('mouseup', handleMouseUp);
-                canvas.addEventListener('mouseleave', handleMouseLeave);
-
-                // Also handle mouseup on document to catch releases outside canvas
-                document.addEventListener('mouseup', handleMouseUp);
-
-                // Create the widget with the container element
-                const canvasWidget = this.addDOMWidget(
-                    'aspect_ratio_canvas',
-                    'custom',
-                    container,
-                    {
-                        getValue() {
-                            return {
-                                width: widthWidget.value,
-                                height: heightWidget.value
-                            };
-                        },
-                        setValue(v) {
-                            if (v.width !== undefined) widthWidget.value = v.width;
-                            if (v.height !== undefined) heightWidget.value = v.height;
-                            renderCanvas();
-                        },
-                        serialize: false
-                    }
-                );
-
-                // Store widget reference
-                this.canvasWidget = canvasWidget;
-
-                // Move custom interface to the top since backend widgets are hidden
-                this.widgets_start_y = 0;
-
-                // Mode widget callback
-                const modeWidget = this.widgets.find(w => w.name === 'mode');
-                if (modeWidget) {
-                    const origCallback = modeWidget.callback;
-                    modeWidget.callback = (value) => {
-                        node.properties.mode = value;
-                        if (origCallback) origCallback(value);
-                        updateCanvasSize();
-                        app.graph.setDirtyCanvas(true, true);
-                    };
-                }
-
-                // Update canvas on property changes
-                this.onPropertyChanged = function (propName) {
-                    if (!this.configured) return;
-
-                    // Update intpos based on current values
-                    this.intpos.x = (widthWidget.value - this.properties.minX) /
-                        (this.properties.maxX - this.properties.minX);
-                    this.intpos.y = (heightWidget.value - this.properties.minY) /
-                        (this.properties.maxY - this.properties.minY);
-
-                    this.intpos.x = Math.max(0, Math.min(1, this.intpos.x));
-                    this.intpos.y = Math.max(0, Math.min(1, this.intpos.y));
-
-                    // If min/max values changed, update canvas size to reflect new aspect ratio
-                    if (propName === 'minX' || propName === 'maxX' || propName === 'minY' || propName === 'maxY') {
-                        updateCanvasSize();
-                    } else {
-                        renderCanvas();
-                    }
-                };
-
-                this.onGraphConfigured = function () {
-                    this.configured = true;
-                    this.onPropertyChanged();
-                };
-
-                // Watch for widget value changes
-                const origWidthCallback = widthWidget.callback;
-                widthWidget.callback = function (value) {
-                    // Update node properties
-                    node.properties.valueX = value;
-
-                    // Update intpos based on new value
-                    node.intpos.x = (value - node.properties.minX) /
-                        (node.properties.maxX - node.properties.minX);
-                    node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
-
-                    // Re-render canvas immediately
-                    renderCanvas();
-                    app.graph.setDirtyCanvas(true);
-
-                    // Update all scale labels
-                    if (updateResolutionScaleLabel) {
-                        updateResolutionScaleLabel();
-                    }
-                    if (updateMegapixelsScaleLabel) {
-                        updateMegapixelsScaleLabel();
-                    }
-                    if (updateUpscalePreview) {
-                        updateUpscalePreview();
-                    }
-
-                    // Call original callback if exists with proper context
-                    if (origWidthCallback) {
-                        return origWidthCallback.call(this, value);
-                    }
-                };
-
-                const origHeightCallback = heightWidget.callback;
-                heightWidget.callback = function (value) {
-                    // Update node properties
-                    node.properties.valueY = value;
-
-                    // Update intpos based on new value
-                    node.intpos.y = (value - node.properties.minY) /
-                        (node.properties.maxY - node.properties.minY);
-                    node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
-
-                    // Re-render canvas immediately
-                    renderCanvas();
-                    app.graph.setDirtyCanvas(true);
-
-                    // Update all scale labels
-                    if (updateResolutionScaleLabel) {
-                        updateResolutionScaleLabel();
-                    }
-                    if (updateMegapixelsScaleLabel) {
-                        updateMegapixelsScaleLabel();
-                    }
-                    if (updateUpscalePreview) {
-                        updateUpscalePreview();
-                    }
-
-                    // Call original callback if exists with proper context
-                    if (origHeightCallback) {
-                        return origHeightCallback.call(this, value);
-                    }
-                };
-
-                // Handle resize
-                this.onResize = function () {
-                    updateCanvasSize();
-                };
-
-                // Cleanup on node removal
-                const origOnRemoved = this.onRemoved;
-                this.onRemoved = function () {
-                    document.removeEventListener('mouseup', handleMouseUp);
-                    
-                    // Clean up dimension check interval
-                    if (dimensionCheckInterval) {
-                        clearInterval(dimensionCheckInterval);
-                        dimensionCheckInterval = null;
-                    }
-
-                    // Disconnect resize observer if present
-                    if (this._uarResizeObserver) {
-                        try { this._uarResizeObserver.disconnect(); } catch(e) {}
-                        this._uarResizeObserver = null;
-                    }
-                    
-                    if (origOnRemoved) origOnRemoved.apply(this, arguments);
-                };
-
-                // Initial setup
-                setTimeout(() => {
-                    updateCanvasSize();
-                }, 100);
+            nodeType.prototype.onNodeCreated = function() {
+                onNodeCreated?.apply(this, []);
+                this.resolutionMaster = new ResolutionMasterCanvas(this);
             };
         }
-    },
+    }
 });
