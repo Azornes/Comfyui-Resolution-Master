@@ -60,7 +60,7 @@ app.registerExtension({
                 const node = this;
                 const fontsize = LiteGraph.NODE_SUBTEXT_SIZE;
                 const shiftLeft = 10;
-                const shiftRight = 60;
+                const shiftRight = 10; // Reduced since we're not showing values on the right anymore
 
                 // Clear output names for cleaner display (like mxSlider2D)
                 this.outputs[0].name = this.outputs[0].localized_name = "";
@@ -1811,14 +1811,7 @@ app.registerExtension({
                             shiftLeft + panelHeight * (1 - node.intpos.y), 5, 0, 2 * Math.PI);
                         ctx.stroke();
 
-                        // Values on the right
-                        ctx.fillStyle = "#aeaeae";
-                        ctx.font = fontsize + "px Arial";
-                        ctx.textAlign = "center";
-                        ctx.fillText(widthWidget.value.toFixed(props.decimalsX),
-                            width - shiftRight + 24, fontsize * 1.5);
-                        ctx.fillText(heightWidget.value.toFixed(props.decimalsY),
-                            width - shiftRight + 24, fontsize * 1.5 + LiteGraph.NODE_SLOT_HEIGHT);
+                        // Values on the right - REMOVED as they are now shown at outputs
 
                     } else if (props.mode === 'Manual Sliders') {
                         // Draw two separate sliders
