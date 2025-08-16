@@ -196,12 +196,6 @@ class ResolutionMasterCanvas {
             node.intpos.y = (heightWidget.value - node.properties.minY) / (node.properties.maxY - node.properties.minY);
         }
         
-        if (autoDetectWidget) {
-            node.properties.autoDetect = autoDetectWidget.value;
-            if (autoDetectWidget.value) {
-                this.startAutoDetect();
-            }
-        }
         
         // Store widget references
         this.widthWidget = widthWidget;
@@ -269,12 +263,10 @@ class ResolutionMasterCanvas {
         node.onGraphConfigured = function() {
             this.configured = true;
             this.onPropertyChanged();
+            if (this.properties.autoDetect) {
+                self.startAutoDetect();
+            }
         };
-        
-        // Start auto-detect if enabled
-        if (node.properties.autoDetect) {
-            this.startAutoDetect();
-        }
     }
     
     drawInterface(ctx) {
