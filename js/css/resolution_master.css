@@ -31,11 +31,16 @@
     cursor: pointer;
     transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out, opacity 0.3s ease-in-out;
     min-width: 60px;
+    height: 26px;
     text-align: center;
     margin: 1px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     text-shadow: 0 1px 2px rgb(0,0,0);
     user-select: none;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .uar-button:hover {
@@ -95,7 +100,7 @@
     width: 100%;
     justify-content: center;
     flex-wrap: wrap;
-    margin-top: 5px;
+    margin-top: 0px;
 }
 
 /* Grid layout for scaling controls */
@@ -124,8 +129,9 @@
     border-radius: 2px;
     outline: none;
     padding: 0;
-    margin: 0;
+    margin: 11px 0;
     cursor: pointer;
+    box-sizing: border-box;
 }
 
 .uar-slider::-webkit-slider-thumb {
@@ -206,6 +212,10 @@
     transition: background 0.3s ease-in-out, border-color 0.3s ease-in-out;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     text-shadow: 0 1px 2px rgb(0,0,0);
+    height: 26px;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
 }
 
 .uar-dropdown:hover {
