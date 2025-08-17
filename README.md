@@ -24,15 +24,15 @@
 
 ### 🎯 Core Functionality
 - **Interactive 2D Canvas Control**: Visually select resolution with real-time preview
-- **Multiple Input Modes**: Manual, Manual Sliders, Common Resolutions, and Aspect Ratios
 - **Smart Rescaling**: Automatic calculation of rescale factors for upscaling workflows
-- **Dimension Swapping**: Quick swap between width and height values
 - **Snap to Grid**: Align dimensions to customizable grid increments (16px to 256px)
+- **Real-time Info Display**: Shows current resolution, megapixels, p-value and aspect ratio
+- **Visual Output Values**: Color-coded values at output slots (blue/pink/green)
 
 ### 📐 Advanced Scaling Options
-- **Manual Scale**: Direct multiplier control (0.1x to 4.0x)
-- **Resolution Targeting**: Scale to standard resolutions (480p, 720p, 1080p, 1440p, 2160p, 4320p)
-- **Megapixel Targeting**: Scale to specific megapixel counts (0.5 MP to 12 MP)
+- **Manual Scale**: Direct multiplier control (ex. 2.0x)
+- **Resolution Targeting**: Scale to standard resolutions (ex. 480p, 720p, 1080p, 2160p)
+- **Megapixel Targeting**: Scale to specific megapixel counts (ex. 5 MP)
 - **Live Preview**: See resulting dimensions before applying changes
 
 ### 🎨 Preset Categories
@@ -64,17 +64,25 @@ Extensive preset library organized by use case:
 - Automatic model recommendation (480p vs 720p)
 - Maintains proper aspect ratios for video generation
 
-## Installation
+---
 
-1. Navigate to your ComfyUI custom nodes directory:
-   ```
-   ComfyUI/custom_nodes/
-   ```
+## 🚀 Installation
 
-2. Clone this repository:
-   ```bash
-   git clone https://github.com/yourusername/comfyui-resolution-master
-   ```
+### Install via ComfyUI-Manager
+* Search `Comfyui-LayerForge` in ComfyUI-Manager and click `Install` button.
+
+### Manual Install
+1. Install [ComfyUi](https://github.com/comfyanonymous/ComfyUI).
+2. Clone this repo into `custom_modules`:
+    ```bash
+    cd ComfyUI/custom_nodes/
+    git clone https://github.com/Azornes/Comfyui-Resolution-Master.git
+    ```
+3. Start up ComfyUI.
+
+---
+
+
 
 3. Restart ComfyUI or reload custom nodes
 
@@ -98,22 +106,20 @@ Extensive preset library organized by use case:
 
 #### Manual Sliders Mode
 - Independent horizontal sliders for width and height
-- Precise control over each dimension
-- Ideal for fine-tuning specific values
+- Precise control over each dimension (64-4096px range by default)
+- Real-time value display next to each slider
+- Ideal for fine-tuning specific values without visual canvas
 
-#### Common Resolutions Mode
-- Dropdown selection of standard resolutions
-- Quick access to commonly used dimensions
-
-#### Aspect Ratios Mode
-- Select from predefined aspect ratios
-- Maintains proportions while adjusting scale
+#### Note on Available Modes
+Currently, the node supports "Manual" and "Manual Sliders" modes. The "Common Resolutions" and "Aspect Ratios" modes mentioned are integrated into the preset system rather than being separate input modes.
 
 ### Working with Presets
 
 1. **Select a Category**: Choose from the dropdown (e.g., "SDXL", "Social Media")
 2. **Choose a Preset**: Select specific aspect ratio or resolution
-3. **Enable Custom Calc** (optional): Activates model-specific constraints
+3. **Enable Custom Calc** (optional): Checkbox appears next to preset dropdown
+   - Activates model-specific constraints
+   - Automatically adjusts dimensions to model requirements
 4. **Apply**: Dimensions are automatically updated
 
 ### Scaling Workflow
@@ -131,21 +137,45 @@ The node provides three scaling methods that work together:
 ### Snap Functionality
 
 - **Snap Button**: Rounds dimensions to nearest grid value
-- **Adjustable Grid**: 16px to 256px increments
+- **Adjustable Grid**: 16px to 256px increments (adjustable via slider)
 - **Smart Snapping**: Respects model constraints when Custom Calc is enabled
+- **Shift Key Override**: Hold Shift while dragging on canvas to temporarily toggle snap on/off
+
+### Auto-Detect & Auto-Fit
+
+- **Auto-Detect Toggle**: Automatically detects dimensions from connected images
+  - Monitors input connection every second
+  - Updates dimensions when new image is detected
+  - Shows detected resolution in green text
+- **Auto-Fit Button**: Intelligently matches detected dimensions to closest preset
+  - Analyzes both aspect ratio and total pixels
+  - Checks both normal and flipped orientations
+  - Applies category-specific scaling when Custom Calc is enabled
+- **Auto Checkbox**: Enable automatic fitting when dimensions change
+  - Located next to Auto-Fit button
+  - Only active when category is selected and image detected
 
 ## Output Values
 
-- **width** (INT): Selected width in pixels
-- **height** (INT): Selected height in pixels  
-- **rescale_factor** (FLOAT): Calculated scaling factor for achieving target resolution
+- **width** (INT): Selected width in pixels (displayed in blue #89F)
+- **height** (INT): Selected height in pixels (displayed in pink #F89)
+- **rescale_factor** (FLOAT): Calculated scaling factor for achieving target resolution (displayed in green #9F8)
+
+Values are shown directly at output slots for quick reference.
 
 ### Rescale Factor Modes
 
-The rescale factor adapts based on your selection:
-- **Manual Mode**: Uses the manual scale slider value
-- **Resolution Mode**: Calculates factor to reach target resolution
-- **Megapixels Mode**: Calculates factor to reach target pixel count
+The rescale factor adapts based on your selection (choose via radio buttons):
+- **Manual Mode**: Uses the manual scale slider value (adjustable 0.1x to 4.0x)
+- **Resolution Mode**: Calculates factor to reach target resolution (p-value based)
+- **Megapixels Mode**: Calculates factor to reach target pixel count (0.5 to 6.0 MP)
+
+Each scaling row shows:
+- Control button for immediate application (⬆, 📺, 📷)
+- Adjustment method (slider/dropdown)
+- Calculated scale factor
+- Preview of resulting dimensions
+- Radio button to set as active rescale mode
 
 ## Examples
 
