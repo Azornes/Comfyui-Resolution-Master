@@ -96,23 +96,6 @@ Extensive preset library organized by use case:
    - `height`: Current height value
    - `rescale_factor`: Calculated scale factor for upscaling
 
-### Input Modes
-
-#### Manual Mode
-- Interactive 2D canvas for visual resolution selection
-- Click and drag on the canvas to adjust both dimensions simultaneously
-- Dots grid shows snap points
-- Frame visualization shows the selected area
-
-#### Manual Sliders Mode
-- Independent horizontal sliders for width and height
-- Precise control over each dimension (64-4096px range by default)
-- Real-time value display next to each slider
-- Ideal for fine-tuning specific values without visual canvas
-
-#### Note on Available Modes
-Currently, the node supports "Manual" and "Manual Sliders" modes. The "Common Resolutions" and "Aspect Ratios" modes mentioned are integrated into the preset system rather than being separate input modes.
-
 ### Working with Presets
 
 1. **Select a Category**: Choose from the dropdown (e.g., "SDXL", "Social Media")
