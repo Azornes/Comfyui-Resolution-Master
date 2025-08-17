@@ -15,36 +15,36 @@ class ResolutionMasterCanvas {
         this.node.properties.mode = this.node.properties.mode ?? "Manual";
         this.node.properties.valueX = this.node.properties.valueX ?? 512;
         this.node.properties.valueY = this.node.properties.valueY ?? 512;
-        this.node.properties.minX = this.node.properties.minX ?? 0;
-        this.node.properties.maxX = this.node.properties.maxX ?? 2048;
-        this.node.properties.stepX = this.node.properties.stepX ?? 64;
-        this.node.properties.minY = this.node.properties.minY ?? 0;
-        this.node.properties.maxY = this.node.properties.maxY ?? 2048;
-        this.node.properties.stepY = this.node.properties.stepY ?? 64;
-        this.node.properties.decimalsX = this.node.properties.decimalsX ?? 0;
-        this.node.properties.decimalsY = this.node.properties.decimalsY ?? 0;
-        this.node.properties.snap = this.node.properties.snap ?? true;
-        this.node.properties.dots = this.node.properties.dots ?? true;
-        this.node.properties.frame = this.node.properties.frame ?? true;
+        this.node.properties.canvas_min_x = this.node.properties.canvas_min_x ?? 0;
+        this.node.properties.canvas_max_x = this.node.properties.canvas_max_x ?? 2048;
+        this.node.properties.canvas_step_x = this.node.properties.canvas_step_x ?? 64;
+        this.node.properties.canvas_min_y = this.node.properties.canvas_min_y ?? 0;
+        this.node.properties.canvas_max_y = this.node.properties.canvas_max_y ?? 2048;
+        this.node.properties.canvas_step_y = this.node.properties.canvas_step_y ?? 64;
+        this.node.properties.canvas_decimals_x = this.node.properties.canvas_decimals_x ?? 0;
+        this.node.properties.canvas_decimals_y = this.node.properties.canvas_decimals_y ?? 0;
+        this.node.properties.canvas_snap = this.node.properties.canvas_snap ?? true;
+        this.node.properties.canvas_dots = this.node.properties.canvas_dots ?? true;
+        this.node.properties.canvas_frame = this.node.properties.canvas_frame ?? true;
         
         // Manual Sliders mode properties
-        this.node.properties.w_min = this.node.properties.w_min ?? 64;
-        this.node.properties.w_max = this.node.properties.w_max ?? 4096;
-        this.node.properties.w_step = this.node.properties.w_step ?? 64;
-        this.node.properties.h_min = this.node.properties.h_min ?? 64;
-        this.node.properties.h_max = this.node.properties.h_max ?? 4096;
-        this.node.properties.h_step = this.node.properties.h_step ?? 64;
+        this.node.properties.manual_slider_min_w = this.node.properties.manual_slider_min_w ?? 64;
+        this.node.properties.manual_slider_max_w = this.node.properties.manual_slider_max_w ?? 4096;
+        this.node.properties.manual_slider_step_w = this.node.properties.manual_slider_step_w ?? 64;
+        this.node.properties.manual_slider_min_h = this.node.properties.manual_slider_min_h ?? 64;
+        this.node.properties.manual_slider_max_h = this.node.properties.manual_slider_max_h ?? 4096;
+        this.node.properties.manual_slider_step_h = this.node.properties.manual_slider_step_h ?? 64;
         
         // Custom sliders properties
-        this.node.properties.snap_min = this.node.properties.snap_min ?? 16;
-        this.node.properties.snap_max = this.node.properties.snap_max ?? 256;
-        this.node.properties.snap_step = this.node.properties.snap_step ?? 16;
-        this.node.properties.s_min = this.node.properties.s_min ?? 0.1;
-        this.node.properties.s_max = this.node.properties.s_max ?? 4.0;
-        this.node.properties.s_step = this.node.properties.s_step ?? 0.1;
-        this.node.properties.mp_min = this.node.properties.mp_min ?? 0.5;
-        this.node.properties.mp_max = this.node.properties.mp_max ?? 6.0;
-        this.node.properties.mp_step = this.node.properties.mp_step ?? 0.1;
+        this.node.properties.action_slider_snap_min = this.node.properties.action_slider_snap_min ?? 16;
+        this.node.properties.action_slider_snap_max = this.node.properties.action_slider_snap_max ?? 256;
+        this.node.properties.action_slider_snap_step = this.node.properties.action_slider_snap_step ?? 16;
+        this.node.properties.scaling_slider_min = this.node.properties.scaling_slider_min ?? 0.1;
+        this.node.properties.scaling_slider_max = this.node.properties.scaling_slider_max ?? 4.0;
+        this.node.properties.scaling_slider_step = this.node.properties.scaling_slider_step ?? 0.1;
+        this.node.properties.megapixels_slider_min = this.node.properties.megapixels_slider_min ?? 0.5;
+        this.node.properties.megapixels_slider_max = this.node.properties.megapixels_slider_max ?? 6.0;
+        this.node.properties.megapixels_slider_step = this.node.properties.megapixels_slider_step ?? 0.1;
 
         // Additional properties for full functionality
         this.node.properties.snapValue = this.node.properties.snapValue ?? 64;
@@ -219,8 +219,8 @@ class ResolutionMasterCanvas {
             node.properties.valueY = heightWidget.value;
             
             // Initialize intpos based on current values
-            node.intpos.x = (widthWidget.value - node.properties.minX) / (node.properties.maxX - node.properties.minX);
-            node.intpos.y = (heightWidget.value - node.properties.minY) / (node.properties.maxY - node.properties.minY);
+            node.intpos.x = (widthWidget.value - node.properties.canvas_min_x) / (node.properties.canvas_max_x - node.properties.canvas_min_x);
+            node.intpos.y = (heightWidget.value - node.properties.canvas_min_y) / (node.properties.canvas_max_y - node.properties.canvas_min_y);
         }
         
         
@@ -402,7 +402,7 @@ class ResolutionMasterCanvas {
         const sliderWidth = node.size[0] - sliderX - valueWidth - margin;
 
         this.controls.snapSlider = { x: sliderX, y, w: sliderWidth, h: 28 };
-        this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.snap_min, props.snap_max, props.snap_step);
+        this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.action_slider_snap_min, props.action_slider_snap_max, props.action_slider_snap_step);
 
         ctx.fillStyle = "#ccc";
         ctx.font = "12px Arial";
@@ -417,8 +417,8 @@ class ResolutionMasterCanvas {
         
         this.controls.canvas2d = { x, y, w, h };
         
-        const rangeX = props.maxX - props.minX;
-        const rangeY = props.maxY - props.minY;
+        const rangeX = props.canvas_max_x - props.canvas_min_x;
+        const rangeY = props.canvas_max_y - props.canvas_min_y;
         const aspectRatio = rangeX / rangeY;
         
         let canvasW = w - 20;
@@ -443,11 +443,11 @@ class ResolutionMasterCanvas {
         ctx.fill();
         ctx.stroke();
         
-        if (props.dots) {
+        if (props.canvas_dots) {
             ctx.fillStyle = "rgba(200,200,200,0.5)";
             ctx.beginPath();
-            let stX = canvasW * props.stepX / rangeX;
-            let stY = canvasH * props.stepY / rangeY;
+            let stX = canvasW * props.canvas_step_x / rangeX;
+            let stY = canvasH * props.canvas_step_y / rangeY;
             for (let ix = stX; ix < canvasW; ix += stX) {
                 for (let iy = stY; iy < canvasH; iy += stY) {
                     ctx.rect(offsetX + ix - 0.5, offsetY + iy - 0.5, 1, 1);
@@ -456,7 +456,7 @@ class ResolutionMasterCanvas {
             ctx.fill();
         }
         
-        if (props.frame) {
+        if (props.canvas_frame) {
             ctx.fillStyle = "rgba(150,150,250,0.1)";
             ctx.strokeStyle = "rgba(150,150,250,0.7)";
             ctx.lineWidth = 1.5;
@@ -524,7 +524,7 @@ class ResolutionMasterCanvas {
         currentX += btnWidth + gap;
         
         this.controls.scaleSlider = { x: currentX, y, w: sliderWidth, h: 28 };
-        this.drawSlider(ctx, currentX, y, sliderWidth, 28, props.upscaleValue, props.s_min, props.s_max, props.s_step);
+        this.drawSlider(ctx, currentX, y, sliderWidth, 28, props.upscaleValue, props.scaling_slider_min, props.scaling_slider_max, props.scaling_slider_step);
         currentX += sliderWidth + gap;
         
         ctx.fillStyle = "#ccc";
@@ -612,7 +612,7 @@ class ResolutionMasterCanvas {
         currentX += btnWidth + gap;
         
         this.controls.megapixelsSlider = { x: currentX, y, w: sliderWidth, h: 28 };
-        this.drawSlider(ctx, currentX, y, sliderWidth, 28, props.targetMegapixels, props.mp_min, props.mp_max, props.mp_step);
+        this.drawSlider(ctx, currentX, y, sliderWidth, 28, props.targetMegapixels, props.megapixels_slider_min, props.megapixels_slider_max, props.megapixels_slider_step);
         currentX += sliderWidth + gap;
         
         const scaleFactor = this.calculateMegapixelsScale(props.targetMegapixels);
@@ -776,7 +776,7 @@ class ResolutionMasterCanvas {
         ctx.fillText("Width:", margin, y);
         
         this.controls.widthSlider = { x: margin, y: y + 10, w, h: 25 };
-        this.drawSlider(ctx, margin, y + 10, w, 25, this.widthWidget.value, props.w_min, props.w_max, props.w_step);
+        this.drawSlider(ctx, margin, y + 10, w, 25, this.widthWidget.value, props.manual_slider_min_w, props.manual_slider_max_w, props.manual_slider_step_w);
         
         ctx.textAlign = "right";
         ctx.fillText(this.widthWidget.value.toString(), node.size[0] - margin, y + 25);
@@ -786,7 +786,7 @@ class ResolutionMasterCanvas {
         ctx.fillText("Height:", margin, y);
         
         this.controls.heightSlider = { x: margin, y: y + 10, w, h: 25 };
-        this.drawSlider(ctx, margin, y + 10, w, 25, this.heightWidget.value, props.h_min, props.h_max, props.h_step);
+        this.drawSlider(ctx, margin, y + 10, w, 25, this.heightWidget.value, props.manual_slider_min_h, props.manual_slider_max_h, props.manual_slider_step_h);
         
         ctx.textAlign = "right";
         ctx.fillText(this.heightWidget.value.toString(), node.size[0] - margin, y + 25);
@@ -1080,10 +1080,10 @@ class ResolutionMasterCanvas {
         const node = this.node;
         if (!node.configured) return;
         
-        node.intpos.x = (node.properties.valueX - node.properties.minX) / 
-                       (node.properties.maxX - node.properties.minX);
-        node.intpos.y = (node.properties.valueY - node.properties.minY) / 
-                       (node.properties.maxY - node.properties.minY);
+        node.intpos.x = (node.properties.valueX - node.properties.canvas_min_x) / 
+                       (node.properties.canvas_max_x - node.properties.canvas_min_x);
+        node.intpos.y = (node.properties.valueY - node.properties.canvas_min_y) / 
+                       (node.properties.canvas_max_y - node.properties.canvas_min_y);
         
         node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
         node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
@@ -1145,9 +1145,9 @@ class ResolutionMasterCanvas {
         let vX = Math.max(0, Math.min(1, x / w));
         let vY = Math.max(0, Math.min(1, 1 - y / h));
         
-        if (shiftKey !== props.snap) {
-            let sX = props.stepX / (props.maxX - props.minX);
-            let sY = props.stepY / (props.maxY - props.minY);
+        if (shiftKey !== props.canvas_snap) {
+            let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
+            let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
             vX = Math.round(vX / sX) * sX;
             vY = Math.round(vY / sY) * sY;
         }
@@ -1155,11 +1155,11 @@ class ResolutionMasterCanvas {
         node.intpos.x = vX;
         node.intpos.y = vY;
         
-        let newX = props.minX + (props.maxX - props.minX) * vX;
-        let newY = props.minY + (props.maxY - props.minY) * vY;
+        let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
+        let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
         
-        const rnX = Math.pow(10, props.decimalsX);
-        const rnY = Math.pow(10, props.decimalsY);
+        const rnX = Math.pow(10, props.canvas_decimals_x);
+        const rnY = Math.pow(10, props.canvas_decimals_y);
         newX = Math.round(rnX * newX) / rnX;
         newY = Math.round(rnY * newY) / rnY;
         
@@ -1180,11 +1180,11 @@ class ResolutionMasterCanvas {
         let value = Math.max(0, Math.min(1, x / w));
         
         const sliderConfig = {
-            snapSlider: { prop: 'snapValue', min: props.snap_min, max: props.snap_max, step: props.snap_step },
-            scaleSlider: { prop: 'upscaleValue', min: props.s_min, max: props.s_max, step: props.s_step, updateOn: 'manual' },
-            megapixelsSlider: { prop: 'targetMegapixels', min: props.mp_min, max: props.mp_max, step: props.mp_step, updateOn: 'megapixels' },
-            widthSlider: { prop: 'valueX', min: props.w_min, max: props.w_max, step: props.w_step },
-            heightSlider: { prop: 'valueY', min: props.h_min, max: props.h_max, step: props.h_step }
+            snapSlider: { prop: 'snapValue', min: props.action_slider_snap_min, max: props.action_slider_snap_max, step: props.action_slider_snap_step },
+            scaleSlider: { prop: 'upscaleValue', min: props.scaling_slider_min, max: props.scaling_slider_max, step: props.scaling_slider_step, updateOn: 'manual' },
+            megapixelsSlider: { prop: 'targetMegapixels', min: props.megapixels_slider_min, max: props.megapixels_slider_max, step: props.megapixels_slider_step, updateOn: 'megapixels' },
+            widthSlider: { prop: 'valueX', min: props.manual_slider_min_w, max: props.manual_slider_max_w, step: props.manual_slider_step_w },
+            heightSlider: { prop: 'valueY', min: props.manual_slider_min_h, max: props.manual_slider_max_h, step: props.manual_slider_step_h }
         };
 
         const config = sliderConfig[sliderName];
@@ -1241,9 +1241,17 @@ class ResolutionMasterCanvas {
     // Action handlers
     handleSwap() {
         if (this.widthWidget && this.heightWidget) {
-            [this.widthWidget.value, this.heightWidget.value] = [this.heightWidget.value, this.widthWidget.value];
-            this.node.properties.valueX = this.widthWidget.value;
-            this.node.properties.valueY = this.heightWidget.value;
+            const newWidth = this.heightWidget.value;
+            const newHeight = this.widthWidget.value;
+
+            // Update properties first
+            this.node.properties.valueX = newWidth;
+            this.node.properties.valueY = newHeight;
+
+            // Then update widgets
+            this.widthWidget.value = newWidth;
+            this.heightWidget.value = newHeight;
+
             this.handlePropertyChange();
             this.updateRescaleValue();
         }
@@ -1252,37 +1260,83 @@ class ResolutionMasterCanvas {
     handleSnap() {
         if (this.widthWidget && this.heightWidget) {
             const snap = this.node.properties.snapValue;
-            this.widthWidget.value = Math.round(this.widthWidget.value / snap) * snap;
-            this.heightWidget.value = Math.round(this.heightWidget.value / snap) * snap;
-            this.applyDimensionChange();
+            const newWidth = Math.round(this.widthWidget.value / snap) * snap;
+            const newHeight = Math.round(this.heightWidget.value / snap) * snap;
+            
+            // Update properties first
+            this.node.properties.valueX = newWidth;
+            this.node.properties.valueY = newHeight;
+            
+            // Then update widgets
+            this.widthWidget.value = newWidth;
+            this.heightWidget.value = newHeight;
+            
+            // Update UI
+            this.handlePropertyChange();
+            this.updateRescaleValue();
         }
     }
     
     handleScale() {
         if (this.widthWidget && this.heightWidget) {
             const scale = this.node.properties.upscaleValue;
-            this.widthWidget.value = Math.round(this.widthWidget.value * scale);
-            this.heightWidget.value = Math.round(this.heightWidget.value * scale);
+            const newWidth = Math.round(this.widthWidget.value * scale);
+            const newHeight = Math.round(this.heightWidget.value * scale);
+            
+            // Update properties first
+            this.node.properties.valueX = newWidth;
+            this.node.properties.valueY = newHeight;
+            
+            // Then update widgets
+            this.widthWidget.value = newWidth;
+            this.heightWidget.value = newHeight;
+            
+            // Reset scale value
             this.node.properties.upscaleValue = 1.0;
-            this.applyDimensionChange();
+            
+            // Update UI
+            this.handlePropertyChange();
+            this.updateRescaleValue();
         }
     }
 
     handleResolutionScale() {
         if (this.widthWidget && this.heightWidget) {
             const scale = this.calculateResolutionScale(this.node.properties.targetResolution);
-            this.widthWidget.value = Math.round(this.widthWidget.value * scale);
-            this.heightWidget.value = Math.round(this.heightWidget.value * scale);
-            this.applyDimensionChange();
+            const newWidth = Math.round(this.widthWidget.value * scale);
+            const newHeight = Math.round(this.heightWidget.value * scale);
+            
+            // Update properties first
+            this.node.properties.valueX = newWidth;
+            this.node.properties.valueY = newHeight;
+            
+            // Then update widgets
+            this.widthWidget.value = newWidth;
+            this.heightWidget.value = newHeight;
+            
+            // Update UI
+            this.handlePropertyChange();
+            this.updateRescaleValue();
         }
     }
 
     handleMegapixelsScale() {
         if (this.widthWidget && this.heightWidget) {
             const scale = this.calculateMegapixelsScale(this.node.properties.targetMegapixels);
-            this.widthWidget.value = Math.round(this.widthWidget.value * scale);
-            this.heightWidget.value = Math.round(this.heightWidget.value * scale);
-            this.applyDimensionChange();
+            const newWidth = Math.round(this.widthWidget.value * scale);
+            const newHeight = Math.round(this.heightWidget.value * scale);
+            
+            // Update properties first
+            this.node.properties.valueX = newWidth;
+            this.node.properties.valueY = newHeight;
+            
+            // Then update widgets
+            this.widthWidget.value = newWidth;
+            this.heightWidget.value = newHeight;
+            
+            // Update UI
+            this.handlePropertyChange();
+            this.updateRescaleValue();
         }
     }
     
@@ -1385,11 +1439,14 @@ class ResolutionMasterCanvas {
             ({ width, height } = this.applyCustomCalculation(width, height, props.selectedCategory));
         }
 
-        this.widthWidget.value = Math.max(props.minX, Math.min(props.maxX, width));
-        this.heightWidget.value = Math.max(props.minY, Math.min(props.maxY, height));
+        const newWidth = Math.max(props.canvas_min_x, Math.min(props.canvas_max_x, width));
+        const newHeight = Math.max(props.canvas_min_y, Math.min(props.canvas_max_y, height));
+        
+        props.valueX = newWidth;
+        props.valueY = newHeight;
 
-        props.valueX = this.widthWidget.value;
-        props.valueY = this.heightWidget.value;
+        this.widthWidget.value = newWidth;
+        this.heightWidget.value = newHeight;
         
         this.handlePropertyChange();
         this.updateRescaleValue();
