@@ -28,13 +28,13 @@ class ResolutionMaster:
                 "width": ("INT", {"default": 512, "min": 64, "max": 4096, "step": 64}),
                 "height": ("INT", {"default": 512, "min": 64, "max": 4096, "step": 64}),
                 "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual"}),
+                "rescale_mode": ("STRING", {"default": "resolution"}),
+                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0}),
             },
             "optional": {
                 "input_image": ("IMAGE",),
             },
             "hidden": {
-                "rescale_mode": "STRING",
-                "rescale_value": "FLOAT",
                 "unique_id": "UNIQUE_ID",
             },
         }
@@ -44,7 +44,7 @@ class ResolutionMaster:
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 
-    def main(self, mode, width, height, auto_detect, input_image=None, rescale_mode="resolution", rescale_value=None, unique_id=None):
+    def main(self, mode, width, height, auto_detect, rescale_mode, rescale_value, input_image=None, unique_id=None):
         detected_width = width
         detected_height = height
         
@@ -82,16 +82,7 @@ class ResolutionMaster:
                 print(f"[ResolutionMaster] Error detecting dimensions: {str(e)}")
                 # Fall back to manual dimensions
         
-        # If rescale_value is provided from frontend, use it
-        if rescale_value is not None:
-            rescale_factor = rescale_value
-        else:
-            # Default calculation based on 1080p target resolution
-            target_resolution = 1080
-            target_pixels = (target_resolution * (16.0 / 9.0)) * target_resolution
-            current_pixels = width * height
-            rescale_factor = math.sqrt(target_pixels / current_pixels)
-
-        # In the future, different modes can process width/height differently
-        # For now, just pass through the values with rescale factor
+        # The rescale_factor is calculated on the frontend and passed here
+        rescale_factor = rescale_value
+        
         return (width, height, rescale_factor)

@@ -177,6 +177,14 @@ class ResolutionMasterCanvas {
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
         
+        // Initialize rescale widgets with proper values
+        if (rescaleModeWidget) {
+            rescaleModeWidget.value = node.properties.rescaleMode;
+        }
+        if (rescaleValueWidget) {
+            rescaleValueWidget.value = node.properties.rescaleValue;
+        }
+        
         // Hide all backend widgets
         [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
             if (widget) {
@@ -266,6 +274,8 @@ class ResolutionMasterCanvas {
             if (this.properties.autoDetect) {
                 self.startAutoDetect();
             }
+            // Calculate initial rescale value
+            self.updateRescaleValue();
         };
     }
     
@@ -1428,8 +1438,18 @@ class ResolutionMasterCanvas {
         const value = modeCalculations[props.rescaleMode]?.() || 1.0;
         
         props.rescaleValue = value;
-        if (this.rescaleValueWidget) this.rescaleValueWidget.value = value;
-        if (this.rescaleModeWidget) this.rescaleModeWidget.value = props.rescaleMode;
+        
+        // Find and update the rescale_value widget
+        const rescaleValueWidget = this.node.widgets?.find(w => w.name === 'rescale_value');
+        if (rescaleValueWidget) {
+            rescaleValueWidget.value = value;
+        }
+        
+        // Find and update the rescale_mode widget
+        const rescaleModeWidget = this.node.widgets?.find(w => w.name === 'rescale_mode');
+        if (rescaleModeWidget) {
+            rescaleModeWidget.value = props.rescaleMode;
+        }
     }
     
     // Auto-detect methods
