@@ -20,7 +20,7 @@
 </p>
 
 
-https://github.com/user-attachments/assets/157f9381-2237-4399-99b3-ebe1aa048e35
+https://github.com/user-attachments/assets/587ea664-32b1-410b-bfa1-fba013f8e700
 
 
 ## Features
