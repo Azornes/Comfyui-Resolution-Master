@@ -531,104 +531,58 @@ class ResolutionMasterCanvas {
     
     drawScaleRow(ctx, x, y) {
         const props = this.node.properties;
-        const layout = this.getScalingRowLayout();
-        let currentX = x;
-
-        this.controls.scaleBtn = { x: currentX, y, w: layout.btnWidth, h: 28 };
-        this.drawButton(ctx, currentX, y, layout.btnWidth, 28, this.icons.upscale, this.hoverElement === 'scaleBtn');
-        currentX += layout.btnWidth + layout.gap;
-        
-        this.controls.scaleSlider = { x: currentX, y, w: layout.sliderWidth, h: 28 };
-        this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28, props.upscaleValue, props.scaling_slider_min, props.scaling_slider_max, props.scaling_slider_step);
-        currentX += layout.sliderWidth + layout.gap;
-        
-        ctx.fillStyle = "#ccc";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(props.upscaleValue.toFixed(1) + "x", currentX + layout.valueWidth / 2, y + 14);
-        currentX += layout.valueWidth + layout.gap;
-        
-        if (this.widthWidget && this.heightWidget) {
-            const newW = Math.round(this.widthWidget.value * props.upscaleValue);
-            const newH = Math.round(this.heightWidget.value * props.upscaleValue);
-            ctx.fillStyle = "#888";
-            ctx.font = "11px Arial";
-            ctx.textAlign = "left";
-            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
-        }
-        currentX += layout.previewWidth + layout.gap;
-        
-        this.controls.upscaleRadio = { x: currentX, y: y + 5, w: layout.radioWidth, h: 18 };
-        this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth, props.rescaleMode === "manual", this.hoverElement === 'upscaleRadio');
+        this.drawScalingRowBase(ctx, x, y, {
+            buttonControl: 'scaleBtn',
+            mainControl: 'scaleSlider',
+            radioControl: 'upscaleRadio',
+            controlType: 'slider',
+            icon: this.icons.upscale,
+            valueProperty: 'upscaleValue',
+            min: props.scaling_slider_min,
+            max: props.scaling_slider_max,
+            step: props.scaling_slider_step,
+            displayValue: props.upscaleValue.toFixed(1) + "x",
+            scaleFactor: props.upscaleValue,
+            rescaleMode: 'manual'
+        });
     }
     
     drawResolutionRow(ctx, x, y) {
         const props = this.node.properties;
-        const layout = this.getScalingRowLayout();
-        let currentX = x;
-
-        this.controls.resolutionBtn = { x: currentX, y, w: layout.btnWidth, h: 28 };
-        this.drawButton(ctx, currentX, y, layout.btnWidth, 28, this.icons.resolution, this.hoverElement === 'resolutionBtn');
-        currentX += layout.btnWidth + layout.gap;
-
-        this.controls.resolutionDropdown = { x: currentX, y, w: layout.dropdownWidth, h: 28 };
         const selectedText = this.resolutions.find(r => parseInt(r) === props.targetResolution) || '1080p';
-        this.drawDropdown(ctx, currentX, y, layout.dropdownWidth, 28, selectedText, this.hoverElement === 'resolutionDropdown');
-        currentX += layout.dropdownWidth + layout.gap;
-        
         const scaleFactor = this.calculateResolutionScale(props.targetResolution);
-        ctx.fillStyle = "#ccc";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(`×${scaleFactor.toFixed(2)}`, currentX + layout.valueWidth / 2, y + 14);
-        currentX += layout.valueWidth + layout.gap;
         
-        if (this.widthWidget && this.heightWidget) {
-            const newW = Math.round(this.widthWidget.value * scaleFactor);
-            const newH = Math.round(this.heightWidget.value * scaleFactor);
-            ctx.fillStyle = "#888";
-            ctx.font = "11px Arial";
-            ctx.textAlign = "left";
-            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
-        }
-        currentX += layout.previewWidth + layout.gap;
-        
-        this.controls.resolutionRadio = { x: currentX, y: y + 5, w: layout.radioWidth, h: 18 };
-        this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth, props.rescaleMode === "resolution", this.hoverElement === 'resolutionRadio');
+        this.drawScalingRowBase(ctx, x, y, {
+            buttonControl: 'resolutionBtn',
+            mainControl: 'resolutionDropdown',
+            radioControl: 'resolutionRadio',
+            controlType: 'dropdown',
+            icon: this.icons.resolution,
+            selectedText: selectedText,
+            displayValue: `×${scaleFactor.toFixed(2)}`,
+            scaleFactor: scaleFactor,
+            rescaleMode: 'resolution'
+        });
     }
     
     drawMegapixelsRow(ctx, x, y) {
         const props = this.node.properties;
-        const layout = this.getScalingRowLayout();
-        let currentX = x;
-
-        this.controls.megapixelsBtn = { x: currentX, y, w: layout.btnWidth, h: 28 };
-        this.drawButton(ctx, currentX, y, layout.btnWidth, 28, this.icons.megapixels, this.hoverElement === 'megapixelsBtn');
-        currentX += layout.btnWidth + layout.gap;
-        
-        this.controls.megapixelsSlider = { x: currentX, y, w: layout.sliderWidth, h: 28 };
-        this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28, props.targetMegapixels, props.megapixels_slider_min, props.megapixels_slider_max, props.megapixels_slider_step);
-        currentX += layout.sliderWidth + layout.gap;
-        
         const scaleFactor = this.calculateMegapixelsScale(props.targetMegapixels);
-        ctx.fillStyle = "#ccc";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(`${props.targetMegapixels.toFixed(1)}MP`, currentX + layout.valueWidth / 2, y + 14);
-        currentX += layout.valueWidth + layout.gap;
         
-        if (this.widthWidget && this.heightWidget) {
-            const newW = Math.round(this.widthWidget.value * scaleFactor);
-            const newH = Math.round(this.heightWidget.value * scaleFactor);
-            ctx.fillStyle = "#888";
-            ctx.font = "11px Arial";
-            ctx.textAlign = "left";
-            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
-        }
-        currentX += layout.previewWidth + layout.gap;
-        
-        this.controls.megapixelsRadio = { x: currentX, y: y + 5, w: layout.radioWidth, h: 18 };
-        this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth, props.rescaleMode === "megapixels", this.hoverElement === 'megapixelsRadio');
+        this.drawScalingRowBase(ctx, x, y, {
+            buttonControl: 'megapixelsBtn',
+            mainControl: 'megapixelsSlider',
+            radioControl: 'megapixelsRadio',
+            controlType: 'slider',
+            icon: this.icons.megapixels,
+            valueProperty: 'targetMegapixels',
+            min: props.megapixels_slider_min,
+            max: props.megapixels_slider_max,
+            step: props.megapixels_slider_step,
+            displayValue: `${props.targetMegapixels.toFixed(1)}MP`,
+            scaleFactor: scaleFactor,
+            rescaleMode: 'megapixels'
+        });
     }
 
     drawAutoDetectSection(ctx, y) {
@@ -1132,6 +1086,85 @@ class ResolutionMasterCanvas {
         app.graph.setDirtyCanvas(true);
     }
     
+    // Helper methods
+    validateWidgets() {
+        return this.widthWidget && this.heightWidget;
+    }
+    
+    updateDimensions(width, height, skipPropertyUpdate = false) {
+        if (!this.validateWidgets()) return;
+        
+        // Update properties first (unless skipped)
+        if (!skipPropertyUpdate) {
+            this.node.properties.valueX = width;
+            this.node.properties.valueY = height;
+        }
+        
+        // Then update widgets
+        this.widthWidget.value = width;
+        this.heightWidget.value = height;
+        
+        // Update UI
+        this.handlePropertyChange();
+        this.updateRescaleValue();
+    }
+    
+    setCanvasTextStyle(ctx, style = {}) {
+        const defaults = {
+            fillStyle: "#ccc",
+            font: "12px Arial",
+            textAlign: "center",
+            textBaseline: "middle"
+        };
+        const finalStyle = { ...defaults, ...style };
+        
+        Object.entries(finalStyle).forEach(([key, value]) => {
+            ctx[key] = value;
+        });
+    }
+    
+    drawScalingRowBase(ctx, x, y, config) {
+        const props = this.node.properties;
+        const layout = this.getScalingRowLayout();
+        let currentX = x;
+
+        // Draw button
+        this.controls[config.buttonControl] = { x: currentX, y, w: layout.btnWidth, h: 28 };
+        this.drawButton(ctx, currentX, y, layout.btnWidth, 28, config.icon, this.hoverElement === config.buttonControl);
+        currentX += layout.btnWidth + layout.gap;
+        
+        // Draw main control (slider or dropdown)
+        if (config.controlType === 'slider') {
+            this.controls[config.mainControl] = { x: currentX, y, w: layout.sliderWidth, h: 28 };
+            this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28, 
+                          props[config.valueProperty], config.min, config.max, config.step);
+            currentX += layout.sliderWidth + layout.gap;
+        } else if (config.controlType === 'dropdown') {
+            this.controls[config.mainControl] = { x: currentX, y, w: layout.dropdownWidth, h: 28 };
+            this.drawDropdown(ctx, currentX, y, layout.dropdownWidth, 28, config.selectedText, this.hoverElement === config.mainControl);
+            currentX += layout.dropdownWidth + layout.gap;
+        }
+        
+        // Draw value display
+        this.setCanvasTextStyle(ctx);
+        ctx.fillText(config.displayValue, currentX + layout.valueWidth / 2, y + 14);
+        currentX += layout.valueWidth + layout.gap;
+        
+        // Draw preview
+        if (this.validateWidgets() && config.scaleFactor) {
+            const newW = Math.round(this.widthWidget.value * config.scaleFactor);
+            const newH = Math.round(this.heightWidget.value * config.scaleFactor);
+            this.setCanvasTextStyle(ctx, { fillStyle: "#888", font: "11px Arial", textAlign: "left" });
+            ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
+        }
+        currentX += layout.previewWidth + layout.gap;
+        
+        // Draw radio button
+        this.controls[config.radioControl] = { x: currentX, y: y + 5, w: layout.radioWidth, h: 18 };
+        this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth, 
+                           props.rescaleMode === config.rescaleMode, this.hoverElement === config.radioControl);
+    }
+
     // Value update methods
     updateCanvasValue(x, y, w, h, shiftKey) {
         const node = this.node;
@@ -1161,12 +1194,7 @@ class ResolutionMasterCanvas {
         props.valueX = newX;
         props.valueY = newY;
         
-        if (this.widthWidget && this.heightWidget) {
-            this.widthWidget.value = newX;
-            this.heightWidget.value = newY;
-        }
-        
-        this.updateRescaleValue();
+        this.updateDimensions(newX, newY, true); // Skip property update since we already did it
         app.graph.setDirtyCanvas(true);
     }
     
@@ -1235,66 +1263,35 @@ class ResolutionMasterCanvas {
     
     // Action handlers
     handleSwap() {
-        if (this.widthWidget && this.heightWidget) {
-            const newWidth = this.heightWidget.value;
-            const newHeight = this.widthWidget.value;
-
-            // Update properties first
-            this.node.properties.valueX = newWidth;
-            this.node.properties.valueY = newHeight;
-
-            // Then update widgets
-            this.widthWidget.value = newWidth;
-            this.heightWidget.value = newHeight;
-
-            this.handlePropertyChange();
-            this.updateRescaleValue();
-        }
+        if (!this.validateWidgets()) return;
+        
+        const newWidth = this.heightWidget.value;
+        const newHeight = this.widthWidget.value;
+        this.updateDimensions(newWidth, newHeight);
     }
     
     handleSnap() {
-        if (this.widthWidget && this.heightWidget) {
-            const snap = this.node.properties.snapValue;
-            const newWidth = Math.round(this.widthWidget.value / snap) * snap;
-            const newHeight = Math.round(this.heightWidget.value / snap) * snap;
-            
-            // Update properties first
-            this.node.properties.valueX = newWidth;
-            this.node.properties.valueY = newHeight;
-            
-            // Then update widgets
-            this.widthWidget.value = newWidth;
-            this.heightWidget.value = newHeight;
-            
-            // Update UI
-            this.handlePropertyChange();
-            this.updateRescaleValue();
-        }
+        if (!this.validateWidgets()) return;
+        
+        const snap = this.node.properties.snapValue;
+        const newWidth = Math.round(this.widthWidget.value / snap) * snap;
+        const newHeight = Math.round(this.heightWidget.value / snap) * snap;
+        this.updateDimensions(newWidth, newHeight);
     }
     
     applyScaling(scaleCalculator, resetValue = null) {
-        if (!this.widthWidget || !this.heightWidget) return;
+        if (!this.validateWidgets()) return;
         
         const scale = scaleCalculator();
         const newWidth = Math.round(this.widthWidget.value * scale);
         const newHeight = Math.round(this.heightWidget.value * scale);
-        
-        // Update properties first
-        this.node.properties.valueX = newWidth;
-        this.node.properties.valueY = newHeight;
-        
-        // Then update widgets
-        this.widthWidget.value = newWidth;
-        this.heightWidget.value = newHeight;
         
         // Reset value if provided
         if (resetValue) {
             resetValue();
         }
         
-        // Update UI
-        this.handlePropertyChange();
-        this.updateRescaleValue();
+        this.updateDimensions(newWidth, newHeight);
     }
 
     handleScale() {
