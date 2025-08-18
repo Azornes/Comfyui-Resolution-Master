@@ -24,6 +24,13 @@ class ResolutionMasterCanvas {
         this.scrollOffset = 0;
         this.dropdownOpen = null;
         
+        // Tooltip state
+        this.tooltipElement = null;
+        this.tooltipTimer = null;
+        this.tooltipDelay = 500; // ms - reduced for faster response
+        this.showTooltip = false;
+        this.tooltipMousePos = null; // Current mouse position
+        
         // Auto-detect state
         this.detectedDimensions = null;
         this.dimensionCheckInterval = null;
@@ -35,6 +42,34 @@ class ResolutionMasterCanvas {
 
         this.icons = {};
         this.loadIcons();
+        
+        // Tooltip definitions
+        this.tooltips = {
+            // Primary controls (excluding sliders and 2D canvas)
+            swapBtn: "Swap width and height values",
+            snapBtn: "Snap current dimensions to the nearest snap value",
+            
+            // Scaling controls (buttons and dropdowns only)
+            scaleBtn: "Apply manual scaling factor and reset to 1.0x",
+            upscaleRadio: "Use manual scaling mode for rescale output",
+            
+            resolutionBtn: "Scale to target resolution (e.g., 1080p)",
+            resolutionDropdown: "Select target resolution for scaling",
+            resolutionRadio: "Use resolution-based scaling for rescale output",
+            
+            megapixelsBtn: "Scale to target megapixel count",
+            megapixelsRadio: "Use megapixel-based scaling for rescale output",
+            
+            // Auto-detect controls
+            autoDetectToggle: "Automatically detect dimensions from connected image input",
+            autoFitBtn: "Find best preset match for detected dimensions",
+            autoFitCheckbox: "Automatically apply best preset when dimensions change",
+            
+            // Preset controls
+            categoryDropdown: "Select preset category (Standard, SDXL, Flux, etc.)",
+            presetDropdown: "Choose specific preset from selected category",
+            customCalcCheckbox: "Apply category-specific calculations (SDXL/Flux/WAN optimizations)"
+        };
         
         // Full preset categories
         this.presetCategories = {
@@ -286,6 +321,10 @@ class ResolutionMasterCanvas {
                 clearInterval(self.dimensionCheckInterval);
                 self.dimensionCheckInterval = null;
             }
+            if (self.tooltipTimer) {
+                clearTimeout(self.tooltipTimer);
+                self.tooltipTimer = null;
+            }
             if (origOnRemoved) origOnRemoved.apply(this, arguments);
         };
         
@@ -341,6 +380,11 @@ class ResolutionMasterCanvas {
         const neededHeight = currentY + 20;
         if (node.size[1] < neededHeight) {
             node.size[1] = neededHeight;
+        }
+        
+        // Draw tooltip last so it appears on top
+        if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
+            this.drawTooltip(ctx);
         }
     }
 
@@ -906,6 +950,102 @@ class ResolutionMasterCanvas {
         ctx.fillText(text, x + w / 2, y + h / 2 + 1);
     }
     
+    drawTooltip(ctx) {
+        if (!this.tooltipMousePos || !this.tooltips[this.tooltipElement]) {
+            log.debug("Tooltip draw failed: missing mouse pos or tooltip text");
+            return;
+        }
+        
+        const tooltipText = this.tooltips[this.tooltipElement];
+        const paddingX = 8;
+        const paddingTop = 8;
+        const paddingBottom = 4; // Zmniejszony dolny padding
+        const maxWidth = 250;
+        const lineHeight = 16;
+        
+        log.debug(`Drawing tooltip for ${this.tooltipElement}: "${tooltipText}"`);
+        
+        // Set font for measuring
+        ctx.font = "12px Arial";
+        
+        // Word wrap the text
+        const words = tooltipText.split(' ');
+        const lines = [];
+        let currentLine = '';
+        
+        for (const word of words) {
+            const testLine = currentLine + (currentLine ? ' ' : '') + word;
+            const metrics = ctx.measureText(testLine);
+            
+            if (metrics.width > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) {
+            lines.push(currentLine);
+        }
+        
+        // Calculate tooltip dimensions
+        const textWidth = Math.max(...lines.map(line => ctx.measureText(line).width));
+        const tooltipWidth = Math.min(textWidth + paddingX * 2, maxWidth + paddingX * 2);
+        const tooltipHeight = lines.length * lineHeight + paddingTop + paddingBottom;
+        
+        // Position tooltip relative to current mouse position - can extend beyond node bounds
+        const mouseRelX = this.tooltipMousePos.x - this.node.pos[0];
+        const mouseRelY = this.tooltipMousePos.y - this.node.pos[1];
+        
+        let tooltipX = mouseRelX + 15;
+        let tooltipY = mouseRelY - tooltipHeight - 10;
+        
+        // Simple positioning logic - prefer right and above mouse
+        if (tooltipX + tooltipWidth > this.node.size[0] + 50) {
+            tooltipX = mouseRelX - tooltipWidth - 15;
+        }
+        if (tooltipY < -50) {
+            tooltipY = mouseRelY + 20;
+        }
+        
+        // Draw tooltip background with shadow
+        ctx.save();
+        
+        // Shadow
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.beginPath();
+        ctx.roundRect(tooltipX + 2, tooltipY + 2, tooltipWidth, tooltipHeight, 6);
+        ctx.fill();
+        
+        // Background
+        const bgGrad = ctx.createLinearGradient(tooltipX, tooltipY, tooltipX, tooltipY + tooltipHeight);
+        bgGrad.addColorStop(0, "rgba(45, 45, 45, 0.95)");
+        bgGrad.addColorStop(1, "rgba(35, 35, 35, 0.95)");
+        ctx.fillStyle = bgGrad;
+        ctx.beginPath();
+        ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 6);
+        ctx.fill();
+        
+        // Border
+        ctx.strokeStyle = "rgba(200, 200, 200, 0.3)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // Draw text
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "12px Arial";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        
+        lines.forEach((line, index) => {
+            ctx.fillText(line, tooltipX + paddingX, tooltipY + paddingTop + index * lineHeight);
+        });
+        
+        ctx.restore();
+        
+        log.debug(`Tooltip drawn at ${tooltipX}, ${tooltipY} with size ${tooltipWidth}x${tooltipHeight}`);
+    }
+    
     // Mouse handling methods
     handleMouseDown(e, pos, canvas) {
         const node = this.node;
@@ -1005,9 +1145,47 @@ class ResolutionMasterCanvas {
             }
         }
         
+        // Always update mouse position for tooltips
+        this.tooltipMousePos = { x: e.canvasX, y: e.canvasY };
+        
+        // If tooltip is showing, update canvas to follow mouse
+        if (this.showTooltip && this.tooltipElement) {
+            app.graph.setDirtyCanvas(true);
+        }
+        
         if (newHover !== this.hoverElement) {
             this.hoverElement = newHover;
+            this.handleTooltipHover(newHover, e);
             app.graph.setDirtyCanvas(true);
+        }
+    }
+    
+    handleTooltipHover(element, e) {
+        // Clear existing tooltip timer
+        if (this.tooltipTimer) {
+            clearTimeout(this.tooltipTimer);
+            this.tooltipTimer = null;
+        }
+        
+        // Hide tooltip immediately when hover changes
+        if (this.showTooltip) {
+            this.showTooltip = false;
+            this.tooltipElement = null;
+            app.graph.setDirtyCanvas(true);
+        }
+        
+        // Start new tooltip timer if hovering over an element with tooltip
+        if (element && this.tooltips[element]) {
+            log.debug(`Starting tooltip timer for element: ${element}`);
+            // Store the initial mouse position when timer starts
+            const initialMousePos = { x: e.canvasX, y: e.canvasY };
+            this.tooltipTimer = setTimeout(() => {
+                log.debug(`Showing tooltip for element: ${element}`);
+                this.tooltipElement = element;
+                this.showTooltip = true;
+                this.tooltipFixedPos = initialMousePos; // Use the stored initial position
+                app.graph.setDirtyCanvas(true);
+            }, this.tooltipDelay);
         }
     }
     
