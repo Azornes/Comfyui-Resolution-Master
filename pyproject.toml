@@ -1,7 +1,7 @@
 [project]
-name = "comfyui-resolution-master"
+name = "Comfyui-Resolution-Master"
 description = "test"
-version = "1"
+version = "1.0"
 license = { text = "MIT License" }
 
 [project.urls]
