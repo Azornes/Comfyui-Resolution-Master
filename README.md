@@ -69,7 +69,7 @@ Extensive preset library organized by use case:
 ## 🚀 Installation
 
 ### Install via ComfyUI-Manager
-* Search `Comfyui-LayerForge` in ComfyUI-Manager and click `Install` button.
+* Search `Comfyui-ResolutionMaster` in ComfyUI-Manager and click `Install` button.
 
 ### Manual Install
 1. Install [ComfyUi](https://github.com/comfyanonymous/ComfyUI).
