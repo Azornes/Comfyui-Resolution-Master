@@ -719,26 +719,30 @@ class ResolutionMasterCanvas {
         
         if (!this.widthWidget || !this.heightWidget) return;
         
+        // Draw width slider
+        y = this.drawDimensionSlider(ctx, y, margin, w, "Width:", "widthSlider", 
+            this.widthWidget.value, props.manual_slider_min_w, props.manual_slider_max_w, props.manual_slider_step_w);
+        
+        // Draw height slider
+        this.drawDimensionSlider(ctx, y, margin, w, "Height:", "heightSlider", 
+            this.heightWidget.value, props.manual_slider_min_h, props.manual_slider_max_h, props.manual_slider_step_h);
+    }
+    
+    drawDimensionSlider(ctx, y, margin, w, label, controlName, value, min, max, step) {
+        const node = this.node;
+        
         ctx.fillStyle = "#ccc";
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
-        ctx.fillText("Width:", margin, y);
+        ctx.fillText(label, margin, y);
         
-        this.controls.widthSlider = { x: margin, y: y + 10, w, h: 25 };
-        this.drawSlider(ctx, margin, y + 10, w, 25, this.widthWidget.value, props.manual_slider_min_w, props.manual_slider_max_w, props.manual_slider_step_w);
-        
-        ctx.textAlign = "right";
-        ctx.fillText(this.widthWidget.value.toString(), node.size[0] - margin, y + 25);
-        
-        y += 45;
-        ctx.textAlign = "left";
-        ctx.fillText("Height:", margin, y);
-        
-        this.controls.heightSlider = { x: margin, y: y + 10, w, h: 25 };
-        this.drawSlider(ctx, margin, y + 10, w, 25, this.heightWidget.value, props.manual_slider_min_h, props.manual_slider_max_h, props.manual_slider_step_h);
+        this.controls[controlName] = { x: margin, y: y + 10, w, h: 25 };
+        this.drawSlider(ctx, margin, y + 10, w, 25, value, min, max, step);
         
         ctx.textAlign = "right";
-        ctx.fillText(this.heightWidget.value.toString(), node.size[0] - margin, y + 25);
+        ctx.fillText(value.toString(), node.size[0] - margin, y + 25);
+        
+        return y + 45;
     }
     
     // Drawing primitives
@@ -1478,15 +1482,17 @@ class ResolutionMasterCanvas {
     }
     
     calculateResolutionScale(targetP) {
-        if (!this.widthWidget || !this.heightWidget) return 1.0;
         const targetPixels = (targetP * (16 / 9)) * targetP;
-        const currentPixels = this.widthWidget.value * this.heightWidget.value;
-        return Math.sqrt(targetPixels / currentPixels);
+        return this.calculateScaleFromPixels(targetPixels);
     }
     
     calculateMegapixelsScale(targetMP) {
-        if (!this.widthWidget || !this.heightWidget) return 1.0;
         const targetPixels = targetMP * 1000000;
+        return this.calculateScaleFromPixels(targetPixels);
+    }
+    
+    calculateScaleFromPixels(targetPixels) {
+        if (!this.widthWidget || !this.heightWidget) return 1.0;
         const currentPixels = this.widthWidget.value * this.heightWidget.value;
         return Math.sqrt(targetPixels / currentPixels);
     }
