@@ -137,12 +137,6 @@ class ResolutionMasterCanvas {
             canvas_snap: true,
             canvas_dots: true,
             canvas_frame: true,
-            manual_slider_min_w: 64,
-            manual_slider_max_w: 4096,
-            manual_slider_step_w: 64,
-            manual_slider_min_h: 64,
-            manual_slider_max_h: 4096,
-            manual_slider_step_h: 64,
             action_slider_snap_min: 16,
             action_slider_snap_max: 256,
             action_slider_snap_step: 16,
@@ -162,7 +156,13 @@ class ResolutionMasterCanvas {
             autoFitOnChange: false,
             selectedCategory: null,
             selectedPreset: null,
-            useCustomCalc: false
+            useCustomCalc: false,
+            manual_slider_min_w: 64,
+            manual_slider_max_w: 4096,
+            manual_slider_step_w: 64,
+            manual_slider_min_h: 64,
+            manual_slider_max_h: 4096,
+            manual_slider_step_h: 64,
         };
 
         Object.entries(defaultProperties).forEach(([key, defaultValue]) => {
@@ -1109,6 +1109,9 @@ class ResolutionMasterCanvas {
         // Update UI
         this.handlePropertyChange();
         this.updateRescaleValue();
+        
+        // Force canvas redraw to update 2D slider position
+        app.graph.setDirtyCanvas(true);
     }
     
     setCanvasTextStyle(ctx, style = {}) {
