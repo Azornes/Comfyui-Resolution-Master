@@ -22,7 +22,7 @@ jobs:
           
           for i in {1..20}; do
             echo "Pobieranie danych z próby $i..."
-            curl -s https://api.comfy.org/nodes/resolutionmaster > tmp_$i.json
+            curl -s https://api.comfy.org/nodes/Comfyui-Resolution-Master > tmp_$i.json
             
             if [ ! -s tmp_$i.json ] || ! jq empty tmp_$i.json 2>/dev/null; then
               echo "Błąd: Nieprawidłowy JSON dla próby $i"
