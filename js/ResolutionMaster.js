@@ -1095,14 +1095,12 @@ class ResolutionMasterCanvas {
         return this.widthWidget && this.heightWidget;
     }
     
-    updateDimensions(width, height, skipPropertyUpdate = false) {
+    setDimensions(width, height) {
         if (!this.validateWidgets()) return;
         
-        // Update properties first (unless skipped)
-        if (!skipPropertyUpdate) {
-            this.node.properties.valueX = width;
-            this.node.properties.valueY = height;
-        }
+        // Update properties
+        this.node.properties.valueX = width;
+        this.node.properties.valueY = height;
         
         // Then update widgets
         this.widthWidget.value = width;
@@ -1195,10 +1193,7 @@ class ResolutionMasterCanvas {
         newX = Math.round(rnX * newX) / rnX;
         newY = Math.round(rnY * newY) / rnY;
         
-        props.valueX = newX;
-        props.valueY = newY;
-        
-        this.updateDimensions(newX, newY, true); // Skip property update since we already did it
+        this.setDimensions(newX, newY);
         app.graph.setDirtyCanvas(true);
     }
     
@@ -1227,10 +1222,13 @@ class ResolutionMasterCanvas {
                 this.updateRescaleValue();
             }
 
-            if(sliderName === 'widthSlider' && this.widthWidget) this.widthWidget.value = props.valueX;
-            if(sliderName === 'heightSlider' && this.heightWidget) this.heightWidget.value = props.valueY;
-
-            if(sliderName.includes('Slider')) this.handlePropertyChange();
+            if (sliderName === 'widthSlider') {
+                this.setDimensions(props.valueX, this.heightWidget.value);
+            } else if (sliderName === 'heightSlider') {
+                this.setDimensions(this.widthWidget.value, props.valueY);
+            } else if (sliderName.includes('Slider')) {
+                this.handlePropertyChange();
+            }
         }
         
         app.graph.setDirtyCanvas(true);
@@ -1271,7 +1269,7 @@ class ResolutionMasterCanvas {
         
         const newWidth = this.heightWidget.value;
         const newHeight = this.widthWidget.value;
-        this.updateDimensions(newWidth, newHeight);
+        this.setDimensions(newWidth, newHeight);
     }
     
     handleSnap() {
@@ -1280,7 +1278,7 @@ class ResolutionMasterCanvas {
         const snap = this.node.properties.snapValue;
         const newWidth = Math.round(this.widthWidget.value / snap) * snap;
         const newHeight = Math.round(this.heightWidget.value / snap) * snap;
-        this.updateDimensions(newWidth, newHeight);
+        this.setDimensions(newWidth, newHeight);
     }
     
     applyScaling(scaleCalculator, resetValue = null) {
@@ -1295,7 +1293,7 @@ class ResolutionMasterCanvas {
             resetValue();
         }
         
-        this.updateDimensions(newWidth, newHeight);
+        this.setDimensions(newWidth, newHeight);
     }
 
     handleScale() {
@@ -1381,22 +1379,14 @@ class ResolutionMasterCanvas {
             
             // Apply the final dimensions
             if (this.widthWidget && this.heightWidget) {
-                this.widthWidget.value = finalWidth;
-                this.heightWidget.value = finalHeight;
-                
                 // Mark that dimensions were manually set by auto-fit
                 this.manuallySetByAutoFit = true;
                 
                 // Update the preset dropdown - use original name for dropdown selection
                 props.selectedPreset = closestPreset.originalName;
                 
-                // Update node properties
-                props.valueX = finalWidth;
-                props.valueY = finalHeight;
-                
-                // Update UI
-                this.handlePropertyChange();
-                this.updateRescaleValue();
+                // Update dimensions and UI via central function
+                this.setDimensions(finalWidth, finalHeight);
                 
                 log.debug(`Auto-fitted to preset: ${closestPreset.name} with final resolution: ${finalWidth}x${finalHeight}`);
             }
@@ -1415,14 +1405,7 @@ class ResolutionMasterCanvas {
         const newWidth = Math.max(props.canvas_min_x, Math.min(props.canvas_max_x, width));
         const newHeight = Math.max(props.canvas_min_y, Math.min(props.canvas_max_y, height));
         
-        props.valueX = newWidth;
-        props.valueY = newHeight;
-
-        this.widthWidget.value = newWidth;
-        this.heightWidget.value = newHeight;
-        
-        this.handlePropertyChange();
-        this.updateRescaleValue();
+        this.setDimensions(newWidth, newHeight);
     }
 
     applyPreset(category, presetName) {
