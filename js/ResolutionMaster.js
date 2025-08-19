@@ -74,9 +74,9 @@ class ResolutionMasterCanvas {
             autoFitCheckbox: "Automatically apply best preset when dimensions change",
             
             // Preset controls
-            categoryDropdown: "Select preset category (Standard, SDXL, Flux, etc.)",
+            categoryDropdown: "Select preset category (Standard, SDXL, Flux, HiDream Dev, Qwen-Image, etc.)",
             presetDropdown: "Choose specific preset from selected category",
-            customCalcCheckbox: "Apply category-specific calculations (SDXL/Flux/WAN optimizations)"
+            customCalcCheckbox: "Apply category-specific calculations (model-specific optimizations)"
         };
         
         // Full preset categories
@@ -128,6 +128,22 @@ class ResolutionMasterCanvas {
                 '4:3 Landscape': { width: 960, height: 720 },
                 '16:9 Landscape': { width: 1280, height: 720 },
                 '21:9 Landscape': { width: 1680, height: 720 }
+            },
+            'HiDream Dev': {
+                '1:1 Square': { width: 1024, height: 1024 },
+                '1:1 Square Large': { width: 1280, height: 1280 },
+                '1:1 Square XL': { width: 1536, height: 1536 },
+                '16:9 Landscape': { width: 1360, height: 768 },
+                '3:2 Landscape': { width: 1248, height: 832 },
+                '4:3 Landscape': { width: 1168, height: 880 },
+            },
+            'Qwen-Image': {
+                '1:1 Square (Default)': { width: 1328, height: 1328 },
+                '16:9 Landscape': { width: 1664, height: 928 },
+                '4:3 Landscape': { width: 1472, height: 1140 },
+                '3:2 Landscape': { width: 1584, height: 1056 },
+                '1:1 Test': { width: 1024, height: 1024 },
+                '4:3 Test': { width: 768, height: 1024 }
             },
             'Social Media': {
                 'Instagram Square': { width: 1080, height: 1080 },
@@ -763,6 +779,10 @@ class ResolutionMasterCanvas {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
             message = `💡 WAN Mode: Suggesting ${model} model, 320p-820p range`;
+        } else if (category === "HiDream Dev" && props.useCustomCalc) {
+            message = "💡 HiDream Dev: Optimized resolutions for best quality (max 3MP)";
+        } else if (category === "Qwen-Image" && props.useCustomCalc) {
+            message = "💡 Qwen-Image: Default 1328×1328, optimized for various aspect ratios";
         }
         
         if (message) {
@@ -1861,6 +1881,10 @@ class ResolutionMasterCanvas {
         const calculations = {
             Flux: () => this.applyFluxCalculation(width, height),
             WAN: () => this.applyWANCalculation(width, height),
+            // SDXL, HiDream Dev and Qwen-Image use their preset resolutions as-is when custom calc is enabled
+            'SDXL': () => ({ width, height }),
+            'HiDream Dev': () => ({ width, height }),
+            'Qwen-Image': () => ({ width, height })
         };
         return calculations[category] ? calculations[category]() : { width, height };
     }
