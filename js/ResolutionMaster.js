@@ -268,15 +268,6 @@ class ResolutionMasterCanvas {
             rescaleValueWidget.value = node.properties.rescaleValue;
         }
         
-        // Hide all backend widgets
-        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
-            if (widget) {
-                widget.hidden = true;
-                widget.type = "hidden";
-                widget.computeSize = () => [0, -4];
-            }
-        });
-        
         // Initialize values from widgets
         if (widthWidget && heightWidget) {
             node.properties.valueX = widthWidget.value;
@@ -374,6 +365,16 @@ class ResolutionMasterCanvas {
             // Calculate initial rescale value
             self.updateRescaleValue();
         };
+
+        // Hide all backend widgets
+        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
+            if (widget) {
+                widget.hidden = true;
+                widget.type = "hidden";
+                widget.computeSize = () => [0, -4];
+            }
+        });
+
     }
     
     drawInterface(ctx) {
@@ -1418,6 +1419,14 @@ class ResolutionMasterCanvas {
         this.handlePropertyChange();
         this.updateRescaleValue();
         
+        // Force callback triggers to ensure canvas updates
+        if (this.widthWidget.callback) {
+            this.widthWidget.callback(width);
+        }
+        if (this.heightWidget.callback) {
+            this.heightWidget.callback(height);
+        }
+        
         // Force canvas redraw to update 2D slider position
         app.graph.setDirtyCanvas(true);
     }
@@ -2048,6 +2057,14 @@ class ResolutionMasterCanvas {
             this.heightWidget.value = preset.height;
             props.selectedPreset = presetName;
             this.applyDimensionChange();
+            
+            // Force callback triggers to ensure canvas updates
+            if (this.widthWidget.callback) {
+                this.widthWidget.callback(preset.width);
+            }
+            if (this.heightWidget.callback) {
+                this.heightWidget.callback(preset.height);
+            }
         }
     }
     
