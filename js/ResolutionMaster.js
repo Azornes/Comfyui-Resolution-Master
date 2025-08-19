@@ -1368,8 +1368,6 @@ class ResolutionMasterCanvas {
         const valueAreaControl = config.buttonControl.replace('Btn', 'ValueArea');
         this.controls[valueAreaControl] = { x: currentX, y, w: layout.valueWidth, h: 28 };
         
-        log.debug(`Created control ${valueAreaControl} at (${currentX}, ${y}) size (${layout.valueWidth}, 28)`);
-        
         // Draw background for value area if hovered
         if (this.hoverElement === valueAreaControl) {
             ctx.fillStyle = "rgba(100, 150, 255, 0.2)";
