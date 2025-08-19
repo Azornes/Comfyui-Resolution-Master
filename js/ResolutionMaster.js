@@ -24,6 +24,10 @@ class ResolutionMasterCanvas {
         this.scrollOffset = 0;
         this.dropdownOpen = null;
         
+        // Custom input dialog state
+        this.customInputDialog = null;
+        this.inputDialogActive = false;
+        
         // Tooltip state
         this.tooltipElement = null;
         this.tooltipTimer = null;
@@ -48,17 +52,21 @@ class ResolutionMasterCanvas {
             // Primary controls (excluding sliders and 2D canvas)
             swapBtn: "Swap width and height values",
             snapBtn: "Snap current dimensions to the nearest snap value",
+            snapValueArea: "Click to set custom snap value",
             
             // Scaling controls (buttons and dropdowns only)
             scaleBtn: "Apply manual scaling factor and reset to 1.0x",
             upscaleRadio: "Use manual scaling mode for rescale output",
+            scaleValueArea: "Click to set custom scale value (e.g., 2.5x)",
             
             resolutionBtn: "Scale to target resolution (e.g., 1080p)",
             resolutionDropdown: "Select target resolution for scaling",
             resolutionRadio: "Use resolution-based scaling for rescale output",
+            resolutionValueArea: "Click to set custom resolution scale factor",
             
             megapixelsBtn: "Scale to target megapixel count",
             megapixelsRadio: "Use megapixel-based scaling for rescale output",
+            megapixelsValueArea: "Click to set custom megapixel value (e.g., 3.5MP)",
             
             // Auto-detect controls
             autoDetectToggle: "Automatically detect dimensions from connected image input",
@@ -325,6 +333,9 @@ class ResolutionMasterCanvas {
                 clearTimeout(self.tooltipTimer);
                 self.tooltipTimer = null;
             }
+            if (self.customInputDialog) {
+                self.closeCustomInputDialog();
+            }
             if (origOnRemoved) origOnRemoved.apply(this, arguments);
         };
         
@@ -451,11 +462,26 @@ class ResolutionMasterCanvas {
         this.controls.snapSlider = { x: sliderX, y, w: sliderWidth, h: 28 };
         this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.action_slider_snap_min, props.action_slider_snap_max, props.action_slider_snap_step);
 
-        ctx.fillStyle = "#ccc";
+        // Draw clickable snap value area
+        const snapValueX = sliderX + sliderWidth + gap;
+        this.controls.snapValueArea = { x: snapValueX, y, w: valueWidth, h: 28 };
+        
+        // Draw background for snap value area if hovered
+        if (this.hoverElement === 'snapValueArea') {
+            ctx.fillStyle = "rgba(100, 150, 255, 0.2)";
+            ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(snapValueX, y, valueWidth, 28, 4);
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        ctx.fillStyle = this.hoverElement === 'snapValueArea' ? "#5af" : "#ccc";
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(props.snapValue.toString(), sliderX + sliderWidth + gap, y + 14);
+        ctx.fillText(props.snapValue.toString(), snapValueX, y + 14);
     }
     
     draw2DCanvas(ctx, x, y, w, h) {
@@ -1066,6 +1092,8 @@ class ResolutionMasterCanvas {
         
         for (const key in this.controls) {
             if (this.isPointInControl(relX, relY, this.controls[key])) {
+                log.debug(`Mouse down on control: ${key} at (${relX}, ${relY})`);
+                
                 if (key.endsWith('Btn')) {
                     this.handleButtonClick(key);
                     return true;
@@ -1092,8 +1120,16 @@ class ResolutionMasterCanvas {
                     this.handleRadioClick(key);
                     return true;
                 }
+                if (key.endsWith('ValueArea')) {
+                    // Open dialog immediately on mousedown
+                    log.debug(`Detected ValueArea click: ${key}`);
+                    this.showCustomValueDialog(key, e);
+                    return true;
+                }
             }
         }
+        
+        log.debug(`No control found at (${relX}, ${relY}). Available controls:`, Object.keys(this.controls));
         
         return false;
     }
@@ -1319,7 +1355,7 @@ class ResolutionMasterCanvas {
         // Draw main control (slider or dropdown)
         if (config.controlType === 'slider') {
             this.controls[config.mainControl] = { x: currentX, y, w: layout.sliderWidth, h: 28 };
-            this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28, 
+            this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28,
                           props[config.valueProperty], config.min, config.max, config.step);
             currentX += layout.sliderWidth + layout.gap;
         } else if (config.controlType === 'dropdown') {
@@ -1328,8 +1364,28 @@ class ResolutionMasterCanvas {
             currentX += layout.dropdownWidth + layout.gap;
         }
         
-        // Draw value display
-        this.setCanvasTextStyle(ctx);
+        // Draw clickable value display with hover effect
+        const valueAreaControl = config.buttonControl.replace('Btn', 'ValueArea');
+        this.controls[valueAreaControl] = { x: currentX, y, w: layout.valueWidth, h: 28 };
+        
+        log.debug(`Created control ${valueAreaControl} at (${currentX}, ${y}) size (${layout.valueWidth}, 28)`);
+        
+        // Draw background for value area if hovered
+        if (this.hoverElement === valueAreaControl) {
+            ctx.fillStyle = "rgba(100, 150, 255, 0.2)";
+            ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(currentX, y, layout.valueWidth, 28, 4);
+            ctx.fill();
+            ctx.stroke();
+        }
+        
+        // Draw value text
+        this.setCanvasTextStyle(ctx, {
+            fillStyle: this.hoverElement === valueAreaControl ? "#5af" : "#ccc",
+            textAlign: "center"
+        });
         ctx.fillText(config.displayValue, currentX + layout.valueWidth / 2, y + 14);
         currentX += layout.valueWidth + layout.gap;
         
@@ -1344,7 +1400,7 @@ class ResolutionMasterCanvas {
         
         // Draw radio button
         this.controls[config.radioControl] = { x: currentX, y: y + 5, w: layout.radioWidth, h: 18 };
-        this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth, 
+        this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth,
                            props.rescaleMode === config.rescaleMode, this.hoverElement === config.radioControl);
     }
 
@@ -1442,6 +1498,206 @@ class ResolutionMasterCanvas {
         if (items?.length) {
             new LiteGraph.ContextMenu(items, { event: e.originalEvent || e, callback });
         }
+    }
+    
+    showCustomValueDialog(valueAreaKey, e) {
+        if (this.inputDialogActive) return;
+        
+        log.debug(`Clicked on value area: ${valueAreaKey}`);
+        
+        // Determine the type and current value based on the control key
+        let valueType, currentValue, propertyName, minValue = 0.01;
+        
+        if (valueAreaKey === 'scaleValueArea') {
+            valueType = 'Scale Factor';
+            currentValue = this.node.properties.upscaleValue;
+            propertyName = 'upscaleValue';
+        } else if (valueAreaKey === 'resolutionValueArea') {
+            valueType = 'Resolution Scale';
+            currentValue = this.calculateResolutionScale(this.node.properties.targetResolution);
+            propertyName = 'targetResolution';
+        } else if (valueAreaKey === 'megapixelsValueArea') {
+            valueType = 'Megapixels';
+            currentValue = this.node.properties.targetMegapixels;
+            propertyName = 'targetMegapixels';
+        } else if (valueAreaKey === 'snapValueArea') {
+            valueType = 'Snap Value';
+            currentValue = this.node.properties.snapValue;
+            propertyName = 'snapValue';
+            minValue = 1;
+        } else {
+            log.debug(`Unknown value area key: ${valueAreaKey}`);
+            return;
+        }
+        
+        log.debug(`Opening dialog for ${valueType} with current value: ${currentValue}`);
+        this.createCustomInputDialog(valueType, currentValue, propertyName, minValue, e);
+    }
+    
+    createCustomInputDialog(valueType, currentValue, propertyName, minValue, e) {
+        this.inputDialogActive = true;
+        log.debug(`Creating dialog for ${valueType}, current: ${currentValue}`);
+        
+        // Create overlay
+        const overlay = document.createElement('div');
+        this.customInputOverlay = overlay;
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+        `;
+        overlay.addEventListener('mousedown', () => this.closeCustomInputDialog());
+        document.body.appendChild(overlay);
+
+        // Create dialog container
+        const dialog = document.createElement('div');
+        this.customInputDialog = dialog;
+        dialog.className = 'litegraph-custom-input-dialog';
+        dialog.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent clicks inside from closing
+        dialog.style.cssText = `
+            position: fixed;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+            border: 2px solid #555; border-radius: 8px; padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 10000;
+            font-family: Arial, sans-serif; min-width: 280px;
+        `;
+        
+        // Position dialog
+        const x = e.clientX ? e.clientX + 20 : (window.innerWidth - 280) / 2;
+        const y = e.clientY ? e.clientY + 20 : (window.innerHeight - 200) / 2;
+        dialog.style.left = `${Math.max(10, Math.min(x, window.innerWidth - 300))}px`;
+        dialog.style.top = `${Math.max(10, Math.min(y, window.innerHeight - 200))}px`;
+        
+        // Create dialog content
+        dialog.innerHTML = `
+            <div style="color: #fff; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-align: center;">Set Custom ${valueType}</div>
+            <div style="margin-bottom: 10px;">
+                <label style="color: #ccc; font-size: 12px; display: block; margin-bottom: 5px;">Current: ${this.formatValueForDisplay(currentValue, valueType)}</label>
+                <input type="${valueType === 'Scale Factor' ? 'text' : 'number'}" id="customValueInput" value="${currentValue}" step="0.01" min="${minValue}"
+                       style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #333; color: #fff; font-size: 14px; box-sizing: border-box;">
+            </div>
+            <div id="validationMessage" style="color: #f55; font-size: 11px; margin-bottom: 5px; min-height: 15px;"></div>
+            <div id="infoMessage" style="color: #999; font-size: 11px; margin-bottom: 10px; min-height: 15px; text-align: center;"></div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="cancelBtn" style="padding: 8px 16px; border: 1px solid #555; border-radius: 4px; background: #444; color: #ccc; cursor: pointer; font-size: 12px;">Cancel</button>
+                <button id="applyBtn" style="padding: 8px 16px; border: 1px solid #5af; border-radius: 4px; background: #5af; color: #fff; cursor: pointer; font-size: 12px;">Apply</button>
+            </div>
+        `;
+        
+        document.body.appendChild(dialog);
+        
+        // Get elements
+        const input = dialog.querySelector('#customValueInput');
+        const validationMsg = dialog.querySelector('#validationMessage');
+        const infoMsg = dialog.querySelector('#infoMessage');
+        const cancelBtn = dialog.querySelector('#cancelBtn');
+        const applyBtn = dialog.querySelector('#applyBtn');
+        
+        if (valueType === 'Scale Factor') {
+            infoMsg.textContent = 'Tip: Use /2 for 0.5x, /4 for 0.25x, etc.';
+        }
+        
+        // Focus and select input
+        setTimeout(() => { input.focus(); input.select(); }, 50);
+        
+        // Real-time validation
+        const validateInput = () => {
+            const value = this.parseCustomInputValue(input.value, valueType);
+            if (isNaN(value) || value < minValue) {
+                let errorMsg = `Value must be ≥ ${minValue}`;
+                if (typeof input.value === 'string' && input.value.startsWith('/')) {
+                    const divisor = parseFloat(input.value.substring(1));
+                    if (isNaN(divisor) || divisor === 0) errorMsg = 'Invalid divisor after /';
+                }
+                validationMsg.textContent = errorMsg;
+                applyBtn.disabled = true; applyBtn.style.opacity = '0.5';
+                return false;
+            } else {
+                validationMsg.textContent = '';
+                applyBtn.disabled = false; applyBtn.style.opacity = '1';
+                return true;
+            }
+        };
+        
+        // Event listeners
+        input.addEventListener('input', validateInput);
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && validateInput()) this.applyCustomValue(propertyName, this.parseCustomInputValue(input.value, valueType), valueType);
+            else if (e.key === 'Escape') this.closeCustomInputDialog();
+        });
+        cancelBtn.addEventListener('click', () => this.closeCustomInputDialog());
+        applyBtn.addEventListener('click', () => {
+            if (validateInput()) this.applyCustomValue(propertyName, this.parseCustomInputValue(input.value, valueType), valueType);
+        });
+        
+        validateInput();
+    }
+    
+    formatValueForDisplay(value, valueType) {
+        if (valueType === 'Scale Factor') {
+            return value.toFixed(1) + 'x';
+        } else if (valueType === 'Resolution Scale') {
+            return '×' + value.toFixed(2);
+        } else if (valueType === 'Megapixels') {
+            return value.toFixed(1) + 'MP';
+        } else {
+            return value.toString();
+        }
+    }
+    
+    applyCustomValue(propertyName, value, valueType) {
+        const props = this.node.properties;
+        
+        if (propertyName === 'upscaleValue') {
+            props.upscaleValue = value;
+            if (props.rescaleMode === 'manual') {
+                this.updateRescaleValue();
+            }
+        } else if (propertyName === 'targetResolution') {
+            // For resolution, we need to reverse-calculate the target resolution from the scale factor
+            if (this.validateWidgets()) {
+                const currentPixels = this.widthWidget.value * this.heightWidget.value;
+                const targetPixels = currentPixels * (value * value);
+                const targetP = Math.sqrt(targetPixels / (16/9));
+                props.targetResolution = Math.round(targetP);
+                if (props.rescaleMode === 'resolution') {
+                    this.updateRescaleValue();
+                }
+            }
+        } else if (propertyName === 'targetMegapixels') {
+            props.targetMegapixels = value;
+            if (props.rescaleMode === 'megapixels') {
+                this.updateRescaleValue();
+            }
+        } else if (propertyName === 'snapValue') {
+            props.snapValue = Math.round(value);
+        }
+        
+        this.closeCustomInputDialog();
+        app.graph.setDirtyCanvas(true);
+        
+        log.debug(`Applied custom ${valueType}: ${value}`);
+    }
+    
+    closeCustomInputDialog() {
+        if (this.customInputDialog) {
+            document.body.removeChild(this.customInputDialog);
+            this.customInputDialog = null;
+        }
+        if (this.customInputOverlay) {
+            document.body.removeChild(this.customInputOverlay);
+            this.customInputOverlay = null;
+        }
+        this.inputDialogActive = false;
+    }
+
+    parseCustomInputValue(rawValue, valueType) {
+        if (valueType === 'Scale Factor' && typeof rawValue === 'string' && rawValue.startsWith('/')) {
+            const divisor = parseFloat(rawValue.substring(1));
+            if (!isNaN(divisor) && divisor !== 0) {
+                return 1 / divisor;
+            }
+        }
+        return parseFloat(rawValue);
     }
     
     // Action handlers
