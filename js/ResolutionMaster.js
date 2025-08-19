@@ -51,7 +51,7 @@ class ResolutionMasterCanvas {
         this.tooltips = {
             // Primary controls (excluding sliders and 2D canvas)
             swapBtn: "Swap width and height values",
-            snapBtn: "Snap current dimensions to the nearest snap value",
+            snapBtn: "Snap current resolution to the nearest snap value",
             snapValueArea: "Click to set custom snap value",
             
             // Scaling controls (buttons and dropdowns only)
@@ -69,14 +69,16 @@ class ResolutionMasterCanvas {
             megapixelsValueArea: "Click to set custom megapixel value (e.g., 3.5MP)",
             
             // Auto-detect controls
-            autoDetectToggle: "Automatically detect dimensions from connected image input",
-            autoFitBtn: "Find best preset match for detected dimensions",
-            autoFitCheckbox: "Automatically apply best preset when dimensions change",
+            autoDetectToggle: "Automatically detect resolution from connected image input",
+            autoFitBtn: "Find and apply best preset match for current resolution",
+            autoFitCheckbox: "Automatically find and apply the best preset for the new detected image resolution",
+            detectedInfo: "Click to apply detected image resolution directly",
             
             // Preset controls
             categoryDropdown: "Select preset category (Standard, SDXL, Flux, HiDream Dev, Qwen-Image, etc.)",
             presetDropdown: "Choose specific preset from selected category",
-            customCalcCheckbox: "Apply category-specific calculations (model-specific optimizations)"
+            customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution (read orange information below)",
+            autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)"
         };
         
         // Full preset categories
@@ -119,15 +121,19 @@ class ResolutionMasterCanvas {
                 '9:21 Portrait': { width: 672, height: 1440 },
             },
             'WAN': {
-                '1:1 Square': { width: 720, height: 720 },
-                '2:3 Portrait': { width: 588, height: 882 },
-                '3:4 Portrait': { width: 624, height: 832 },
-                '9:16 Portrait': { width: 720, height: 1280 },
-                '9:21 Portrait': { width: 549, height: 1280 },
-                '3:2 Landscape': { width: 1080, height: 720 },
-                '4:3 Landscape': { width: 960, height: 720 },
-                '16:9 Landscape': { width: 1280, height: 720 },
-                '21:9 Landscape': { width: 1680, height: 720 }
+               // Community Presets
+               '16:9 Landscape': { width: 1280, height: 720 },
+               '16:9 Landscape': { width: 832, height: 480 },
+               '1:1 Square': { width: 512, height: 512 },
+               '1:1 Square': { width: 768, height: 768 },
+               // Original Presets
+               '1:1 Square': { width: 720, height: 720 },
+               '2:3 Portrait': { width: 588, height: 882 },
+               '3:4 Portrait': { width: 624, height: 832 },
+               '9:21 Portrait': { width: 549, height: 1280 },
+               '3:2 Landscape': { width: 1080, height: 720 },
+               '4:3 Landscape': { width: 960, height: 720 },
+               '21:9 Landscape': { width: 1680, height: 720 }
             },
             'HiDream Dev': {
                 '1:1 Square': { width: 1024, height: 1024 },
@@ -213,7 +219,7 @@ class ResolutionMasterCanvas {
             rescaleValue: 1.0,
             autoDetect: false,
             autoFitOnChange: false,
-            selectedCategory: null,
+            selectedCategory: "Standard",
             selectedPreset: null,
             useCustomCalc: false,
             manual_slider_min_w: 64,
@@ -301,6 +307,23 @@ class ResolutionMasterCanvas {
         this.heightWidget = heightWidget;
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
+        
+        // Add widget change observers for live canvas 2D updates
+        if (widthWidget) {
+            const originalWidthCallback = widthWidget.callback;
+            widthWidget.callback = (value) => {
+                if (originalWidthCallback) originalWidthCallback.call(widthWidget, value);
+                this.updateCanvasFromWidgets();
+            };
+        }
+        
+        if (heightWidget) {
+            const originalHeightCallback = heightWidget.callback;
+            heightWidget.callback = (value) => {
+                if (originalHeightCallback) originalHeightCallback.call(heightWidget, value);
+                this.updateCanvasFromWidgets();
+            };
+        }
         
         // Override onDrawForeground
         node.onDrawForeground = function(ctx) {
@@ -684,35 +707,75 @@ class ResolutionMasterCanvas {
         const autoFitWidth = availableWidth - toggleWidth - checkboxWidth - checkboxLabelWidth - (gap * 2);
 
         let currentX = margin;
+        let currentY = y;
 
-        this.controls.autoDetectToggle = { x: currentX, y, w: toggleWidth, h: 28 };
-        this.drawToggle(ctx, currentX, y, toggleWidth, 28, props.autoDetect, 
+        // Pierwszy rząd: Auto-detect toggle + Auto-fit button + Auto checkbox
+        this.controls.autoDetectToggle = { x: currentX, y: currentY, w: toggleWidth, h: 28 };
+        this.drawToggle(ctx, currentX, currentY, toggleWidth, 28, props.autoDetect,
                        props.autoDetect ? "Auto-detect ON" : "Auto-detect OFF",
                        this.hoverElement === 'autoDetectToggle');
-        currentX += toggleWidth + gap;
         
-        this.controls.autoFitBtn = { x: currentX, y, w: autoFitWidth, h: 28 };
-        const btnEnabled = this.detectedDimensions && props.selectedCategory;
-        this.drawButton(ctx, currentX, y, autoFitWidth, 28, "🎯 Auto-fit", this.hoverElement === 'autoFitBtn', !btnEnabled);
-        currentX += autoFitWidth + gap;
+        const autoFitStartX = currentX + toggleWidth + gap;
+        this.controls.autoFitBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
+        const btnEnabled = props.selectedCategory; // Tylko wymaga wybranej kategorii, nie wykrytych wymiarów
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "🎯 Auto-fit", this.hoverElement === 'autoFitBtn', !btnEnabled);
         
-        this.controls.autoFitCheckbox = { x: currentX, y: y + 5, w: checkboxWidth, h: 18 };
-        this.drawCheckbox(ctx, currentX, y + 5, checkboxWidth, props.autoFitOnChange, this.hoverElement === 'autoFitCheckbox', !btnEnabled);
+        const autoCheckboxX = autoFitStartX + autoFitWidth + gap;
+        this.controls.autoFitCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
+        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoFitOnChange, this.hoverElement === 'autoFitCheckbox', !btnEnabled);
         
         ctx.fillStyle = btnEnabled ? "#ddd" : "#777";
         ctx.font = "11px Arial";
         ctx.textAlign = "left";
-        ctx.fillText("Auto", currentX + checkboxWidth + 4, y + 14);
+        ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
         
+        // Drugi rząd: Detected info (po lewej) + Auto-calc button + Calc checkbox (idealnie pod Auto-fit)
+        currentY += 35;
+        
+        // Klikalny napis "Detected" wycentrowany pod switchem Auto-detect
         if (props.autoDetect && this.detectedDimensions) {
-            ctx.fillStyle = "#5f5";
+            const detectedText = `Detected: ${this.detectedDimensions.width}×${this.detectedDimensions.height}`;
             ctx.font = "12px Arial";
-            ctx.textAlign = "center";
-            ctx.fillText(`Detected: ${this.detectedDimensions.width}×${this.detectedDimensions.height}`,
-                        node.size[0] / 2, y + 45);
-            return 60;
+            const textWidth = ctx.measureText(detectedText).width;
+            
+            // Wycentruj tekst pod switchem Auto-detect (toggleWidth = 140)
+            const toggleCenterX = margin + (toggleWidth / 2);
+            const textX = toggleCenterX - (textWidth / 2);
+            
+            // Definiuj obszar klikalny dla napisu "Detected" (wycentrowany pod switchem)
+            this.controls.detectedInfo = { x: textX - 5, y: currentY + 2, w: textWidth + 10, h: 24 };
+            
+            // Rysuj tło jeśli hover
+            if (this.hoverElement === 'detectedInfo') {
+                ctx.fillStyle = "rgba(95, 255, 95, 0.2)";
+                ctx.strokeStyle = "rgba(95, 255, 95, 0.5)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(textX - 5, currentY + 2, textWidth + 10, 20, 4);
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = this.hoverElement === 'detectedInfo' ? "#7f7" : "#5f5";
+            ctx.textAlign = "left";
+            ctx.fillText(detectedText, textX, currentY + 14);
         }
-        return 30;
+        
+        // Auto-calc button idealnie pod Auto-fit button
+        this.controls.autoCalcBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
+        const calcEnabled = props.useCustomCalc && props.selectedCategory;
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "⚡ Auto-calc", this.hoverElement === 'autoCalcBtn', !calcEnabled);
+        
+        // Calc checkbox idealnie pod Auto checkbox
+        this.controls.customCalcCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
+        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.useCustomCalc, this.hoverElement === 'customCalcCheckbox');
+        
+        ctx.fillStyle = "#ddd";
+        ctx.font = "11px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Calc", autoCheckboxX + checkboxWidth + 4, currentY + 14);
+        
+        return 65;
     }
     
     drawPresetSection(ctx, y) {
@@ -725,13 +788,9 @@ class ResolutionMasterCanvas {
         let currentX = margin;
 
         if (props.selectedCategory) {
-            const checkboxWidth = 18;
-            const checkboxLabelWidth = 30;
-            const checkboxTotalWidth = checkboxWidth + checkboxLabelWidth + gap;
-
-            const dropdownsWidth = availableWidth - checkboxTotalWidth;
-            const categoryDDWidth = dropdownsWidth * 0.45;
-            const presetDDWidth = dropdownsWidth * 0.55;
+            // Tylko dropdowny kategorii i presetów
+            const categoryDDWidth = availableWidth * 0.45;
+            const presetDDWidth = availableWidth * 0.55 - gap;
 
             this.controls.categoryDropdown = { x: currentX, y, w: categoryDDWidth, h: 28 };
             const categoryText = props.selectedCategory || "Category...";
@@ -741,14 +800,6 @@ class ResolutionMasterCanvas {
             this.controls.presetDropdown = { x: currentX, y, w: presetDDWidth, h: 28 };
             const presetText = props.selectedPreset || "Select Preset...";
             this.drawDropdown(ctx, currentX, y, presetDDWidth, 28, presetText, this.hoverElement === 'presetDropdown');
-            currentX += presetDDWidth + gap;
-            
-            this.controls.customCalcCheckbox = { x: currentX, y: y + 5, w: checkboxWidth, h: 18 };
-            this.drawCheckbox(ctx, currentX, y + 5, checkboxWidth, props.useCustomCalc, this.hoverElement === 'customCalcCheckbox');
-            
-            ctx.fillStyle = "#ddd";
-            ctx.font = "11px Arial";
-            ctx.fillText("Calc", currentX + checkboxWidth + 4, y + 14);
         } else {
             // Category dropdown takes full width
             this.controls.categoryDropdown = { x: currentX, y, w: availableWidth, h: 28 };
@@ -757,9 +808,11 @@ class ResolutionMasterCanvas {
         }
 
         if (props.useCustomCalc && props.selectedCategory) {
-            const messageY = y + 40;
-            this.drawInfoMessage(ctx, messageY);
-            currentHeight += 25;
+            const messageY = y + 38; // y + dropdown height + gap
+            const messageHeight = this.drawInfoMessage(ctx, messageY);
+            if (messageHeight > 0) {
+                currentHeight += messageHeight + 8; // Add dynamic height + gap
+            }
         }
 
         return currentHeight;
@@ -772,33 +825,66 @@ class ResolutionMasterCanvas {
         
         let message = "";
         if (category === "SDXL" && props.useCustomCalc) {
-            message = "💡 SDXL Mode: Using officially supported resolutions";
+            message = "💡 SDXL Mode: Only using presets!";
         } else if (category === "Flux" && props.useCustomCalc) {
             message = "💡 Flux Mode: 32px increments, 320-2560px, max 4.0 MP";
         } else if (category === "WAN" && props.useCustomCalc && this.widthWidget && this.heightWidget) {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
-            message = `💡 WAN Mode: Suggesting ${model} model, 320p-820p range`;
+            message = `💡 WAN Mode: Suggesting ${model} model (320p-820p range). Dimensions will be rounded to a multiple of 16.`;
         } else if (category === "HiDream Dev" && props.useCustomCalc) {
-            message = "💡 HiDream Dev: Optimized resolutions for best quality (max 3MP)";
+            message = "💡 HiDream Dev: Only using presets!";
         } else if (category === "Qwen-Image" && props.useCustomCalc) {
-            message = "💡 Qwen-Image: Default 1328×1328, optimized for various aspect ratios";
+            message = "💡 Qwen-Image: Scales resolution to fit within ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
+        } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category) && props.useCustomCalc) {
+            message = "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
         }
         
         if (message) {
-            ctx.fillStyle = "rgba(250, 165, 90, 0.15)";
-            ctx.strokeStyle = "rgba(250, 165, 90, 0.5)";
-            ctx.beginPath();
-            ctx.roundRect(20, y - 10, node.size[0] - 40, 20, 4);
-            ctx.fill();
-            ctx.stroke();
+           const paddingX = 10;
+           const paddingTop = 8;
+           const paddingBottom = 8;
+           const lineHeight = 14;
+           const maxWidth = node.size[0] - 40 - (paddingX * 2);
 
-            ctx.fillStyle = "#fa5";
-            ctx.font = "11px Arial";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillText(message, node.size[0] / 2, y);
+           // Word wrap logic
+           ctx.font = "11px Arial";
+           const words = message.split(' ');
+           const lines = [];
+           let currentLine = '';
+           for (const word of words) {
+               const testLine = currentLine ? `${currentLine} ${word}` : word;
+               if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+                   lines.push(currentLine);
+                   currentLine = word;
+               } else {
+                   currentLine = testLine;
+               }
+           }
+           if (currentLine) lines.push(currentLine);
+
+           const textHeight = lines.length * lineHeight - (lineHeight - ctx.measureText("M").width);
+           const boxHeight = textHeight + paddingTop + paddingBottom;
+
+           // Draw background with dynamic height
+           ctx.fillStyle = "rgba(250, 165, 90, 0.15)";
+           ctx.strokeStyle = "rgba(250, 165, 90, 0.5)";
+           ctx.beginPath();
+           ctx.roundRect(20, y, node.size[0] - 40, boxHeight, 4);
+           ctx.fill();
+           ctx.stroke();
+
+           // Draw multi-line text
+           ctx.fillStyle = "#fa5";
+           ctx.textAlign = "center";
+           ctx.textBaseline = "top";
+           lines.forEach((line, index) => {
+               ctx.fillText(line, node.size[0] / 2, y + paddingTop + (index * lineHeight));
+           });
+           
+           return boxHeight;
         }
+        return 0;
     }
     
     drawSliderMode(ctx, y) {
@@ -1114,7 +1200,7 @@ class ResolutionMasterCanvas {
             if (this.isPointInControl(relX, relY, this.controls[key])) {
                 log.debug(`Mouse down on control: ${key} at (${relX}, ${relY})`);
                 
-                if (key.endsWith('Btn')) {
+                if (key.endsWith('Btn') || key === 'detectedInfo') {
                     this.handleButtonClick(key);
                     return true;
                 }
@@ -1285,7 +1371,9 @@ class ResolutionMasterCanvas {
             scaleBtn: () => this.handleScale(),
             resolutionBtn: () => this.handleResolutionScale(),
             megapixelsBtn: () => this.handleMegapixelsScale(),
-            autoFitBtn: () => this.handleAutoFit()
+            autoFitBtn: () => this.handleAutoFit(),
+            autoCalcBtn: () => this.handleAutoCalc(),
+            detectedInfo: () => this.handleDetectedClick()
         };
         actions[buttonName]?.();
     }
@@ -1304,7 +1392,7 @@ class ResolutionMasterCanvas {
 
     handleCheckboxClick(checkboxName) {
         const props = this.node.properties;
-        if (checkboxName === 'autoFitCheckbox' && this.detectedDimensions && props.selectedCategory) {
+        if (checkboxName === 'autoFitCheckbox' && props.selectedCategory) {
             props.autoFitOnChange = !props.autoFitOnChange;
         } else if (checkboxName === 'customCalcCheckbox') {
             props.useCustomCalc = !props.useCustomCalc;
@@ -1345,6 +1433,32 @@ class ResolutionMasterCanvas {
         this.updateRescaleValue();
         
         // Force canvas redraw to update 2D slider position
+        app.graph.setDirtyCanvas(true);
+    }
+    
+    updateCanvasFromWidgets() {
+        // Aktualizuj pozycję canvas 2D na podstawie wartości widgetów
+        if (!this.validateWidgets()) return;
+        
+        const node = this.node;
+        const props = node.properties;
+        
+        // Aktualizuj properties na podstawie widgetów
+        props.valueX = this.widthWidget.value;
+        props.valueY = this.heightWidget.value;
+        
+        // Przelicz pozycję intpos dla canvas 2D
+        node.intpos.x = (this.widthWidget.value - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
+        node.intpos.y = (this.heightWidget.value - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
+        
+        // Ogranicz do zakresu 0-1
+        node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
+        node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
+        
+        // Aktualizuj rescale value
+        this.updateRescaleValue();
+        
+        // Wymuś przerysowanie canvas
         app.graph.setDirtyCanvas(true);
     }
     
@@ -1503,7 +1617,12 @@ class ResolutionMasterCanvas {
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
             const presets = this.presetCategories[props.selectedCategory];
             items = Object.keys(presets).map(name => `${name} (${presets[name].width}×${presets[name].height})`);
-            callback = (value) => this.applyPreset(props.selectedCategory, value.split(' (')[0]);
+            callback = (value) => {
+               // Handle preset names that may contain parentheses by removing the last part with dimensions
+               const lastParenIndex = value.lastIndexOf(' (');
+               const presetName = value.substring(0, lastParenIndex);
+               this.applyPreset(props.selectedCategory, presetName);
+            };
         } else if (dropdownName === 'resolutionDropdown') {
             items = this.resolutions;
             callback = (value) => {
@@ -1767,85 +1886,155 @@ class ResolutionMasterCanvas {
     }
     
     handleAutoFit() {
+        const props = this.node.properties;
+        const category = props.selectedCategory;
+        if (!category) return;
+        
+        if (!this.widthWidget || !this.heightWidget) {
+            log.debug("Auto-fit: Width or height widget not found");
+            return;
+        }
+        
+        // Pobierz obecne wymiary z widgetów (nie z wykrytego zdjęcia)
+        const currentWidth = this.widthWidget.value;
+        const currentHeight = this.heightWidget.value;
+        
+        // Sprawdź czy checkbox Calc jest zaznaczony i użyj odpowiedniej logiki
+        if (props.useCustomCalc) {
+            // Jeśli Calc jest włączony, znajdź preset + zastosuj kalkulacje na obecnych wymiarach
+            this.handleAutoFitWithScalingFromCurrent(currentWidth, currentHeight);
+        } else {
+            // Jeśli Calc jest wyłączony, znajdź najbliższy preset dla obecnych wymiarów
+            this.handleAutoFitPresetOnlyFromCurrent(currentWidth, currentHeight);
+        }
+    }
+    
+    handleAutoFitPresetOnlyFromCurrent(currentWidth, currentHeight) {
+        // Scenariusz: Znajdź najbliższy preset pod względem rozmiaru i aspect ratio dla obecnych wymiarów
+        const props = this.node.properties;
+        const category = props.selectedCategory;
+        if (!category) return;
+        
+        const closestPreset = this.findClosestPreset(currentWidth, currentHeight, category);
+        
+        if (closestPreset && this.widthWidget && this.heightWidget) {
+            // Zastosuj najbliższy preset bez dodatkowych kalkulacji
+            props.selectedPreset = closestPreset.name;
+            this.setDimensions(closestPreset.width, closestPreset.height);
+            log.debug(`Auto-fit preset only from current: ${closestPreset.name} (${closestPreset.width}x${closestPreset.height}) for input ${currentWidth}x${currentHeight}`);
+        }
+    }
+    
+    handleAutoFitWithScalingFromCurrent(currentWidth, currentHeight) {
+        // Scenariusz: Znajdź najbliższy preset + skaluj zachowując proporcje presetu dla obecnych wymiarów
+        const props = this.node.properties;
+        const category = props.selectedCategory;
+        if (!category) return;
+        
+        const closestPreset = this.findClosestPreset(currentWidth, currentHeight, category);
+        
+        if (closestPreset && this.widthWidget && this.heightWidget) {
+            // ZACHOWAJ KONIECZNIE PROPORCJE PRESETU - znajdź najbliższy rozmiar zachowując aspect ratio presetu
+            const presetAspect = closestPreset.width / closestPreset.height;
+            const scaledDimensions = this.scaleToPresetAspectRatio(currentWidth, currentHeight, presetAspect);
+            
+            // Zastosuj kalkulacje specyficzne dla kategorii na wymiarach zachowujących proporcje presetu
+            const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
+            
+            props.selectedPreset = closestPreset.name;
+            this.setDimensions(result.width, result.height);
+            log.debug(`Auto-fit with scaling from current (strict preset aspect ${presetAspect.toFixed(2)}): ${closestPreset.name} → ${result.width}x${result.height} (from current ${currentWidth}x${currentHeight})`);
+        }
+    }
+    
+    handleAutoFitPresetOnly() {
+        // Scenariusz 2: Wykrywa najbliższy preset pod względem rozmiaru i aspect ratio
         if (!this.detectedDimensions) return;
         
         const props = this.node.properties;
         const category = props.selectedCategory;
         if (!category) return;
         
-        const presets = this.presetCategories[category];
-        let closestPreset = null;
-        let closestDistance = Infinity;
+        const closestPreset = this.findClosestPreset(this.detectedDimensions.width, this.detectedDimensions.height, category);
         
-        const detectedAspect = this.detectedDimensions.width / this.detectedDimensions.height;
-        const detectedPixels = this.detectedDimensions.width * this.detectedDimensions.height;
-        
-        Object.entries(presets).forEach(([presetName, preset]) => {
-            // Check both original and flipped orientations
-            const orientations = [
-                { width: preset.width, height: preset.height, flipped: false },
-                { width: preset.height, height: preset.width, flipped: true }
-            ];
-            
-            orientations.forEach(orientation => {
-                const presetAspect = orientation.width / orientation.height;
-                const presetPixels = orientation.width * orientation.height;
-                
-                // Calculate distance based on aspect ratio and total pixels
-                const aspectDiff = Math.abs(detectedAspect - presetAspect);
-                const pixelDiff = Math.abs(Math.log(detectedPixels / presetPixels));
-                const distance = aspectDiff + pixelDiff * 0.5;
-                
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    const orientationSuffix = orientation.flipped ? ' (flipped)' : '';
-                    closestPreset = { 
-                        name: presetName + orientationSuffix, 
-                        width: orientation.width, 
-                        height: orientation.height,
-                        originalName: presetName
-                    };
-                }
-            });
-        });
-        
-        if (closestPreset) {
-            // Apply the closest preset
-            let finalWidth = closestPreset.width;
-            let finalHeight = closestPreset.height;
-            
-            // Apply category-specific scaling if custom calc is enabled
-            if (props.useCustomCalc) {
-                if (category === 'WAN') {
-                    // For WAN mode, scale to optimal "p" resolution based on detected dimensions
-                    const wanResult = this.applyWANCalculation(this.detectedDimensions.width, this.detectedDimensions.height);
-                    finalWidth = wanResult.width;
-                    finalHeight = wanResult.height;
-                    log.debug(`WAN scaling applied: ${this.detectedDimensions.width}x${this.detectedDimensions.height} → ${finalWidth}x${finalHeight}`);
-                } else if (category === 'Flux') {
-                    // For Flux mode, apply constraints while maintaining aspect ratio
-                    const fluxResult = this.applyFluxCalculation(closestPreset.width, closestPreset.height);
-                    finalWidth = fluxResult.width;
-                    finalHeight = fluxResult.height;
-                    log.debug(`Flux constraints applied: ${closestPreset.width}x${closestPreset.height} → ${finalWidth}x${finalHeight}`);
-                }
-                // For other categories with custom calc, use the preset as-is
-            }
-            
-            // Apply the final dimensions
-            if (this.widthWidget && this.heightWidget) {
-                // Mark that dimensions were manually set by auto-fit
-                this.manuallySetByAutoFit = true;
-                
-                // Update the preset dropdown - use original name for dropdown selection
-                props.selectedPreset = closestPreset.originalName;
-                
-                // Update dimensions and UI via central function
-                this.setDimensions(finalWidth, finalHeight);
-                
-                log.debug(`Auto-fitted to preset: ${closestPreset.name} with final resolution: ${finalWidth}x${finalHeight}`);
-            }
+        if (closestPreset && this.widthWidget && this.heightWidget) {
+            // Zastosuj najbliższy preset bez dodatkowych kalkulacji
+            props.selectedPreset = closestPreset.name;
+            this.setDimensions(closestPreset.width, closestPreset.height);
+            log.debug(`Auto-fit preset only: ${closestPreset.name} (${closestPreset.width}x${closestPreset.height})`);
         }
+    }
+    
+    handleAutoFitWithScaling() {
+        // Scenariusz 3: Wykrywa najbliższy preset + skaluje go zachowując KONIECZNIE proporcje presetu
+        if (!this.detectedDimensions) return;
+        
+        const props = this.node.properties;
+        const category = props.selectedCategory;
+        if (!category) return;
+        
+        const detectedWidth = this.detectedDimensions.width;
+        const detectedHeight = this.detectedDimensions.height;
+        
+        const closestPreset = this.findClosestPreset(detectedWidth, detectedHeight, category);
+        
+        if (closestPreset && this.widthWidget && this.heightWidget) {
+            // ZACHOWAJ KONIECZNIE PROPORCJE PRESETU - znajdź najbliższy rozmiar zachowując aspect ratio presetu
+            const presetAspect = closestPreset.width / closestPreset.height;
+            const scaledDimensions = this.scaleToPresetAspectRatio(detectedWidth, detectedHeight, presetAspect);
+            
+            // Zastosuj kalkulacje specyficzne dla kategorii na wymiarach zachowujących proporcje presetu
+            const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
+            
+            props.selectedPreset = closestPreset.name;
+            this.setDimensions(result.width, result.height);
+            log.debug(`Auto-fit with scaling (strict preset aspect ${presetAspect.toFixed(2)}): ${closestPreset.name} → ${result.width}x${result.height} (from detected ${detectedWidth}x${detectedHeight})`);
+        }
+    }
+    
+    handleAutoCalc() {
+        // Funkcja Auto-calc - ręczne zastosowanie kalkulacji bez użycia Auto-fit
+        const props = this.node.properties;
+        
+        if (!props.useCustomCalc || !props.selectedCategory) {
+            log.debug("Auto-calc: Calc checkbox or category not selected");
+            return;
+        }
+        
+        if (!this.widthWidget || !this.heightWidget) {
+            log.debug("Auto-calc: Width or height widget not found");
+            return;
+        }
+        
+        // Pobierz obecne wymiary z widgetów
+        const currentWidth = this.widthWidget.value;
+        const currentHeight = this.heightWidget.value;
+        
+        // Zastosuj kalkulacje specyficzne dla kategorii
+        const result = this.applyCustomCalculation(currentWidth, currentHeight, props.selectedCategory);
+        
+        // Ustaw nowe wymiary
+        this.setDimensions(result.width, result.height);
+        
+        log.debug(`Auto-calc applied: ${currentWidth}x${currentHeight} → ${result.width}x${result.height} (${props.selectedCategory})`);
+    }
+    
+    handleDetectedClick() {
+        // Funkcja obsługująca kliknięcie na napis "Detected" - nakłada oryginalne wymiary wykrytego zdjęcia
+        if (!this.detectedDimensions) {
+            log.debug("Detected click: No detected dimensions available");
+            return;
+        }
+        
+        if (!this.widthWidget || !this.heightWidget) {
+            log.debug("Detected click: Width or height widget not found");
+            return;
+        }
+        
+        // Ustaw oryginalne wymiary wykrytego zdjęcia
+        this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
+        
+        log.debug(`Detected click applied: Set dimensions to ${this.detectedDimensions.width}x${this.detectedDimensions.height}`);
     }
     
     applyDimensionChange() {
@@ -1881,12 +2070,119 @@ class ResolutionMasterCanvas {
         const calculations = {
             Flux: () => this.applyFluxCalculation(width, height),
             WAN: () => this.applyWANCalculation(width, height),
-            // SDXL, HiDream Dev and Qwen-Image use their preset resolutions as-is when custom calc is enabled
-            'SDXL': () => ({ width, height }),
-            'HiDream Dev': () => ({ width, height }),
-            'Qwen-Image': () => ({ width, height })
+            'Qwen-Image': () => this.applyQwenCalculation(width, height),
+            // SDXL and HiDream Dev zachowują się jak auto-fit - znajdą najbliższy preset
+            'SDXL': () => this.findBestPresetForCategory(width, height, 'SDXL'),
+            'HiDream Dev': () => this.findBestPresetForCategory(width, height, 'HiDream Dev'),
+            'Standard': () => this.scaleToNearestPresetAspectRatio(width, height, 'Standard'),
+            'Social Media': () => this.scaleToNearestPresetAspectRatio(width, height, 'Social Media'),
+            'Print': () => this.scaleToNearestPresetAspectRatio(width, height, 'Print'),
+            'Cinema': () => this.scaleToNearestPresetAspectRatio(width, height, 'Cinema')
         };
         return calculations[category] ? calculations[category]() : { width, height };
+    }
+    
+    findBestPresetForCategory(width, height, category) {
+        // Znajdź najbliższy preset dla SDXL lub HiDream Dev
+        const closestPreset = this.findClosestPreset(width, height, category);
+        
+        if (closestPreset) {
+            log.debug(`${category} Calc: Found best preset ${closestPreset.name} (${closestPreset.width}x${closestPreset.height}) for input ${width}x${height}`);
+            return { width: closestPreset.width, height: closestPreset.height };
+        }
+        
+        return { width, height };
+    }
+
+    scaleToNearestPresetAspectRatio(width, height, category) {
+        const closestPreset = this.findClosestPreset(width, height, category);
+
+        if (closestPreset) {
+            const presetAspect = closestPreset.width / closestPreset.height;
+            const result = this.scaleToPresetAspectRatio(width, height, presetAspect);
+            
+            log.debug(`Calc for ${category}: Found preset ${closestPreset.name}. Scaling ${width}x${height} -> ${result.width}x${result.height} with aspect ${presetAspect.toFixed(2)}`);
+            return result;
+        }
+        
+        return { width, height };
+    }
+
+    // Unified preset finding logic
+    findClosestPreset(width, height, category, options = {}) {
+        const presets = this.presetCategories[category];
+        if (!presets) return null;
+
+        let closestPreset = null;
+        let closestDistance = Infinity;
+        
+        const inputAspect = width / height;
+        const inputPixels = width * height;
+        
+        Object.entries(presets).forEach(([presetName, preset]) => {
+            // Check both original and flipped orientations
+            const orientations = [
+                { width: preset.width, height: preset.height, flipped: false },
+                { width: preset.height, height: preset.width, flipped: true }
+            ];
+            
+            orientations.forEach(orientation => {
+                const presetAspect = orientation.width / orientation.height;
+                const presetPixels = orientation.width * orientation.height;
+                
+                // Calculate distance based on aspect ratio and total pixels
+                const aspectDiff = Math.abs(inputAspect - presetAspect);
+                const pixelDiff = Math.abs(Math.log(inputPixels / presetPixels));
+                const distance = aspectDiff + pixelDiff * 0.5;
+                
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestPreset = {
+                        name: presetName,
+                        width: orientation.width,
+                        height: orientation.height,
+                        originalPreset: preset
+                    };
+                }
+            });
+        });
+        
+        return closestPreset;
+    }
+
+    // Unified logic for choosing best scaling option based on pixel difference
+    chooseBestScalingOption(currentPixels, option1Pixels, option2Pixels, option1Dims, option2Dims) {
+        const option1Diff = Math.abs(option1Pixels - currentPixels);
+        const option2Diff = Math.abs(option2Pixels - currentPixels);
+        
+        if (option1Diff <= option2Diff) {
+            return option1Dims;
+        } else {
+            return option2Dims;
+        }
+    }
+
+    // Unified logic for scaling to preset aspect ratio
+    scaleToPresetAspectRatio(currentWidth, currentHeight, presetAspect) {
+        const currentPixels = currentWidth * currentHeight;
+        
+        // Option 1: base on current width
+        const option1Width = currentWidth;
+        const option1Height = Math.round(currentWidth / presetAspect);
+        const option1Pixels = option1Width * option1Height;
+        
+        // Option 2: base on current height
+        const option2Height = currentHeight;
+        const option2Width = Math.round(currentHeight * presetAspect);
+        const option2Pixels = option2Width * option2Height;
+        
+        return this.chooseBestScalingOption(
+            currentPixels,
+            option1Pixels,
+            option2Pixels,
+            { width: option1Width, height: option1Height },
+            { width: option2Width, height: option2Height }
+        );
     }
 
     getClosestPResolution(width, height) {
@@ -1895,19 +2191,40 @@ class ResolutionMasterCanvas {
     }
     
     applyFluxCalculation(width, height) {
-        let newWidth = Math.round(width / 32) * 32;
-        let newHeight = Math.round(height / 32) * 32;
+        // Najpierw sprawdź czy trzeba skalować ze względu na MP (zachowując proporcje)
+        const currentMP = (width * height) / 1000000;
+        let scaledWidth = width;
+        let scaledHeight = height;
         
-        const currentMP = (newWidth * newHeight) / 1000000;
         if (currentMP > 4.0) {
+            // Skaluj zachowując dokładnie proporcje
             const scale = Math.sqrt(4.0 / currentMP);
-            newWidth = Math.round((newWidth * scale) / 32) * 32;
-            newHeight = Math.round((newHeight * scale) / 32) * 32;
+            scaledWidth = width * scale;
+            scaledHeight = height * scale;
         }
         
-        return { 
-            width: Math.max(320, Math.min(2560, newWidth)),
-            height: Math.max(320, Math.min(2560, newHeight))
+        // Ogranicz do zakresu 320-2560px zachowując proporcje
+        const maxDimension = Math.max(scaledWidth, scaledHeight);
+        if (maxDimension > 2560) {
+            const limitScale = 2560 / maxDimension;
+            scaledWidth *= limitScale;
+            scaledHeight *= limitScale;
+        }
+        
+        const minDimension = Math.min(scaledWidth, scaledHeight);
+        if (minDimension < 320) {
+            const limitScale = 320 / minDimension;
+            scaledWidth *= limitScale;
+            scaledHeight *= limitScale;
+        }
+        
+        // DOPIERO NA KOŃCU zaokrąglij do 32px (to może nieznacznie zmienić proporcje)
+        const finalWidth = Math.round(scaledWidth / 32) * 32;
+        const finalHeight = Math.round(scaledHeight / 32) * 32;
+        
+        return {
+            width: Math.max(320, Math.min(2560, finalWidth)),
+            height: Math.max(320, Math.min(2560, finalHeight))
         };
     }
     
@@ -1921,6 +2238,39 @@ class ResolutionMasterCanvas {
             width: Math.round(targetWidth / 16) * 16,
             height: Math.round(targetHeight / 16) * 16
         };
+    }
+    
+    applyQwenCalculation(width, height) {
+        const currentPixels = width * height;
+        const minPixels = 589824;  // ~0.6MP
+        const maxPixels = 4194304; // ~4.2MP
+
+        // Explicitly check if dimensions are already within the target range
+        if (currentPixels >= minPixels && currentPixels <= maxPixels) {
+            // Input is already in the desired range, return unchanged
+            return { width, height };
+        } else {
+            // Input is outside the range, scale to fit
+            let targetPixels;
+            
+            if (currentPixels < minPixels) {
+                // Too small, scale up to minimum
+                targetPixels = minPixels;
+            } else {
+                // Too large, scale down to maximum
+                targetPixels = maxPixels;
+            }
+            
+            // Calculate new dimensions maintaining aspect ratio
+            const aspect = width / height;
+            let targetHeight = Math.sqrt(targetPixels / aspect);
+            let targetWidth = targetHeight * aspect;
+            
+            return {
+                width: Math.round(targetWidth),
+                height: Math.round(targetHeight)
+            };
+        }
     }
     
     calculateResolutionScale(targetP) {
@@ -1994,15 +2344,39 @@ class ResolutionMasterCanvas {
                     this.detectedDimensions = { width: img.naturalWidth, height: img.naturalHeight };
                     this.manuallySetByAutoFit = false;
                     
-                    if (node.properties.autoDetect && this.widthWidget && this.heightWidget) {
+                    const props = node.properties;
+                    
+                    // Scenariusz 1: TYLKO autoDetect = ON (bez autoFit i bez Calc)
+                    if (props.autoDetect && !props.autoFitOnChange && !props.useCustomCalc) {
+                        if (this.widthWidget && this.heightWidget) {
+                            this.widthWidget.value = this.detectedDimensions.width;
+                            this.heightWidget.value = this.detectedDimensions.height;
+                            this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
+                        }
+                    }
+                    // Scenariusz 2: autoFitOnChange = ON + useCustomCalc = OFF (może być z autoDetect lub bez)
+                    else if (props.autoFitOnChange && !props.useCustomCalc && props.selectedCategory) {
+                        this.handleAutoFitPresetOnly();
+                    }
+                    // Scenariusz 3: autoFitOnChange = ON + useCustomCalc = ON (może być z autoDetect lub bez)
+                    else if (props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
+                        this.handleAutoFitWithScaling();
+                    }
+                    // Scenariusz 4: autoDetect = ON + useCustomCalc = ON + autoFitOnChange = OFF
+                    else if (props.autoDetect && !props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
+                        if (this.widthWidget && this.heightWidget) {
+                            this.widthWidget.value = this.detectedDimensions.width;
+                            this.heightWidget.value = this.detectedDimensions.height;
+                            this.applyDimensionChange(); // Zastosuje kalkulacje na oryginalnych wymiarach
+                        }
+                    }
+                    // Fallback: tylko autoDetect bez innych opcji
+                    else if (props.autoDetect && this.widthWidget && this.heightWidget) {
                         this.widthWidget.value = this.detectedDimensions.width;
                         this.heightWidget.value = this.detectedDimensions.height;
-                        this.applyDimensionChange();
+                        this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
                     }
                     
-                    if (node.properties.autoFitOnChange && node.properties.selectedCategory) {
-                        this.handleAutoFit();
-                    }
                     app.graph.setDirtyCanvas(true);
                 }
             }
