@@ -202,6 +202,7 @@ Each scaling row shows:
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
 
-## Support
+## 💖 Support / Sponsorship
 
-For issues, questions, or suggestions, please open an issue on GitHub or contact through the ComfyUI community forums.
+If you’d like to support my work:  
+👉 [GitHub Sponsors](https://github.com/sponsors/Azornes)
