@@ -408,6 +408,14 @@ class ResolutionMasterCanvas {
             section("Scaling", (ctx, y) => this.drawScalingGrid(ctx, y));
             section("Auto-Detect", (ctx, y) => this.drawAutoDetectSection(ctx, y));
             section("Presets", (ctx, y) => this.drawPresetSection(ctx, y));
+            
+            // Draw info message outside of any section background
+            if (props.useCustomCalc && props.selectedCategory) {
+                const messageHeight = this.drawInfoMessage(ctx, currentY);
+                if (messageHeight > 0) {
+                    currentY += messageHeight + spacing;
+                }
+            }
 
         } else if (props.mode === "Manual Sliders") {
             this.drawSliderMode(ctx, currentY);
@@ -435,8 +443,8 @@ class ResolutionMasterCanvas {
 
         ctx.fillStyle = "#ccc";
         ctx.font = "bold 12px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText(title, x + 10, y + 15);
+        ctx.textAlign = "center";
+        ctx.fillText(title, x + w / 2, y + 10);
     }
     
     drawOutputValues(ctx) {
@@ -791,14 +799,6 @@ class ResolutionMasterCanvas {
             this.controls.categoryDropdown = { x: currentX, y, w: availableWidth, h: 28 };
             const categoryText = props.selectedCategory || "Category...";
             this.drawDropdown(ctx, currentX, y, availableWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
-        }
-
-        if (props.useCustomCalc && props.selectedCategory) {
-            const messageY = y + 38; // y + dropdown height + gap
-            const messageHeight = this.drawInfoMessage(ctx, messageY);
-            if (messageHeight > 0) {
-                currentHeight += messageHeight + 8; // Add dynamic height + gap
-            }
         }
 
         return currentHeight;
