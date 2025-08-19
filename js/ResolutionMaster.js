@@ -286,22 +286,6 @@ class ResolutionMasterCanvas {
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
         
-        // Add widget change observers for live canvas 2D updates
-        if (widthWidget) {
-            const originalWidthCallback = widthWidget.callback;
-            widthWidget.callback = (value) => {
-                if (originalWidthCallback) originalWidthCallback.call(widthWidget, value);
-                this.updateCanvasFromWidgets();
-            };
-        }
-        
-        if (heightWidget) {
-            const originalHeightCallback = heightWidget.callback;
-            heightWidget.callback = (value) => {
-                if (originalHeightCallback) originalHeightCallback.call(heightWidget, value);
-                this.updateCanvasFromWidgets();
-            };
-        }
         
         // Override onDrawForeground
         node.onDrawForeground = function(ctx) {
