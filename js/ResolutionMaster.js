@@ -267,15 +267,7 @@ class ResolutionMasterCanvas {
         if (rescaleValueWidget) {
             rescaleValueWidget.value = node.properties.rescaleValue;
         }
-        
-        // Hide all backend widgets
-        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
-            if (widget) {
-                widget.hidden = true;
-                widget.type = "hidden";
-                widget.computeSize = () => [0, -4];
-            }
-        });
+    
         
         // Initialize values from widgets
         if (widthWidget && heightWidget) {
@@ -374,6 +366,15 @@ class ResolutionMasterCanvas {
             // Calculate initial rescale value
             self.updateRescaleValue();
         };
+
+                // Hide all backend widgets
+        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
+            if (widget) {
+                widget.hidden = true;
+                widget.type = "hidden";
+                widget.computeSize = () => [0, -4];
+            }
+        });
     }
     
     drawInterface(ctx) {
@@ -1417,6 +1418,8 @@ class ResolutionMasterCanvas {
         // Update UI
         this.handlePropertyChange();
         this.updateRescaleValue();
+
+        this.updateCanvasFromWidgets();
         
         // Force canvas redraw to update 2D slider position
         app.graph.setDirtyCanvas(true);
@@ -2048,6 +2051,7 @@ class ResolutionMasterCanvas {
             this.heightWidget.value = preset.height;
             props.selectedPreset = presetName;
             this.applyDimensionChange();
+            this.updateCanvasFromWidgets();
         }
     }
     
