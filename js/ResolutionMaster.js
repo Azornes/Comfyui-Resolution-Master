@@ -2,6 +2,7 @@
 // All controls visible at once like in original DOM version
 import { app } from "../../scripts/app.js";
 import { createModuleLogger } from "./utils/LoggerUtils.js";
+import { loadIcons } from "./utils/IconUtils.js";
 
 // Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
@@ -45,7 +46,7 @@ class ResolutionMasterCanvas {
         this.resolutions = ['144p', '240p', '360p', '480p', '720p', '820p', '1080p', '1440p', '2160p', '4320p'];
 
         this.icons = {};
-        this.loadIcons();
+        loadIcons(this.icons);
         
         // Tooltip definitions
         this.tooltips = {
@@ -235,21 +236,6 @@ class ResolutionMasterCanvas {
         });
     }
     
-    loadIcons() {
-        const iconColor = "#dddddd";
-        const svgs = {
-            upscale: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>`,
-            resolution: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect><polyline points="17 2 12 7 7 2"></polyline></svg>`,
-            megapixels: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${iconColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`
-        };
-
-        for (const name in svgs) {
-            const img = new Image();
-            img.onload = () => app.graph.setDirtyCanvas(true);
-            img.src = `data:image/svg+xml;base64,${btoa(svgs[name])}`;
-            this.icons[name] = img;
-        }
-    }
     
     setupNode() {
         const node = this.node;
