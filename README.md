@@ -196,6 +196,16 @@ Each scaling row shows:
 - Step values for grid snapping
 - Decimal precision settings
 - Visual options (dots, frame, snap)
+- 
+## ⚠️ Known Issues / Compatibility
+
+- **Conflict with comfyui-mixlab-nodes**  
+  Some users have reported that the *Resolution Master* node appears completely blank when added to the canvas.  
+  This issue is caused by a conflict with **comfyui-mixlab-nodes**.  
+
+  ✅ Temporary Fix: Disable or uninstall `comfyui-mixlab-nodes` – the node will then display and work correctly.  
+  ❌ Unfortunately, I cannot reproduce this bug on my end, since with my setup both node packs work fine together.  
+  Until a proper fix is found, the only workaround is disabling `comfyui-mixlab-nodes`.  
 
 
 ## Contributing
