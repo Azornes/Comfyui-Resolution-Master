@@ -25,8 +25,8 @@ class ResolutionMaster:
                 "mode": (
                     ["Manual", "Manual Sliders", "Common Resolutions", "Aspect Ratios"],
                 ),
-                "width": ("INT", {"default": 512, "min": 64, "max": 4096, "step": 64}),
-                "height": ("INT", {"default": 512, "min": 64, "max": 4096, "step": 64}),
+                "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64}),
+                "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64}),
                 "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual"}),
                 "rescale_mode": ("STRING", {"default": "resolution"}),
                 "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0}),

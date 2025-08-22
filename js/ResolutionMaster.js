@@ -224,10 +224,10 @@ class ResolutionMasterCanvas {
             selectedPreset: null,
             useCustomCalc: false,
             manual_slider_min_w: 64,
-            manual_slider_max_w: 4096,
+            manual_slider_max_w: 2048,
             manual_slider_step_w: 64,
             manual_slider_min_h: 64,
-            manual_slider_max_h: 4096,
+            manual_slider_max_h: 2048,
             manual_slider_step_h: 64,
         };
 
@@ -798,15 +798,15 @@ class ResolutionMasterCanvas {
         if (category === "SDXL" && props.useCustomCalc) {
             message = "💡 SDXL Mode: Only using presets!";
         } else if (category === "Flux" && props.useCustomCalc) {
-            message = "💡 Flux Mode: 32px increments, 320-2560px, max 4.0 MP";
+            message = "💡 Flux Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
         } else if (category === "WAN" && props.useCustomCalc && this.widthWidget && this.heightWidget) {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
-            message = `💡 WAN Mode: Suggesting ${model} model (320p-820p range). Dimensions will be rounded to a multiple of 16.`;
+            message = `💡 WAN Mode: Suggesting ${model} model | Round to: 16px | Resolution range: 320p-820p`;
         } else if (category === "HiDream Dev" && props.useCustomCalc) {
             message = "💡 HiDream Dev: Only using presets!";
         } else if (category === "Qwen-Image" && props.useCustomCalc) {
-            message = "💡 Qwen-Image: Scales resolution to fit within ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
+            message = "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
         } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category) && props.useCustomCalc) {
             message = "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
         }
@@ -1066,7 +1066,7 @@ class ResolutionMasterCanvas {
         const maxWidth = 250;
         const lineHeight = 16;
         
-        log.debug(`Drawing tooltip for ${this.tooltipElement}: "${tooltipText}"`);
+        // log.debug(`Drawing tooltip for ${this.tooltipElement}: "${tooltipText}"`);
         
         // Set font for measuring
         ctx.font = "12px Arial";
@@ -1146,7 +1146,7 @@ class ResolutionMasterCanvas {
         
         ctx.restore();
         
-        log.debug(`Tooltip drawn at ${tooltipX}, ${tooltipY} with size ${tooltipWidth}x${tooltipHeight}`);
+        //log.debug(`Tooltip drawn at ${tooltipX}, ${tooltipY} with size ${tooltipWidth}x${tooltipHeight}`);
     }
     
     // Mouse handling methods
@@ -1162,7 +1162,7 @@ class ResolutionMasterCanvas {
             if (c2d && this.isPointInControl(relX, relY, c2d)) {
                 node.capture = 'canvas2d';
                 node.captureInput(true);
-                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey);
+                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
                 return true;
             }
         }
@@ -1228,7 +1228,7 @@ class ResolutionMasterCanvas {
         if (node.capture === 'canvas2d') {
             const c2d = this.controls.canvas2d;
             if (c2d) {
-                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey);
+                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
             }
             return true;
         }
@@ -1289,11 +1289,11 @@ class ResolutionMasterCanvas {
         
         // Start new tooltip timer if hovering over an element with tooltip
         if (element && this.tooltips[element]) {
-            log.debug(`Starting tooltip timer for element: ${element}`);
+            //log.debug(`Starting tooltip timer for element: ${element}`);
             // Store the initial mouse position when timer starts
             const initialMousePos = { x: e.canvasX, y: e.canvasY };
             this.tooltipTimer = setTimeout(() => {
-                log.debug(`Showing tooltip for element: ${element}`);
+                //log.debug(`Showing tooltip for element: ${element}`);
                 this.tooltipElement = element;
                 this.showTooltip = true;
                 this.tooltipFixedPos = initialMousePos; // Use the stored initial position
@@ -1510,14 +1510,60 @@ class ResolutionMasterCanvas {
     }
 
     // Value update methods
-    updateCanvasValue(x, y, w, h, shiftKey) {
+    updateCanvasValue(x, y, w, h, shiftKey, ctrlKey) {
         const node = this.node;
         const props = node.properties;
         
         let vX = Math.max(0, Math.min(1, x / w));
         let vY = Math.max(0, Math.min(1, 1 - y / h));
         
-        if (shiftKey !== props.canvas_snap) {
+        // Ctrl+Shift: zmiana rozmiaru po 1px z zachowaniem proporcji
+        if (ctrlKey && shiftKey) {
+            // Zachowaj obecne proporcje
+            const currentAspect = this.widthWidget.value / this.heightWidget.value;
+            
+            let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
+            let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
+            
+            // Zaokrąglij do 1px
+            newX = Math.round(newX);
+            newY = Math.round(newY);
+            
+            // Zachowaj proporcje - dostosuj Y na podstawie X
+            newY = Math.round(newX / currentAspect);
+            
+            // Przelicz z powrotem na pozycje vX, vY
+            vX = (newX - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
+            vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
+        }
+        // Shift: przeciąganie z zachowaniem proporcji
+        else if (shiftKey && !ctrlKey) {
+            // Zachowaj obecne proporcje
+            const currentAspect = this.widthWidget.value / this.heightWidget.value;
+            
+            let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
+            let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
+            
+            // Zastosuj snap
+            let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
+            let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
+            vX = Math.round(vX / sX) * sX;
+            
+            // Przelicz newX po snap
+            newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
+            
+            // Zachowaj proporcje - dostosuj Y na podstawie X
+            newY = newX / currentAspect;
+            
+            // Przelicz z powrotem na pozycję vY
+            vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
+        }
+        // Ctrl: zmiana rozmiaru bez snap (poprzednia funkcjonalność Shift)
+        else if (ctrlKey && !shiftKey) {
+            // Nie stosuj snap - pozostaw vX i vY bez zmian
+        }
+        // Domyślnie: zastosuj snap
+        else {
             let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
             let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
             vX = Math.round(vX / sX) * sX;
@@ -1872,97 +1918,51 @@ class ResolutionMasterCanvas {
         const currentWidth = this.widthWidget.value;
         const currentHeight = this.heightWidget.value;
         
-        // Sprawdź czy checkbox Calc jest zaznaczony i użyj odpowiedniej logiki
-        if (props.useCustomCalc) {
-            // Jeśli Calc jest włączony, znajdź preset + zastosuj kalkulacje na obecnych wymiarach
-            this.handleAutoFitWithScalingFromCurrent(currentWidth, currentHeight);
+        // Użyj zunifikowanej funkcji
+        this.applyAutoFit(currentWidth, currentHeight, props.useCustomCalc, category, 'current');
+    }
+    
+    // Zunifikowana funkcja AutoFit
+    applyAutoFit(width, height, useCalc, category, source = 'detected') {
+        const props = this.node.properties;
+        
+        if (!this.widthWidget || !this.heightWidget) return;
+        
+        const closestPreset = this.findClosestPreset(width, height, category);
+        
+        if (!closestPreset) return;
+        
+        let finalWidth, finalHeight;
+        
+        if (useCalc) {
+            // Z kalkulacjami - sprawdź czy aspect ratio się zgadza
+            const presetAspect = closestPreset.width / closestPreset.height;
+            const currentAspect = width / height;
+            
+            // Jeśli aspect ratio jest prawie identyczny (różnica < 0.01)
+            if (Math.abs(currentAspect - presetAspect) < 0.01) {
+                // Zachowaj obecny rozmiar lub zastosuj specyficzne kalkulacje dla kategorii
+                const result = this.applyCustomCalculation(width, height, category);
+                finalWidth = result.width;
+                finalHeight = result.height;
+                log.debug(`Auto-fit with calc (${source}): ${closestPreset.name} has matching aspect ratio. Using ${finalWidth}x${finalHeight} (from ${width}x${height})`);
+            } else {
+                // Aspect ratio się różni - skaluj do presetu i zastosuj kalkulacje
+                const scaledDimensions = this.scaleToPresetAspectRatio(width, height, presetAspect);
+                const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
+                finalWidth = result.width;
+                finalHeight = result.height;
+                log.debug(`Auto-fit with calc (${source}): ${closestPreset.name} different aspect. Scaled to ${finalWidth}x${finalHeight} (from ${width}x${height})`);
+            }
         } else {
-            // Jeśli Calc jest wyłączony, znajdź najbliższy preset dla obecnych wymiarów
-            this.handleAutoFitPresetOnlyFromCurrent(currentWidth, currentHeight);
+            // Bez kalkulacji - użyj presetu bezpośrednio
+            finalWidth = closestPreset.width;
+            finalHeight = closestPreset.height;
+            log.debug(`Auto-fit preset only (${source}): ${closestPreset.name} (${finalWidth}x${finalHeight}) for input ${width}x${height}`);
         }
-    }
-    
-    handleAutoFitPresetOnlyFromCurrent(currentWidth, currentHeight) {
-        // Scenariusz: Znajdź najbliższy preset pod względem rozmiaru i aspect ratio dla obecnych wymiarów
-        const props = this.node.properties;
-        const category = props.selectedCategory;
-        if (!category) return;
         
-        const closestPreset = this.findClosestPreset(currentWidth, currentHeight, category);
-        
-        if (closestPreset && this.widthWidget && this.heightWidget) {
-            // Zastosuj najbliższy preset bez dodatkowych kalkulacji
-            props.selectedPreset = closestPreset.name;
-            this.setDimensions(closestPreset.width, closestPreset.height);
-            log.debug(`Auto-fit preset only from current: ${closestPreset.name} (${closestPreset.width}x${closestPreset.height}) for input ${currentWidth}x${currentHeight}`);
-        }
-    }
-    
-    handleAutoFitWithScalingFromCurrent(currentWidth, currentHeight) {
-        // Scenariusz: Znajdź najbliższy preset + skaluj zachowując proporcje presetu dla obecnych wymiarów
-        const props = this.node.properties;
-        const category = props.selectedCategory;
-        if (!category) return;
-        
-        const closestPreset = this.findClosestPreset(currentWidth, currentHeight, category);
-        
-        if (closestPreset && this.widthWidget && this.heightWidget) {
-            // ZACHOWAJ KONIECZNIE PROPORCJE PRESETU - znajdź najbliższy rozmiar zachowując aspect ratio presetu
-            const presetAspect = closestPreset.width / closestPreset.height;
-            const scaledDimensions = this.scaleToPresetAspectRatio(currentWidth, currentHeight, presetAspect);
-            
-            // Zastosuj kalkulacje specyficzne dla kategorii na wymiarach zachowujących proporcje presetu
-            const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
-            
-            props.selectedPreset = closestPreset.name;
-            this.setDimensions(result.width, result.height);
-            log.debug(`Auto-fit with scaling from current (strict preset aspect ${presetAspect.toFixed(2)}): ${closestPreset.name} → ${result.width}x${result.height} (from current ${currentWidth}x${currentHeight})`);
-        }
-    }
-    
-    handleAutoFitPresetOnly() {
-        // Scenariusz 2: Wykrywa najbliższy preset pod względem rozmiaru i aspect ratio
-        if (!this.detectedDimensions) return;
-        
-        const props = this.node.properties;
-        const category = props.selectedCategory;
-        if (!category) return;
-        
-        const closestPreset = this.findClosestPreset(this.detectedDimensions.width, this.detectedDimensions.height, category);
-        
-        if (closestPreset && this.widthWidget && this.heightWidget) {
-            // Zastosuj najbliższy preset bez dodatkowych kalkulacji
-            props.selectedPreset = closestPreset.name;
-            this.setDimensions(closestPreset.width, closestPreset.height);
-            log.debug(`Auto-fit preset only: ${closestPreset.name} (${closestPreset.width}x${closestPreset.height})`);
-        }
-    }
-    
-    handleAutoFitWithScaling() {
-        // Scenariusz 3: Wykrywa najbliższy preset + skaluje go zachowując KONIECZNIE proporcje presetu
-        if (!this.detectedDimensions) return;
-        
-        const props = this.node.properties;
-        const category = props.selectedCategory;
-        if (!category) return;
-        
-        const detectedWidth = this.detectedDimensions.width;
-        const detectedHeight = this.detectedDimensions.height;
-        
-        const closestPreset = this.findClosestPreset(detectedWidth, detectedHeight, category);
-        
-        if (closestPreset && this.widthWidget && this.heightWidget) {
-            // ZACHOWAJ KONIECZNIE PROPORCJE PRESETU - znajdź najbliższy rozmiar zachowując aspect ratio presetu
-            const presetAspect = closestPreset.width / closestPreset.height;
-            const scaledDimensions = this.scaleToPresetAspectRatio(detectedWidth, detectedHeight, presetAspect);
-            
-            // Zastosuj kalkulacje specyficzne dla kategorii na wymiarach zachowujących proporcje presetu
-            const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
-            
-            props.selectedPreset = closestPreset.name;
-            this.setDimensions(result.width, result.height);
-            log.debug(`Auto-fit with scaling (strict preset aspect ${presetAspect.toFixed(2)}): ${closestPreset.name} → ${result.width}x${result.height} (from detected ${detectedWidth}x${detectedHeight})`);
-        }
+        props.selectedPreset = closestPreset.name;
+        this.setDimensions(finalWidth, finalHeight);
     }
     
     handleAutoCalc() {
@@ -2073,6 +2073,15 @@ class ResolutionMasterCanvas {
 
         if (closestPreset) {
             const presetAspect = closestPreset.width / closestPreset.height;
+            const currentAspect = width / height;
+            
+            // Jeśli aspect ratio jest prawie identyczny (różnica < 0.01), zachowaj obecny rozmiar
+            if (Math.abs(currentAspect - presetAspect) < 0.01) {
+                log.debug(`Calc for ${category}: Preset ${closestPreset.name} has matching aspect ratio (${presetAspect.toFixed(2)}). Keeping current size ${width}x${height}`);
+                return { width, height };
+            }
+            
+            // W przeciwnym razie skaluj do aspect ratio presetu
             const result = this.scaleToPresetAspectRatio(width, height, presetAspect);
             
             log.debug(`Calc for ${category}: Found preset ${closestPreset.name}. Scaling ${width}x${height} -> ${result.width}x${result.height} with aspect ${presetAspect.toFixed(2)}`);
@@ -2088,7 +2097,8 @@ class ResolutionMasterCanvas {
         if (!presets) return null;
 
         let closestPreset = null;
-        let closestDistance = Infinity;
+        let closestAspectDiff = Infinity;
+        let closestPixelDiff = Infinity;
         
         const inputAspect = width / height;
         const inputPixels = width * height;
@@ -2104,22 +2114,35 @@ class ResolutionMasterCanvas {
                 const presetAspect = orientation.width / orientation.height;
                 const presetPixels = orientation.width * orientation.height;
                 
-                // Calculate distance based on aspect ratio and total pixels
+                // NAJPIERW porównaj aspect ratio
                 const aspectDiff = Math.abs(inputAspect - presetAspect);
-                const pixelDiff = Math.abs(Math.log(inputPixels / presetPixels));
-                const distance = aspectDiff + pixelDiff * 0.5;
                 
-                if (distance < closestDistance) {
-                    closestDistance = distance;
-                    closestPreset = {
-                        name: presetName,
-                        width: orientation.width,
-                        height: orientation.height,
-                        originalPreset: preset
-                    };
+                // Jeśli aspect ratio jest bliższy lub bardzo podobny (różnica < 0.01)
+                if (aspectDiff < closestAspectDiff || (Math.abs(aspectDiff - closestAspectDiff) < 0.01)) {
+                    // Jeśli aspect ratio jest identyczny lub prawie identyczny
+                    if (aspectDiff < 0.01 || aspectDiff < closestAspectDiff) {
+                        // Wtedy sprawdź różnicę w pikselach
+                        const pixelDiff = Math.abs(Math.log(inputPixels / presetPixels));
+                        
+                        // Wybierz preset tylko jeśli ma lepszy aspect ratio
+                        // LUB ma ten sam aspect ratio ale bliższy rozmiar
+                        if (aspectDiff < closestAspectDiff ||
+                            (Math.abs(aspectDiff - closestAspectDiff) < 0.01 && pixelDiff < closestPixelDiff)) {
+                            closestAspectDiff = aspectDiff;
+                            closestPixelDiff = pixelDiff;
+                            closestPreset = {
+                                name: presetName,
+                                width: orientation.width,
+                                height: orientation.height,
+                                originalPreset: preset
+                            };
+                        }
+                    }
                 }
             });
         });
+        
+        log.debug(`findClosestPreset: Input ${width}x${height} (aspect ${inputAspect.toFixed(2)}) → Selected "${closestPreset?.name}" ${closestPreset?.width}x${closestPreset?.height} (aspect ${(closestPreset?.width/closestPreset?.height)?.toFixed(2)})`);
         
         return closestPreset;
     }
@@ -2330,11 +2353,11 @@ class ResolutionMasterCanvas {
                     }
                     // Scenariusz 2: autoFitOnChange = ON + useCustomCalc = OFF (może być z autoDetect lub bez)
                     else if (props.autoFitOnChange && !props.useCustomCalc && props.selectedCategory) {
-                        this.handleAutoFitPresetOnly();
+                        this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, false, props.selectedCategory, 'detected');
                     }
                     // Scenariusz 3: autoFitOnChange = ON + useCustomCalc = ON (może być z autoDetect lub bez)
                     else if (props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
-                        this.handleAutoFitWithScaling();
+                        this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, true, props.selectedCategory, 'detected');
                     }
                     // Scenariusz 4: autoDetect = ON + useCustomCalc = ON + autoFitOnChange = OFF
                     else if (props.autoDetect && !props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
