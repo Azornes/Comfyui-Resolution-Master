@@ -1,74 +1,95 @@
 name: 🐞 Bug Report
-description: Report an error or unexpected behavior
+description: 'Report something that is not working correctly'
 title: "[BUG] "
 labels: [bug]
 body:
-  - type: markdown
+  - type: checkboxes
     attributes:
-      value: |
-        **Thank you for reporting a bug!**  
-        Please follow these steps to capture all necessary information:
+      label: Prerequisites
+      options:
+        - label: I am running the latest version of [ComfyUI](https://github.com/comfyanonymous/ComfyUI/releases)
+          required: true
+        - label: I am running the latest version of [ComfyUI_frontend](https://github.com/Comfy-Org/ComfyUI_frontend/releases)
+          required: true
+        - label: I am running the latest version of [Resolution Master Github](https://github.com/Azornes/Comfyui-Resolution-Master/releases) | [ComfyUI Node Manager](https://registry.comfy.org/publishers/azornes/nodes/Comfyui-Resolution-Master)
+          required: true
+        - label: I have searched existing issues to make sure this isn't a duplicate
+          required: true
 
-        ### ✅ Before You Report:
-        1. Make sure you have the **latest versions**:
-           - [ComfyUI Github](https://github.com/comfyanonymous/ComfyUI/releases)
-           - [ComfyUI_frontend Github](https://github.com/Comfy-Org/ComfyUI_frontend/releases)
-           - [Resolution Master Github](https://github.com/Azornes/Comfyui-Resolution-Master/releases) or via [ComfyUI Node Manager](https://registry.comfy.org/publishers/azornes/nodes/Comfyui-Resolution-Master)
-        
-  - type: input
-    id: environment
+  - type: textarea
+    id: description
     attributes:
-      label: Environment (OS, ComfyUI versions, ResolutionMaster version)
-      placeholder: e.g. Windows 11, ComfyUI v0.3.5, ComfyUI_frontend v1.26.6, ResolutionMaster v1.4
-    validations:
-      required: true
-
-  - type: input
-    id: browser
-    attributes:
-      label: Browser & Version
-      placeholder: e.g. Chrome 115.0.0, Firefox 120.1.0
+      label: What happened?
+      description: A clear and concise description of the bug. Include screenshots or videos if helpful.
+      placeholder: |
+        Example: "When I connect a image to an Input, the connection line appears but the workflow fails to execute with an error message..."
     validations:
       required: true
 
   - type: textarea
-    id: steps
+    id: reproduce
     attributes:
       label: Steps to Reproduce
+      description: How can I reproduce this issue? Please attach your workflow (JSON or PNG) if needed.
       placeholder: |
-        1. …
-        2. …
-        3. …
+        1. Connect Image to Input
+        2. Click Scale button
+        3. Click Queue Prompt
+        4. See error
     validations:
       required: true
 
-  - type: textarea
-    id: expected
+  - type: dropdown
+    id: severity
     attributes:
-      label: Expected Behavior
-      placeholder: Describe what you expected to happen
+      label: How is this affecting you?
+      options:
+        - Crashes ComfyUI completely
+        - Workflow won't execute
+        - Feature doesn't work as expected
+        - Visual/UI issue only
+        - Minor inconvenience
     validations:
       required: true
-
-  - type: textarea
-    id: actual
+    
+  - type: dropdown
+    id: browser
     attributes:
-      label: Actual Behavior
-      placeholder: Describe what happened instead
+      label: Browser
+      description: Which browser are you using?
+      options:
+        - Chrome/Chromium
+        - Firefox
+        - Safari
+        - Edge
+        - Other
     validations:
       required: true
-
-  - type: textarea
-    id: context
-    attributes:
-      label: Additional Context (Optional)
-      placeholder: |
-        (Optional) Add any other context that might help me investigate.
-    validations:
-      required: false
 
   - type: markdown
     attributes:
       value: |
-        **Optional:** You can also **attach a screenshot or video** to demonstrate the issue visually.  
-        Simply drag & drop or paste image/video files into this issue form. GitHub supports common image formats and MP4/GIF files.
+        ## Additional Information (Optional)
+        *The following fields help me debug complex issues but are not required for most bug reports.*
+
+  - type: textarea
+    id: console-errors
+    attributes:
+      label: Console Errors
+      description: If you see red error messages in the browser console (F12), paste them here
+      render: javascript
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: If relevant, paste any terminal/server logs here
+      render: shell
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context, Environment (OS, ComfyUI versions, ResolutionMaster version)
+      description: Any other information that might help (OS, GPU, specific nodes involved, etc.)
+
+      
