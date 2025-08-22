@@ -27,6 +27,10 @@ https://github.com/user-attachments/assets/587ea664-32b1-410b-bfa1-fba013f8e700
 
 ### 🎯 Core Functionality
 - **Interactive 2D Canvas Control**: Visually select resolution with real-time preview
+  - **Shift + Drag**: Preserves aspect ratio while dragging (with snap enabled)
+  - **Ctrl + Drag**: Disables snap for fine-tuning without grid constraints
+  - **Ctrl + Shift + Drag**: Preserves aspect ratio with 1px precision (no snap)
+  - **Normal Drag**: Standard behavior with snap to grid
 - **Smart Rescaling**: Automatic calculation of rescale factors for upscaling workflows
 - **Snap to Grid**: Align dimensions to customizable grid increments (16px to 256px)
 - **Real-time Info Display**: Shows current resolution, megapixels, p-value and aspect ratio
@@ -125,7 +129,11 @@ The node provides three scaling methods that work together:
 - **Snap Button**: Rounds dimensions to nearest grid value
 - **Adjustable Grid**: 16px to 256px increments (adjustable via slider)
 - **Smart Snapping**: Respects model constraints when Custom Calc is enabled
-- **Shift Key Override**: Hold Shift while dragging on canvas to temporarily toggle snap on/off
+- **Canvas Drag Modifiers**:
+  - **Normal Drag**: Standard behavior with snap to grid
+  - **Shift + Drag**: Preserves aspect ratio while dragging (with snap enabled)
+  - **Ctrl + Drag**: Disables snap for fine-tuning without grid constraints
+  - **Ctrl + Shift + Drag**: Preserves aspect ratio with 1px precision (no snap)
 
 ### Auto-Detect & Auto-Fit
 
@@ -143,9 +151,12 @@ The node provides three scaling methods that work together:
 
 ## Output Values
 
-- **width** (INT): Selected width in pixels (displayed in blue #89F)
-- **height** (INT): Selected height in pixels (displayed in pink #F89)
-- **rescale_factor** (FLOAT): Calculated scaling factor for achieving target resolution (displayed in green #9F8)
+- **width** (INT): Selected width in pixels
+- **height** (INT): Selected height in pixels
+- **rescale_factor** (FLOAT): Calculated scaling factor for external upscaling nodes
+  - This value is used when you want to upscale/downscale your image using external nodes
+  - Changes based on selected scaling mode (manual scale, resolution target, or megapixels target)
+  - Connect this output to upscaling nodes in your workflow for resolution-independent scaling
 
 Values are shown directly at output slots for quick reference.
 
@@ -191,12 +202,23 @@ Each scaling row shows:
 4. **Monitor Info Messages**: Pay attention to mode-specific recommendations
 5. **Leverage Rescale Factor**: Connect to upscaling nodes for resolution-independent workflows
 
+### Working with High Resolutions (Above 2K)
+
+The node now supports outputs up to 32K resolution. When working with very high resolutions:
+
+- **Visual Representation**: The 2D canvas may appear distorted at extreme resolutions as it's optimized for the default 2048x2048 range
+- **Actual Outputs**: The width/height outputs maintain correct aspect ratios regardless of canvas appearance
+- **Solution**: Use the Properties panel to adjust `canvas_max_x` and `canvas_max_y` values to match your working resolution range
+  - Example: For 8K work, set both to 8192
+  - Example: For 32K work, set both to 32768
+- This adjustment fixes the visual representation while maintaining accurate output values
+
 ### Internal Properties
-- Min/Max ranges for X and Y axes
-- Step values for grid snapping
-- Decimal precision settings
-- Visual options (dots, frame, snap)
-- 
+- **canvas_min_x/y**: Minimum values for X and Y axes (default: 0)
+- **canvas_max_x/y**: Maximum values for X and Y axes (default: 2048, adjustable up to 32768)
+- **canvas_step_x/y**: Step values for grid snapping
+- **canvas_decimals_x/y**: Decimal precision settings
+- **Visual options**: dots, frame, snap toggles
 ## ⚠️ Known Issues / Compatibility
 
 - **Conflict with comfyui-mixlab-nodes**  
