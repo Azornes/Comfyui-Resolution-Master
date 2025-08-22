@@ -55,6 +55,10 @@ class ResolutionMasterCanvas {
             snapBtn: "Snap current resolution to the nearest snap value",
             snapValueArea: "Click to set custom snap value",
             
+            // Output value areas (editable)
+            widthValueArea: "Click to set custom width value",
+            heightValueArea: "Click to set custom height value",
+            
             // Scaling controls (buttons and dropdowns only)
             scaleBtn: "Apply manual scaling factor and reset to 1.0x",
             upscaleRadio: "Use manual scaling mode for rescale output",
@@ -446,10 +450,53 @@ class ResolutionMasterCanvas {
             const y_offset_2 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 1.5);
             const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
 
-            ctx.fillStyle = "#89F";
+            // Calculate clickable area dimensions
+            const valueAreaWidth = 60; // Wider area for better clicking
+            const valueAreaHeight = 20;
+            const valueAreaX = node.size[0] - valueAreaWidth - 5;
+
+            // Width value area
+            this.controls.widthValueArea = {
+                x: valueAreaX,
+                y: y_offset_1 - valueAreaHeight/2,
+                w: valueAreaWidth,
+                h: valueAreaHeight
+            };
+            
+            // Draw background for width value area if hovered
+            if (this.hoverElement === 'widthValueArea') {
+                ctx.fillStyle = "rgba(136, 153, 255, 0.2)";
+                ctx.strokeStyle = "rgba(136, 153, 255, 0.5)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(valueAreaX, y_offset_1 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, 4);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = this.hoverElement === 'widthValueArea' ? "#89F" : "#89F";
             ctx.fillText(this.widthWidget.value.toString(), node.size[0] - 20, y_offset_1);
             
-            ctx.fillStyle = "#F89";
+            // Height value area
+            this.controls.heightValueArea = {
+                x: valueAreaX,
+                y: y_offset_2 - valueAreaHeight/2,
+                w: valueAreaWidth,
+                h: valueAreaHeight
+            };
+            
+            // Draw background for height value area if hovered
+            if (this.hoverElement === 'heightValueArea') {
+                ctx.fillStyle = "rgba(248, 136, 153, 0.2)";
+                ctx.strokeStyle = "rgba(248, 136, 153, 0.5)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(valueAreaX, y_offset_2 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, 4);
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = this.hoverElement === 'heightValueArea' ? "#F89" : "#F89";
             ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
             
             ctx.fillStyle = "#9F8";
@@ -1681,6 +1728,16 @@ class ResolutionMasterCanvas {
             currentValue = this.node.properties.snapValue;
             propertyName = 'snapValue';
             minValue = 1;
+        } else if (valueAreaKey === 'widthValueArea') {
+            valueType = 'Width';
+            currentValue = this.widthWidget ? this.widthWidget.value : this.node.properties.valueX;
+            propertyName = 'width';
+            minValue = 64;
+        } else if (valueAreaKey === 'heightValueArea') {
+            valueType = 'Height';
+            currentValue = this.heightWidget ? this.heightWidget.value : this.node.properties.valueY;
+            propertyName = 'height';
+            minValue = 64;
         } else {
             log.debug(`Unknown value area key: ${valueAreaKey}`);
             return;
@@ -1795,6 +1852,8 @@ class ResolutionMasterCanvas {
             return '×' + value.toFixed(2);
         } else if (valueType === 'Megapixels') {
             return value.toFixed(1) + 'MP';
+        } else if (valueType === 'Width' || valueType === 'Height') {
+            return value.toString() + 'px';
         } else {
             return value.toString();
         }
@@ -1826,6 +1885,14 @@ class ResolutionMasterCanvas {
             }
         } else if (propertyName === 'snapValue') {
             props.snapValue = Math.round(value);
+        } else if (propertyName === 'width') {
+            const newWidth = Math.round(value);
+            const currentHeight = this.heightWidget ? this.heightWidget.value : props.valueY;
+            this.setDimensions(newWidth, currentHeight);
+        } else if (propertyName === 'height') {
+            const newHeight = Math.round(value);
+            const currentWidth = this.widthWidget ? this.widthWidget.value : props.valueX;
+            this.setDimensions(currentWidth, newHeight);
         }
         
         this.closeCustomInputDialog();
