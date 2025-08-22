@@ -174,6 +174,68 @@ Each scaling row shows:
 - Preview of resulting dimensions
 - Radio button to set as active rescale mode
 
+## 🔧 Understanding rescale_factor Behavior
+
+**Important**: The `rescale_factor` output is **not** a simple "scale from input" value. It's a **workflow control parameter** designed for professional ComfyUI pipelines.
+
+### How rescale_factor Actually Works
+
+The `rescale_factor` represents your **scaling intent** for downstream nodes (like upscalers), not the relationship between input and current resolution.
+
+#### Key Concepts:
+
+1. **Base Resolution**: The current width/height values (set manually, via presets, or auto-detected)
+2. **Scaling Intent**: What you want to achieve (manual scale, target resolution, or target megapixels)
+3. **rescale_factor**: The calculated multiplier to achieve your scaling intent
+
+#### Three Scaling Modes Control rescale_factor:
+
+- **Manual Mode**: Uses the manual scale slider value (0.1x to 4.0x)
+- **Resolution Mode**: Calculates factor to reach target resolution (p-value based)
+- **Megapixels Mode**: Calculates factor to reach target pixel count (0.5 to 6.0 MP)
+
+### Common Misconceptions
+
+❌ **Wrong**: "rescale_factor should reset to 1.0 when I connect a new image"
+✅ **Correct**: rescale_factor maintains your scaling intent regardless of input changes
+
+❌ **Wrong**: "rescale_factor should show the ratio between input and current resolution"
+✅ **Correct**: rescale_factor shows the multiplier needed to achieve your target scaling
+
+### Practical Example
+
+```
+Workflow Setup:
+1. Connect 512×512 image → auto-detect sets base resolution to 512×512
+2. Set resolution target to 1080p → rescale_factor calculates ~2.81x
+3. Connect different 1024×1024 image → base resolution updates to 1024×1024
+4. rescale_factor recalculates to ~1.41x (to still reach 1080p target)
+```
+
+**Why this happens**: Your scaling intent (reach 1080p) remains constant, but the required multiplier changes based on the new input resolution.
+
+### Auto-Detect + Scaling Workflow
+
+When using auto-detect with scaling:
+
+1. **Auto-detect updates base resolution** from connected images
+2. **Your scaling mode remains active** (manual/resolution/megapixel)
+3. **rescale_factor recalculates** to maintain your scaling intent
+4. **Canvas drag operations** update base resolution but preserve scaling intent
+
+This design allows **resolution-independent workflows** where you can swap input images without breaking your scaling logic.
+
+### Canvas Drag Behavior
+
+When dragging the canvas with different modifiers:
+
+- **Normal Drag**: Updates base resolution, rescale_factor adjusts to maintain scaling intent
+- **Shift + Drag**: Preserves aspect ratio, rescale_factor adjusts accordingly
+- **Ctrl + Drag**: Fine-tuning without snap, rescale_factor adjusts
+- **Ctrl + Shift + Drag**: Precise aspect ratio control, rescale_factor adjusts
+
+The rescale_factor **always reflects your active scaling mode**, not the drag operation itself.
+
 ## Examples
 
 ### Example 1: SDXL Portrait Generation
