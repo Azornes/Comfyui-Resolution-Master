@@ -161,6 +161,7 @@ class ResolutionMasterCanvas {
                 'Instagram Portrait': { width: 1080, height: 1350 },
                 'Twitter Post': { width: 1200, height: 675 },
                 'Facebook Cover': { width: 1200, height: 630 },
+                'Facebook Personal Cover': { width: 1200, height: 445 },
                 'YouTube Thumbnail': { width: 1280, height: 720 }
             },
             'Print': {
