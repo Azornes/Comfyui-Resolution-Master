@@ -289,7 +289,35 @@ The node now supports outputs up to 32K resolution. When working with very high 
 
   ✅ Temporary Fix: Disable or uninstall `comfyui-mixlab-nodes` – the node will then display and work correctly.  
   ❌ Unfortunately, I cannot reproduce this bug on my end, since with my setup both node packs work fine together.  
-  Until a proper fix is found, the only workaround is disabling `comfyui-mixlab-nodes`.  
+  👉 Until a proper fix is implemented in `comfyui-mixlab-nodes`, the only workaround is disabling `comfyui-mixlab-nodes` or manual patch (see below).  
+
+<details>
+<summary>🔧 Advanced explanation and manual patch (click to expand)</summary>
+
+If you *really* want or need to use comfyui-mixlab-nodes despite this, here’s the deal:  
+
+The problem occurs because **mixlab overrides the `onDrawForeground` method of other nodes**, which breaks their display. This behavior is, frankly, unacceptable since it hijacks a method other nodes legitimately rely on. The good news is that mixlab only uses this override if the method is defined in the prototype, which means we can adjust it safely.  
+
+### ✅ Patch  
+In `ui_mixlab.js` (see [source line here](https://github.com/shadowcz007/comfyui-mixlab-nodes/blob/67c974c96e6472316cb4bf4326281d9f86a25ae6/web/javascript/ui_mixlab.js#L2186C11-L2186C55)), replace this part:  
+
+```js
+const orig = node.__proto__.onDrawForeground;
+```
+
+with this safer version:  
+
+```js
+const orig = node.onDrawForeground ?? node.__proto__.onDrawForeground;
+```
+
+With this modification, the Resolution Master node (and potentially other affected nodes) will render correctly again.  
+You can either apply this tweak manually or report it to the mixlab authors so it can be properly integrated upstream.  
+
+📌 Full discussion and context are available here:  
+[github.com/Smirnov75/ComfyUI-mxToolkit/issues/28#issuecomment-2603091317](https://github.com/Smirnov75/ComfyUI-mxToolkit/issues/28#issuecomment-2603091317)
+
+</details>
 
 
 ## Contributing
