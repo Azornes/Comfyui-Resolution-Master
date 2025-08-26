@@ -11,7 +11,7 @@ body:
           required: true
         - label: I am running the latest version of [ComfyUI_frontend](https://github.com/Comfy-Org/ComfyUI_frontend/releases)
           required: true
-        - label: I am running the latest version of [Resolution Master Github](https://github.com/Azornes/Comfyui-Resolution-Master/releases) | [ComfyUI Node Manager](https://registry.comfy.org/publishers/azornes/nodes/Comfyui-Resolution-Master)
+        - label: I am running the latest version of Resolution Master [Github](https://github.com/Azornes/Comfyui-Resolution-Master/releases) | [Manager](https://registry.comfy.org/publishers/azornes/nodes/Comfyui-Resolution-Master)
           required: true
         - label: I have searched existing issues to make sure this isn't a duplicate
           required: true

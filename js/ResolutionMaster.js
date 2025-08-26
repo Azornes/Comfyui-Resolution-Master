@@ -25,6 +25,9 @@ class ResolutionMasterCanvas {
         this.scrollOffset = 0;
         this.dropdownOpen = null;
         
+        // Collapsible sections state will be initialized after properties are set
+        this.collapsedSections = {};
+        
         // Custom input dialog state
         this.customInputDialog = null;
         this.inputDialogActive = false;
@@ -83,7 +86,13 @@ class ResolutionMasterCanvas {
             categoryDropdown: "Select preset category (Standard, SDXL, Flux, HiDream Dev, Qwen-Image, etc.)",
             presetDropdown: "Choose specific preset from selected category",
             customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution (read orange information below)",
-            autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)"
+            autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)",
+            
+            // Section headers
+            actionsHeader: "Click to collapse/expand Actions section",
+            scalingHeader: "Click to collapse/expand Scaling section",
+            autoDetectHeader: "Click to collapse/expand Auto-Detect section",
+            presetsHeader: "Click to collapse/expand Presets section"
         };
         
         // Full preset categories
@@ -187,9 +196,52 @@ class ResolutionMasterCanvas {
         if (this.node.size[0] < 330) {
             this.node.size[0] = 330;
         }
-        if (this.node.size[1] < 620) {
-            this.node.size[1] = 620;
+        
+        // Calculate needed height based on current content
+        const neededHeight = this.calculateNeededHeight();
+        if (neededHeight > 0) {
+            this.node.size[1] = Math.max(neededHeight, this.node.min_size[1]);
+        } else {
+            // Fallback to minimum if calculation not available
+            if (this.node.size[1] < this.node.min_size[1]) {
+                this.node.size[1] = this.node.min_size[1];
+            }
         }
+    }
+    
+    calculateNeededHeight() {
+        const props = this.node.properties;
+        if (!props || props.mode !== "Manual") return 0;
+        
+        let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
+        const spacing = 8;
+        
+        // Canvas height
+        const canvasHeight = 200;
+        currentY += canvasHeight + spacing;
+        
+        // Info text
+        currentY += 15 + spacing;
+        
+        // Calculate section heights based on collapsed state
+        const sectionHeights = {
+            actions: this.collapsedSections?.actions ? 25 : 55,      // 25 for header, +30 for content
+            scaling: this.collapsedSections?.scaling ? 25 : 130,    // 25 for header, +105 for content
+            autoDetect: this.collapsedSections?.autoDetect ? 25 : 90, // 25 for header, +65 for content
+            presets: this.collapsedSections?.presets ? 25 : 55       // 25 for header, +30 for content
+        };
+        
+        // Add section heights
+        Object.values(sectionHeights).forEach(height => {
+            currentY += height + spacing;
+        });
+        
+        // Info message height (if applicable)
+        if (props.useCustomCalc && props.selectedCategory) {
+            currentY += 40; // Approximate info message height
+        }
+        
+        return currentY + 20; // Add bottom padding
     }
     
     initializeProperties() {
@@ -234,6 +286,11 @@ class ResolutionMasterCanvas {
             manual_slider_min_h: 64,
             manual_slider_max_h: 2048,
             manual_slider_step_h: 64,
+            // Collapsible sections state
+            section_actions_collapsed: false,
+            section_scaling_collapsed: false,
+            section_autoDetect_collapsed: false,
+            section_presets_collapsed: false,
         };
 
         Object.entries(defaultProperties).forEach(([key, defaultValue]) => {
@@ -246,9 +303,9 @@ class ResolutionMasterCanvas {
         const node = this.node;
         const self = this;
         
-        // Set minimum size to accommodate all controls
-        node.size = [330, 620]; // Taller to fit all controls
-        node.min_size = [330, 620];
+        // Set minimum size - height will be calculated dynamically
+        node.size = [330, 400]; // Initial size, will be adjusted dynamically
+        node.min_size = [330, 200]; // Minimum size for basic functionality
         
         // Clear output names for cleaner display
         if (node.outputs) {
@@ -354,6 +411,14 @@ class ResolutionMasterCanvas {
             }
             // Calculate initial rescale value
             self.updateRescaleValue();
+            
+            // Initialize collapsible sections state from properties after full configuration
+            self.collapsedSections = {
+                actions: this.properties.section_actions_collapsed,
+                scaling: this.properties.section_scaling_collapsed,
+                autoDetect: this.properties.section_autoDetect_collapsed,
+                presets: this.properties.section_presets_collapsed
+            };
         };
 
                 // Hide all backend widgets
@@ -377,10 +442,18 @@ class ResolutionMasterCanvas {
         let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
         
         if (props.mode === "Manual") {
-            const section = (title, drawContent) => {
-                const contentHeight = drawContent(ctx, currentY + 20, true);
-                this.drawSection(ctx, title, margin, currentY, node.size[0] - margin * 2, contentHeight + 25);
-                currentY += contentHeight + 25 + spacing;
+            // Clear controls at the start to avoid stale references
+            this.controls = {};
+            
+            const collapsibleSection = (title, sectionKey, drawContent) => {
+                const contentHeight = drawContent(ctx, currentY + 25, true);
+                const sectionInfo = this.drawCollapsibleSection(ctx, title, sectionKey, margin, currentY, node.size[0] - margin * 2, contentHeight);
+                
+                if (!sectionInfo.isCollapsed) {
+                    drawContent(ctx, sectionInfo.contentStartY, false);
+                }
+                
+                currentY += sectionInfo.totalHeight + spacing;
             };
 
             const canvasHeight = 200;
@@ -390,14 +463,25 @@ class ResolutionMasterCanvas {
             this.drawInfoText(ctx, currentY);
             currentY += 15 + spacing;
 
-            section("Actions", (ctx, y) => {
-                this.drawPrimaryControls(ctx, y);
+            collapsibleSection("Actions", "actions", (ctx, y, preview) => {
+                if (!preview) this.drawPrimaryControls(ctx, y);
                 return 30;
             });
             
-            section("Scaling", (ctx, y) => this.drawScalingGrid(ctx, y));
-            section("Auto-Detect", (ctx, y) => this.drawAutoDetectSection(ctx, y));
-            section("Presets", (ctx, y) => this.drawPresetSection(ctx, y));
+            collapsibleSection("Scaling", "scaling", (ctx, y, preview) => {
+                if (!preview) return this.drawScalingGrid(ctx, y);
+                return 105;
+            });
+            
+            collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
+                if (!preview) return this.drawAutoDetectSection(ctx, y);
+                return 65;
+            });
+            
+            collapsibleSection("Presets", "presets", (ctx, y, preview) => {
+                if (!preview) return this.drawPresetSection(ctx, y);
+                return 30;
+            });
             
             // Draw info message outside of any section background
             if (props.useCustomCalc && props.selectedCategory) {
@@ -412,8 +496,9 @@ class ResolutionMasterCanvas {
         }
         
         const neededHeight = currentY + 20;
-        if (node.size[1] < neededHeight) {
-            node.size[1] = neededHeight;
+        // Always adjust height to match content, allowing shrinking when sections are collapsed
+        if (node.size[1] !== neededHeight) {
+            node.size[1] = Math.max(neededHeight, node.min_size[1]);
         }
         
         // Draw tooltip last so it appears on top
@@ -435,6 +520,46 @@ class ResolutionMasterCanvas {
         ctx.font = "bold 12px Arial";
         ctx.textAlign = "center";
         ctx.fillText(title, x + w / 2, y + 10);
+    }
+    
+    drawCollapsibleSection(ctx, title, sectionKey, x, y, w, contentHeight) {
+        // Fallback to false if collapsedSections is not yet initialized
+        const isCollapsed = this.collapsedSections[sectionKey] || false;
+        const headerHeight = 25;
+        const totalHeight = isCollapsed ? headerHeight : headerHeight + contentHeight;
+        
+        // Draw section background
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.strokeStyle = "rgba(255,255,255,0.1)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, totalHeight, 6);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw header background with hover effect
+        const headerControl = `${sectionKey}Header`;
+        this.controls[headerControl] = { x, y, w, h: headerHeight };
+        
+        if (this.hoverElement === headerControl) {
+            ctx.fillStyle = "rgba(255,255,255,0.1)";
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, headerHeight, 6);
+            ctx.fill();
+        }
+        
+        // Draw collapse/expand button and title centered
+        const arrow = isCollapsed ? "▶" : "▼";
+        const titleText = `${arrow} ${title}`;
+        
+        ctx.fillStyle = this.hoverElement === headerControl ? "#fff" : "#ccc";
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        ctx.fillText(titleText, x + w / 2, y + headerHeight / 2);
+        
+        return { totalHeight, isCollapsed, contentStartY: y + headerHeight };
     }
     
     drawOutputValues(ctx) {
@@ -1251,6 +1376,10 @@ class ResolutionMasterCanvas {
                     this.showCustomValueDialog(key, e);
                     return true;
                 }
+                if (key.endsWith('Header')) {
+                    this.handleSectionHeaderClick(key);
+                    return true;
+                }
             }
         }
         
@@ -1429,6 +1558,20 @@ class ResolutionMasterCanvas {
         props.rescaleMode = radioMap[radioName];
         this.updateRescaleValue();
         app.graph.setDirtyCanvas(true);
+    }
+    
+    handleSectionHeaderClick(headerKey) {
+        const sectionKey = headerKey.replace('Header', '');
+        this.collapsedSections[sectionKey] = !this.collapsedSections[sectionKey];
+        
+        // Save state to properties
+        const propertyKey = `section_${sectionKey}_collapsed`;
+        this.node.properties[propertyKey] = this.collapsedSections[sectionKey];
+        
+        // Force immediate redraw to recalculate size
+        app.graph.setDirtyCanvas(true, true);
+        
+        log.debug(`Section ${sectionKey} ${this.collapsedSections[sectionKey] ? 'collapsed' : 'expanded'}`);
     }
     
     // Helper methods
