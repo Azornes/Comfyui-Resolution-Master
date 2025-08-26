@@ -437,8 +437,6 @@ class ResolutionMasterCanvas {
         const margin = 10;
         const spacing = 8;
         
-        this.drawOutputValues(ctx);
-        
         let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
         
         if (props.mode === "Manual") {
@@ -490,6 +488,9 @@ class ResolutionMasterCanvas {
                     currentY += messageHeight + spacing;
                 }
             }
+            
+            // Draw output values after all sections to ensure controls are preserved
+            this.drawOutputValues(ctx);
 
         } else if (props.mode === "Manual Sliders") {
             this.drawSliderMode(ctx, currentY);
