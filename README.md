@@ -27,14 +27,14 @@ https://github.com/user-attachments/assets/587ea664-32b1-410b-bfa1-fba013f8e700
 
 ### 🎯 Core Functionality
 - **Interactive 2D Canvas Control**: Visually select resolution with real-time preview
+  - **Normal Drag**: Standard behavior with snap to canvas grid (controlled by `canvas_step_x/y`)
   - **Shift + Drag**: Preserves aspect ratio while dragging (with snap enabled)
   - **Ctrl + Drag**: Disables snap for fine-tuning without grid constraints
   - **Ctrl + Shift + Drag**: Preserves aspect ratio with 1px precision (no snap)
-  - **Normal Drag**: Standard behavior with snap to grid
 - **Smart Rescaling**: Automatic calculation of rescale factors for upscaling workflows
-- **Snap to Grid**: Align dimensions to customizable grid increments (16px to 256px)
+- **Snap Button**: Round current dimensions to the snap value (NOT related to 2D canvas grid)
 - **Real-time Info Display**: Shows current resolution, megapixels, p-value and aspect ratio
-- **Visual Output Values**: Color-coded values at output slots (blue/pink/green)
+- **Visual Output Values**: Color-coded clickable values at output slots (blue/pink/green)
 
 ### 📐 Advanced Scaling Options
 - **Manual Scale**: Direct multiplier control (ex. 2.0x)
@@ -99,9 +99,81 @@ Extensive preset library organized by use case:
 
 1. Add the "Resolution Master" node to your workflow
 2. Connect the outputs to your image generation nodes:
-   - `width`: Current width value
-   - `height`: Current height value
-   - `rescale_factor`: Calculated scale factor for upscaling
+   - `width`: Current width value (click the blue number to set custom width)
+   - `height`: Current height value (click the pink number to set custom height)
+   - `rescale_factor`: Calculated scale factor for upscaling (green number)
+
+## 🎮 Understanding the Controls
+
+### Actions Section
+- **⇄ Swap Button**: Swaps width and height values
+- **⊞ Snap Button**: Rounds the current width/height to the nearest snap value (e.g., if snap=64 and width=520, clicking Snap makes it 512)
+- **Snap Value Slider**: Sets the value used by the Snap button (16-256px). **Important**: This does NOT change the 2D canvas grid behavior!
+
+### 2D Canvas
+- **White Dot**: Drag to set resolution visually
+- **Grid Dots**: Visual guides controlled by `canvas_step_x/y` properties (NOT by the snap slider)
+- **Blue Rectangle**: Shows current resolution selection
+
+### Scaling Section
+- **⬆ Manual Scale Button**: Applies the manual scale factor to current dimensions
+- **📺 Resolution Button**: Scales to target resolution (e.g., 1080p)
+- **📷 Megapixels Button**: Scales to target megapixel count
+- **Radio Buttons**: Select which scaling mode affects the `rescale_factor` output
+
+### Auto-Detect Section
+- **Auto-detect Toggle**: ON/OFF switch for automatic dimension detection from connected images
+- **🎯 Auto-fit Button**: Finds best matching preset for current dimensions
+- **Auto Checkbox**: When checked, automatically applies Auto-fit when new image is detected
+- **Detected Text (green)**: Click to apply the detected image's original dimensions
+- **⚡ Auto-calc Button**: Applies model-specific calculations to current dimensions
+- **Calc Checkbox**: Enables automatic model-specific optimizations
+
+### Presets Section
+- **Category Dropdown**: Select preset category (Standard, SDXL, Flux, etc.)
+- **Preset Dropdown**: Choose specific preset from selected category
+
+## 🔧 Node Properties Configuration
+
+You can customize various parameters by accessing the node's Properties panel in ComfyUI. Here's a complete list of all configurable properties:
+
+### Canvas Properties
+- **`canvas_min_x`** / **`canvas_min_y`**: Minimum values for X and Y axes (default: 0)
+- **`canvas_max_x`** / **`canvas_max_y`**: Maximum values for X and Y axes (default: 2048, max: 32768)
+  - Increase these for working with higher resolutions (e.g., 8192 for 8K)
+- **`canvas_step_x`** / **`canvas_step_y`**: Grid snap increments for the 2D canvas (default: 64)
+  - This controls the grid dots and snap behavior when dragging on the 2D canvas
+  - **NOT** controlled by the snap slider in the Actions section
+- **`canvas_decimals_x`** / **`canvas_decimals_y`**: Decimal precision for X/Y values (default: 0)
+- **`canvas_snap`**: Enable/disable grid snapping on 2D canvas (default: true)
+- **`canvas_dots`**: Show/hide grid dots on 2D canvas (default: true)
+- **`canvas_frame`**: Show/hide the blue selection frame (default: true)
+
+### Action Sliders Range
+- **`action_slider_snap_min`**: Minimum value for snap slider (default: 16)
+- **`action_slider_snap_max`**: Maximum value for snap slider (default: 256)
+- **`action_slider_snap_step`**: Step increment for snap slider (default: 16)
+
+### Scaling Sliders Range
+- **`scaling_slider_min`**: Minimum manual scale factor (default: 0.1)
+- **`scaling_slider_max`**: Maximum manual scale factor (default: 4.0)
+- **`scaling_slider_step`**: Step increment for scale slider (default: 0.1)
+- **`megapixels_slider_min`**: Minimum megapixels target (default: 0.5)
+- **`megapixels_slider_max`**: Maximum megapixels target (default: 6.0)
+- **`megapixels_slider_step`**: Step increment for megapixels slider (default: 0.1)
+
+### Section Collapse States
+- **`section_actions_collapsed`**: Actions section collapsed state (default: false)
+- **`section_scaling_collapsed`**: Scaling section collapsed state (default: false)
+- **`section_autoDetect_collapsed`**: Auto-Detect section collapsed state (default: false)
+- **`section_presets_collapsed`**: Presets section collapsed state (default: false)
+
+### Example: Customizing for 8K Workflow
+1. Right-click on the ResolutionMaster node
+2. Select "Properties"
+3. Set `canvas_max_x` and `canvas_max_y` to 8192
+4. Set `canvas_step_x` and `canvas_step_y` to 128 for larger grid increments
+5. Set `manual_slider_max_w` and `manual_slider_max_h` to 8192
 
 ### Working with Presets
 
@@ -238,19 +310,30 @@ The rescale_factor **always reflects your active scaling mode**, not the drag op
 
 ## Examples
 
-### Example 1: SDXL Portrait Generation
+### Example 1: Understanding Snap Button vs Canvas Grid
+**Snap Button (Actions Section)**:
+- Current resolution: 520×380
+- Snap value slider: 64
+- Click Snap button → Resolution becomes 512×384 (rounded to nearest 64)
+
+**2D Canvas Grid** (controlled by properties):
+- `canvas_step_x` = 32, `canvas_step_y` = 32
+- When dragging on canvas, resolution snaps to 32px increments
+- The snap slider does NOT affect this - only `canvas_step_x/y` properties do!
+
+### Example 2: SDXL Portrait Generation
 1. Select "SDXL" category
 2. Choose "3:4 Portrait (768×1024)"
 3. Enable "Custom Calc" for SDXL optimization
 4. Connect to your SDXL workflow
 
-### Example 2: Social Media Content
+### Example 3: Social Media Content
 1. Select "Social Media" category
 2. Choose "Instagram Square (1080×1080)"
 3. Use resolution scaling to target 2160p for high quality
 4. Apply rescale factor in upscaling node
 
-### Example 3: Flux Model Generation
+### Example 4: Flux Model Generation
 1. Select "Flux" category
 2. Enable "Custom Calc" for automatic constraints
 3. Choose any preset - dimensions auto-adjust to Flux requirements
