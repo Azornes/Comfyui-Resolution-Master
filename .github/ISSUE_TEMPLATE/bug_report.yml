@@ -13,7 +13,7 @@ body:
           required: true
         - label: I am running the latest version of Resolution Master [Github](https://github.com/Azornes/Comfyui-Resolution-Master/releases) | [Manager](https://registry.comfy.org/publishers/azornes/nodes/Comfyui-Resolution-Master)
           required: true
-        - label: I have searched existing issues to make sure this isn't a duplicate
+        - label: I have searched existing(open/closed) issues to make sure this isn't a duplicate
           required: true
 
   - type: textarea
