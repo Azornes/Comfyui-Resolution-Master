@@ -49,6 +49,8 @@ Extensive preset library organized by use case:
 - **SDXL**: Optimized resolutions for Stable Diffusion XL
 - **Flux**: Flux model optimized presets with smart constraints
 - **WAN**: Video model presets with resolution recommendations
+- **HiDream Dev**: HiDream model optimized presets
+- **Qwen-Image**: Qwen-Image model optimized presets
 - **Social Media**: Instagram, Twitter, Facebook, YouTube optimized sizes
 - **Print**: Standard print formats (A4, Letter, photo sizes)
 - **Cinema**: Professional film aspect ratios (2.39:1, 1.85:1, etc.)
@@ -70,6 +72,18 @@ Extensive preset library organized by use case:
 - 16px increments for video encoding compatibility
 - Automatic model recommendation (480p vs 720p)
 - Maintains proper aspect ratios for video generation
+
+#### HiDream Dev Mode
+- Preset-based optimization system
+- Uses closest matching preset from HiDream Dev category
+- Automatically selects best preset based on input dimensions and aspect ratio
+- Supports both original and flipped orientations for optimal matching
+
+#### Qwen-Image Mode
+- Resolution range: ~0.6MP to 4.2MP (589,824 to 4,194,304 pixels)
+- Smart scaling: If input is already within range, dimensions remain unchanged
+- Automatic scaling: Input outside range is scaled to fit while maintaining aspect ratio
+- Preserves original dimensions when already optimized
 
 ---
 
