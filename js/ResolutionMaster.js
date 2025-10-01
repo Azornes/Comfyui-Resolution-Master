@@ -3,6 +3,8 @@
 import { app } from "../../scripts/app.js";
 import { createModuleLogger } from "./utils/LoggerUtils.js";
 import { loadIcons } from "./utils/IconUtils.js";
+import { tooltips, presetCategories } from "./utils/ResolutionMasterConfig.js";
+import { DialogManager } from "./DialogManager.js";
 
 // Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
@@ -28,9 +30,8 @@ class ResolutionMasterCanvas {
         // Collapsible sections state will be initialized after properties are set
         this.collapsedSections = {};
         
-        // Custom input dialog state
-        this.customInputDialog = null;
-        this.inputDialogActive = false;
+        // Initialize DialogManager
+        this.dialogManager = new DialogManager(this);
         
         // Tooltip state
         this.tooltipElement = null;
@@ -51,143 +52,9 @@ class ResolutionMasterCanvas {
         this.icons = {};
         loadIcons(this.icons);
         
-        // Tooltip definitions
-        this.tooltips = {
-            // Primary controls (excluding sliders and 2D canvas)
-            swapBtn: "Swap width and height values",
-            snapBtn: "Snap current resolution to the nearest snap value",
-            snapValueArea: "Click to set custom snap value",
-            
-            // Output value areas (editable)
-            widthValueArea: "Click to set custom width value",
-            heightValueArea: "Click to set custom height value",
-            
-            // Scaling controls (buttons and dropdowns only)
-            scaleBtn: "Apply manual scaling factor and reset to 1.0x",
-            upscaleRadio: "Use manual scaling mode for rescale output",
-            scaleValueArea: "Click to set custom scale value (e.g., 2.5x)",
-            
-            resolutionBtn: "Scale to target resolution (e.g., 1080p)",
-            resolutionDropdown: "Select target resolution for scaling",
-            resolutionRadio: "Use resolution-based scaling for rescale output",
-            resolutionValueArea: "Click to set custom resolution scale factor",
-            
-            megapixelsBtn: "Scale to target megapixel count",
-            megapixelsRadio: "Use megapixel-based scaling for rescale output",
-            megapixelsValueArea: "Click to set custom megapixel value (e.g., 3.5MP)",
-            
-            // Auto-detect controls
-            autoDetectToggle: "Automatically detect resolution from connected image input",
-            autoFitBtn: "Find and apply best preset match for current resolution",
-            autoFitCheckbox: "Automatically find and apply the best preset for the new detected image resolution",
-            detectedInfo: "Click to apply detected image resolution directly",
-            
-            // Preset controls
-            categoryDropdown: "Select preset category (Standard, SDXL, Flux, HiDream Dev, Qwen-Image, etc.)",
-            presetDropdown: "Choose specific preset from selected category",
-            customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution (read orange information below)",
-            autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)",
-            
-            // Section headers
-            actionsHeader: "Click to collapse/expand Actions section",
-            scalingHeader: "Click to collapse/expand Scaling section",
-            autoDetectHeader: "Click to collapse/expand Auto-Detect section",
-            presetsHeader: "Click to collapse/expand Presets section"
-        };
-        
-        // Full preset categories
-        this.presetCategories = {
-            'Standard': {
-                '1:1 Square': { width: 512, height: 512 },
-                '1:2 Tall': { width: 512, height: 1024 },
-                '1:3 Ultra Tall': { width: 512, height: 1536 },
-                '2:3 Portrait': { width: 512, height: 768 },
-                '3:4 Portrait': { width: 576, height: 768 },
-                '4:5 Portrait': { width: 512, height: 640 },
-                '4:7 Phone': { width: 512, height: 896 },
-                '5:12 Banner': { width: 512, height: 1228 },
-                '7:9 Vertical': { width: 512, height: 658 },
-                '9:16 Mobile': { width: 576, height: 1024 },
-                '9:21 Ultra Mobile': { width: 512, height: 1194 },
-                '10:16 Monitor': { width: 640, height: 1024 },
-                '13:19 Tall Screen': { width: 512, height: 748 },
-                '3:2 Landscape': { width: 768, height: 512 },
-                '4:3 Classic': { width: 512, height: 384 },
-                '16:9 Widescreen': { width: 768, height: 432 },
-                '21:9 Ultrawide': { width: 1024, height: 439 }
-            },
-            'SDXL': {
-                '1:1 Square': { width: 1024, height: 1024 },
-                '3:4 Portrait': { width: 768, height: 1024 },
-                '4:5 Portrait': { width: 915, height: 1144 },
-                '5:12 Portrait': { width: 640, height: 1536 },
-                '7:9 Portrait': { width: 896, height: 1152 },
-                '9:16 Portrait': { width: 768, height: 1344 },
-                '13:19 Portrait': { width: 832, height: 1216 },
-                '3:2 Landscape': { width: 1254, height: 836 }
-            },
-            'Flux': {
-                '1:1 Square': { width: 1024, height: 1024 },
-                '2:3 Portrait': { width: 832, height: 1248 },
-                '3:4 Portrait': { width: 896, height: 1184 },
-                '4:5 Portrait': { width: 928, height: 1152 },
-                '9:16 Portrait': { width: 768, height: 1344 },
-                '9:21 Portrait': { width: 672, height: 1440 },
-            },
-            'WAN': {
-               // Community Presets
-               '16:9 Landscape': { width: 1280, height: 720 },
-               '16:9 Landscape': { width: 832, height: 480 },
-               '1:1 Square': { width: 512, height: 512 },
-               '1:1 Square': { width: 768, height: 768 },
-               // Original Presets
-               '1:1 Square': { width: 720, height: 720 },
-               '2:3 Portrait': { width: 588, height: 882 },
-               '3:4 Portrait': { width: 624, height: 832 },
-               '9:21 Portrait': { width: 549, height: 1280 },
-               '3:2 Landscape': { width: 1080, height: 720 },
-               '4:3 Landscape': { width: 960, height: 720 },
-               '21:9 Landscape': { width: 1680, height: 720 }
-            },
-            'HiDream Dev': {
-                '1:1 Square': { width: 1024, height: 1024 },
-                '1:1 Square Large': { width: 1280, height: 1280 },
-                '1:1 Square XL': { width: 1536, height: 1536 },
-                '16:9 Landscape': { width: 1360, height: 768 },
-                '3:2 Landscape': { width: 1248, height: 832 },
-                '4:3 Landscape': { width: 1168, height: 880 },
-            },
-            'Qwen-Image': {
-                '1:1 Square (Default)': { width: 1328, height: 1328 },
-                '16:9 Landscape': { width: 1664, height: 928 },
-                '4:3 Landscape': { width: 1472, height: 1140 },
-                '3:2 Landscape': { width: 1584, height: 1056 },
-                '1:1 Test': { width: 1024, height: 1024 },
-                '4:3 Test': { width: 768, height: 1024 }
-            },
-            'Social Media': {
-                'Instagram Square': { width: 1080, height: 1080 },
-                'Instagram Portrait': { width: 1080, height: 1350 },
-                'Twitter Post': { width: 1200, height: 675 },
-                'Facebook Cover': { width: 1200, height: 630 },
-                'Facebook Personal Cover': { width: 1200, height: 445 },
-                'YouTube Thumbnail': { width: 1280, height: 720 }
-            },
-            'Print': {
-                'A4 Portrait': { width: 2480, height: 3508 },
-                'A4 Landscape': { width: 3508, height: 2480 },
-                'Letter Portrait': { width: 2550, height: 3300 },
-                '4x6 Photo': { width: 1200, height: 1800 },
-                '8x10 Photo': { width: 2400, height: 3000 }
-            },
-            'Cinema': {
-                '2.39:1 Anamorphic': { width: 2048, height: 858 },
-                '1.85:1 Standard': { width: 1998, height: 1080 },
-                '2:1 Univisium': { width: 2048, height: 1024 },
-                '4:3 Academy': { width: 1440, height: 1080 },
-                '1.33:1 Classic': { width: 1436, height: 1080 }
-            }
-        };
+        // Import configuration from external file
+        this.tooltips = tooltips;
+        this.presetCategories = presetCategories;
         
         this.setupNode();
     }
@@ -396,8 +263,8 @@ class ResolutionMasterCanvas {
                 clearTimeout(self.tooltipTimer);
                 self.tooltipTimer = null;
             }
-            if (self.customInputDialog) {
-                self.closeCustomInputDialog();
+            if (self.dialogManager.customInputDialog) {
+                self.dialogManager.closeCustomInputDialog();
             }
             if (origOnRemoved) origOnRemoved.apply(this, arguments);
         };
@@ -735,11 +602,52 @@ class ResolutionMasterCanvas {
         const knobX = offsetX + canvasW * node.intpos.x;
         const knobY = offsetY + canvasH * (1 - node.intpos.y);
         
+        // Edge handle positions
+        const rightEdgeX = offsetX + canvasW * node.intpos.x;
+        const rightEdgeY = offsetY + canvasH * (1 - node.intpos.y / 2);
+        const topEdgeX = offsetX + canvasW * node.intpos.x / 2;
+        const topEdgeY = offsetY + canvasH * (1 - node.intpos.y);
+        
+        // Define handle areas BEFORE drawing so hover detection works
+        this.controls.canvas2dRightHandle = { 
+            x: rightEdgeX - 10, 
+            y: rightEdgeY - 10, 
+            w: 20, 
+            h: 20 
+        };
+        this.controls.canvas2dTopHandle = { 
+            x: topEdgeX - 10, 
+            y: topEdgeY - 10, 
+            w: 20, 
+            h: 20 
+        };
+        
+        // Main corner knob (white)
         ctx.fillStyle = "#FFF";
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw right edge handle (width control - blue) - always visible with hover effect
+        const isHoveringRight = this.hoverElement === 'canvas2dRightHandle';
+        ctx.fillStyle = isHoveringRight ? "#5AF" : "#89F";
+        ctx.strokeStyle = isHoveringRight ? "#FFF" : "#000";
+        ctx.lineWidth = isHoveringRight ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(rightEdgeX, rightEdgeY, isHoveringRight ? 7 : 6, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Draw top edge handle (height control - pink) - always visible with hover effect
+        const isHoveringTop = this.hoverElement === 'canvas2dTopHandle';
+        ctx.fillStyle = isHoveringTop ? "#FAB" : "#F89";
+        ctx.strokeStyle = isHoveringTop ? "#FFF" : "#000";
+        ctx.lineWidth = isHoveringTop ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(topEdgeX, topEdgeY, isHoveringTop ? 7 : 6, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
     }
@@ -1332,6 +1240,20 @@ class ResolutionMasterCanvas {
         const relY = e.canvasY - node.pos[1];
         
         if (props.mode === "Manual") {
+            // Check for edge handles first (higher priority)
+            if (this.controls.canvas2dRightHandle && this.isPointInControl(relX, relY, this.controls.canvas2dRightHandle)) {
+                node.capture = 'canvas2dRightHandle';
+                node.captureInput(true);
+                return true;
+            }
+            
+            if (this.controls.canvas2dTopHandle && this.isPointInControl(relX, relY, this.controls.canvas2dTopHandle)) {
+                node.capture = 'canvas2dTopHandle';
+                node.captureInput(true);
+                return true;
+            }
+            
+            // Then check main canvas area
             const c2d = this.controls.canvas2d;
             if (c2d && this.isPointInControl(relX, relY, c2d)) {
                 node.capture = 'canvas2d';
@@ -1374,7 +1296,7 @@ class ResolutionMasterCanvas {
                 if (key.endsWith('ValueArea')) {
                     // Open dialog immediately on mousedown
                     log.debug(`Detected ValueArea click: ${key}`);
-                    this.showCustomValueDialog(key, e);
+                    this.dialogManager.showCustomValueDialog(key, e);
                     return true;
                 }
                 if (key.endsWith('Header')) {
@@ -1411,6 +1333,22 @@ class ResolutionMasterCanvas {
             return true;
         }
         
+        if (node.capture === 'canvas2dRightHandle') {
+            const c2d = this.controls.canvas2d;
+            if (c2d) {
+                this.updateCanvasValueWidth(relX - c2d.x, c2d.w, e.ctrlKey);
+            }
+            return true;
+        }
+        
+        if (node.capture === 'canvas2dTopHandle') {
+            const c2d = this.controls.canvas2d;
+            if (c2d) {
+                this.updateCanvasValueHeight(relY - c2d.y, c2d.h, e.ctrlKey);
+            }
+            return true;
+        }
+        
         if (node.capture.endsWith('Slider')) {
             const control = this.controls[node.capture];
             if (control) {
@@ -1429,10 +1367,19 @@ class ResolutionMasterCanvas {
         
         let newHover = null;
         
-        for (const element in this.controls) {
-            if (this.isPointInControl(relX, relY, this.controls[element])) {
-                newHover = element;
-                break;
+        // Check edge handles first (higher priority than main canvas)
+        if (this.controls.canvas2dRightHandle && this.isPointInControl(relX, relY, this.controls.canvas2dRightHandle)) {
+            newHover = 'canvas2dRightHandle';
+        } else if (this.controls.canvas2dTopHandle && this.isPointInControl(relX, relY, this.controls.canvas2dTopHandle)) {
+            newHover = 'canvas2dTopHandle';
+        } else {
+            // Check other controls
+            for (const element in this.controls) {
+                if (element !== 'canvas2dRightHandle' && element !== 'canvas2dTopHandle' && 
+                    this.isPointInControl(relX, relY, this.controls[element])) {
+                    newHover = element;
+                    break;
+                }
             }
         }
         
@@ -1777,6 +1724,54 @@ class ResolutionMasterCanvas {
         app.graph.setDirtyCanvas(true);
     }
     
+    updateCanvasValueWidth(x, w, ctrlKey) {
+        const node = this.node;
+        const props = node.properties;
+        
+        let vX = Math.max(0, Math.min(1, x / w));
+        
+        // Apply snap unless Ctrl is held
+        if (!ctrlKey) {
+            let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
+            vX = Math.round(vX / sX) * sX;
+        }
+        
+        node.intpos.x = vX;
+        
+        let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
+        
+        const rnX = Math.pow(10, props.canvas_decimals_x);
+        newX = Math.round(rnX * newX) / rnX;
+        
+        // Keep height unchanged
+        this.setDimensions(newX, this.heightWidget.value);
+        app.graph.setDirtyCanvas(true);
+    }
+    
+    updateCanvasValueHeight(y, h, ctrlKey) {
+        const node = this.node;
+        const props = node.properties;
+        
+        let vY = Math.max(0, Math.min(1, 1 - y / h));
+        
+        // Apply snap unless Ctrl is held
+        if (!ctrlKey) {
+            let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
+            vY = Math.round(vY / sY) * sY;
+        }
+        
+        node.intpos.y = vY;
+        
+        let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
+        
+        const rnY = Math.pow(10, props.canvas_decimals_y);
+        newY = Math.round(rnY * newY) / rnY;
+        
+        // Keep width unchanged
+        this.setDimensions(this.widthWidget.value, newY);
+        app.graph.setDirtyCanvas(true);
+    }
+    
     updateSliderValue(sliderName, x, w) {
         const props = this.node.properties;
         let value = Math.max(0, Math.min(1, x / w));
@@ -1848,225 +1843,6 @@ class ResolutionMasterCanvas {
         }
     }
     
-    showCustomValueDialog(valueAreaKey, e) {
-        if (this.inputDialogActive) return;
-        
-        log.debug(`Clicked on value area: ${valueAreaKey}`);
-        
-        // Determine the type and current value based on the control key
-        let valueType, currentValue, propertyName, minValue = 0.01;
-        
-        if (valueAreaKey === 'scaleValueArea') {
-            valueType = 'Scale Factor';
-            currentValue = this.node.properties.upscaleValue;
-            propertyName = 'upscaleValue';
-        } else if (valueAreaKey === 'resolutionValueArea') {
-            valueType = 'Resolution Scale';
-            currentValue = this.calculateResolutionScale(this.node.properties.targetResolution);
-            propertyName = 'targetResolution';
-        } else if (valueAreaKey === 'megapixelsValueArea') {
-            valueType = 'Megapixels';
-            currentValue = this.node.properties.targetMegapixels;
-            propertyName = 'targetMegapixels';
-        } else if (valueAreaKey === 'snapValueArea') {
-            valueType = 'Snap Value';
-            currentValue = this.node.properties.snapValue;
-            propertyName = 'snapValue';
-            minValue = 1;
-        } else if (valueAreaKey === 'widthValueArea') {
-            valueType = 'Width';
-            currentValue = this.widthWidget ? this.widthWidget.value : this.node.properties.valueX;
-            propertyName = 'width';
-            minValue = 64;
-        } else if (valueAreaKey === 'heightValueArea') {
-            valueType = 'Height';
-            currentValue = this.heightWidget ? this.heightWidget.value : this.node.properties.valueY;
-            propertyName = 'height';
-            minValue = 64;
-        } else {
-            log.debug(`Unknown value area key: ${valueAreaKey}`);
-            return;
-        }
-        
-        log.debug(`Opening dialog for ${valueType} with current value: ${currentValue}`);
-        this.createCustomInputDialog(valueType, currentValue, propertyName, minValue, e);
-    }
-    
-    createCustomInputDialog(valueType, currentValue, propertyName, minValue, e) {
-        this.inputDialogActive = true;
-        log.debug(`Creating dialog for ${valueType}, current: ${currentValue}`);
-        
-        // Create overlay
-        const overlay = document.createElement('div');
-        this.customInputOverlay = overlay;
-        overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 9999;
-        `;
-        overlay.addEventListener('mousedown', () => this.closeCustomInputDialog());
-        document.body.appendChild(overlay);
-
-        // Create dialog container
-        const dialog = document.createElement('div');
-        this.customInputDialog = dialog;
-        dialog.className = 'litegraph-custom-input-dialog';
-        dialog.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent clicks inside from closing
-        dialog.style.cssText = `
-            position: fixed;
-            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-            border: 2px solid #555; border-radius: 8px; padding: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 10000;
-            font-family: Arial, sans-serif; min-width: 280px;
-        `;
-        
-        // Position dialog
-        const x = e.clientX ? e.clientX + 20 : (window.innerWidth - 280) / 2;
-        const y = e.clientY ? e.clientY + 20 : (window.innerHeight - 200) / 2;
-        dialog.style.left = `${Math.max(10, Math.min(x, window.innerWidth - 300))}px`;
-        dialog.style.top = `${Math.max(10, Math.min(y, window.innerHeight - 200))}px`;
-        
-        // Create dialog content
-        dialog.innerHTML = `
-            <div style="color: #fff; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-align: center;">Set Custom ${valueType}</div>
-            <div style="margin-bottom: 10px;">
-                <label style="color: #ccc; font-size: 12px; display: block; margin-bottom: 5px;">Current: ${this.formatValueForDisplay(currentValue, valueType)}</label>
-                <input type="${valueType === 'Scale Factor' ? 'text' : 'number'}" id="customValueInput" value="${currentValue}" step="0.01" min="${minValue}"
-                       style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #333; color: #fff; font-size: 14px; box-sizing: border-box;">
-            </div>
-            <div id="validationMessage" style="color: #f55; font-size: 11px; margin-bottom: 5px; min-height: 15px;"></div>
-            <div id="infoMessage" style="color: #999; font-size: 11px; margin-bottom: 10px; min-height: 15px; text-align: center;"></div>
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button id="cancelBtn" style="padding: 8px 16px; border: 1px solid #555; border-radius: 4px; background: #444; color: #ccc; cursor: pointer; font-size: 12px;">Cancel</button>
-                <button id="applyBtn" style="padding: 8px 16px; border: 1px solid #5af; border-radius: 4px; background: #5af; color: #fff; cursor: pointer; font-size: 12px;">Apply</button>
-            </div>
-        `;
-        
-        document.body.appendChild(dialog);
-        
-        // Get elements
-        const input = dialog.querySelector('#customValueInput');
-        const validationMsg = dialog.querySelector('#validationMessage');
-        const infoMsg = dialog.querySelector('#infoMessage');
-        const cancelBtn = dialog.querySelector('#cancelBtn');
-        const applyBtn = dialog.querySelector('#applyBtn');
-        
-        if (valueType === 'Scale Factor') {
-            infoMsg.textContent = 'Tip: Use /2 for 0.5x, /4 for 0.25x, etc.';
-        }
-        
-        // Focus and select input
-        setTimeout(() => { input.focus(); input.select(); }, 50);
-        
-        // Real-time validation
-        const validateInput = () => {
-            const value = this.parseCustomInputValue(input.value, valueType);
-            if (isNaN(value) || value < minValue) {
-                let errorMsg = `Value must be ≥ ${minValue}`;
-                if (typeof input.value === 'string' && input.value.startsWith('/')) {
-                    const divisor = parseFloat(input.value.substring(1));
-                    if (isNaN(divisor) || divisor === 0) errorMsg = 'Invalid divisor after /';
-                }
-                validationMsg.textContent = errorMsg;
-                applyBtn.disabled = true; applyBtn.style.opacity = '0.5';
-                return false;
-            } else {
-                validationMsg.textContent = '';
-                applyBtn.disabled = false; applyBtn.style.opacity = '1';
-                return true;
-            }
-        };
-        
-        // Event listeners
-        input.addEventListener('input', validateInput);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && validateInput()) this.applyCustomValue(propertyName, this.parseCustomInputValue(input.value, valueType), valueType);
-            else if (e.key === 'Escape') this.closeCustomInputDialog();
-        });
-        cancelBtn.addEventListener('click', () => this.closeCustomInputDialog());
-        applyBtn.addEventListener('click', () => {
-            if (validateInput()) this.applyCustomValue(propertyName, this.parseCustomInputValue(input.value, valueType), valueType);
-        });
-        
-        validateInput();
-    }
-    
-    formatValueForDisplay(value, valueType) {
-        if (valueType === 'Scale Factor') {
-            return value.toFixed(1) + 'x';
-        } else if (valueType === 'Resolution Scale') {
-            return '×' + value.toFixed(2);
-        } else if (valueType === 'Megapixels') {
-            return value.toFixed(1) + 'MP';
-        } else if (valueType === 'Width' || valueType === 'Height') {
-            return value.toString() + 'px';
-        } else {
-            return value.toString();
-        }
-    }
-    
-    applyCustomValue(propertyName, value, valueType) {
-        const props = this.node.properties;
-        
-        if (propertyName === 'upscaleValue') {
-            props.upscaleValue = value;
-            if (props.rescaleMode === 'manual') {
-                this.updateRescaleValue();
-            }
-        } else if (propertyName === 'targetResolution') {
-            // For resolution, we need to reverse-calculate the target resolution from the scale factor
-            if (this.validateWidgets()) {
-                const currentPixels = this.widthWidget.value * this.heightWidget.value;
-                const targetPixels = currentPixels * (value * value);
-                const targetP = Math.sqrt(targetPixels / (16/9));
-                props.targetResolution = Math.round(targetP);
-                if (props.rescaleMode === 'resolution') {
-                    this.updateRescaleValue();
-                }
-            }
-        } else if (propertyName === 'targetMegapixels') {
-            props.targetMegapixels = value;
-            if (props.rescaleMode === 'megapixels') {
-                this.updateRescaleValue();
-            }
-        } else if (propertyName === 'snapValue') {
-            props.snapValue = Math.round(value);
-        } else if (propertyName === 'width') {
-            const newWidth = Math.round(value);
-            const currentHeight = this.heightWidget ? this.heightWidget.value : props.valueY;
-            this.setDimensions(newWidth, currentHeight);
-        } else if (propertyName === 'height') {
-            const newHeight = Math.round(value);
-            const currentWidth = this.widthWidget ? this.widthWidget.value : props.valueX;
-            this.setDimensions(currentWidth, newHeight);
-        }
-        
-        this.closeCustomInputDialog();
-        app.graph.setDirtyCanvas(true);
-        
-        log.debug(`Applied custom ${valueType}: ${value}`);
-    }
-    
-    closeCustomInputDialog() {
-        if (this.customInputDialog) {
-            document.body.removeChild(this.customInputDialog);
-            this.customInputDialog = null;
-        }
-        if (this.customInputOverlay) {
-            document.body.removeChild(this.customInputOverlay);
-            this.customInputOverlay = null;
-        }
-        this.inputDialogActive = false;
-    }
-
-    parseCustomInputValue(rawValue, valueType) {
-        if (valueType === 'Scale Factor' && typeof rawValue === 'string' && rawValue.startsWith('/')) {
-            const divisor = parseFloat(rawValue.substring(1));
-            if (!isNaN(divisor) && divisor !== 0) {
-                return 1 / divisor;
-            }
-        }
-        return parseFloat(rawValue);
-    }
     
     // Action handlers
     handleSwap() {
@@ -2263,7 +2039,8 @@ class ResolutionMasterCanvas {
             'Standard': () => this.scaleToNearestPresetAspectRatio(width, height, 'Standard'),
             'Social Media': () => this.scaleToNearestPresetAspectRatio(width, height, 'Social Media'),
             'Print': () => this.scaleToNearestPresetAspectRatio(width, height, 'Print'),
-            'Cinema': () => this.scaleToNearestPresetAspectRatio(width, height, 'Cinema')
+            'Cinema': () => this.scaleToNearestPresetAspectRatio(width, height, 'Cinema'),
+            'Display Resolutions': () => this.scaleToNearestPresetAspectRatio(width, height, 'Display Resolutions')
         };
         return calculations[category] ? calculations[category]() : { width, height };
     }
