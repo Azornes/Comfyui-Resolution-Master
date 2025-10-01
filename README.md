@@ -117,6 +117,29 @@ Extensive preset library organized by use case:
    - `height`: Current height value (click the pink number to set custom height)
    - `rescale_factor`: Calculated scale factor for upscaling (green number)
 
+### Workflow Examples
+
+#### Example 1: Image Resizing Workflow
+If you want to resize an input image using Resolution Master:
+
+1. **Load Image**: Add a "Load Image" node and connect your image.
+2. **Connect to Resolution Master**: Link the image output to the input of Resolution Master (enables Auto-Detect).
+3. **Configure Resolution Master**:
+   - Enable **Auto-Detect** toggle to read input image dimensions.
+   - Select a preset or set target resolution/aspect ratio.
+   - Use **Auto-Fit** or **Auto-Resize** for automatic adaptation.
+4. **Resize Image**: Connect Resolution Master's `width` and `height` outputs to a "Resize Image" node's width/height inputs.
+5. **Connect Image**: Link the original image from "Load Image" to the "Resize Image" node's image input.
+6. **Output**: The resized image will match your target specifications.
+
+**Note**: Resolution Master doesn't process images directly—it calculates dimensions. Always connect it to a resizing node (like "Resize Image") for actual image transformation.
+
+#### Example 2: Generation Workflow
+For new image generation:
+1. Connect Resolution Master's `width`/`height` to your sampler/checkpoint nodes.
+2. Use `rescale_factor` with upscaling nodes if needed.
+3. Enable Auto-Detect if using an input image as reference.
+
 ## 🎮 Understanding the Controls
 
 ### Actions Section
