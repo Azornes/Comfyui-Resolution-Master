@@ -29,6 +29,8 @@ export const tooltips = {
     autoDetectToggle: "Automatically detect resolution from connected image input",
     autoFitBtn: "Find and apply best preset match for current resolution",
     autoFitCheckbox: "Automatically find and apply the best preset for the new detected image resolution",
+    autoResizeBtn: "Apply scaling based on selected mode (Manual/Resolution/Megapixels)",
+    autoResizeCheckbox: "Automatically apply scaling when new image is detected",
     detectedInfo: "Click to apply detected image resolution directly",
     
     // Preset controls

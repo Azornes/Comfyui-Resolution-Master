@@ -94,7 +94,7 @@ class ResolutionMasterCanvas {
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,      // 25 for header, +30 for content
             scaling: this.collapsedSections?.scaling ? 25 : 130,    // 25 for header, +105 for content
-            autoDetect: this.collapsedSections?.autoDetect ? 25 : 90, // 25 for header, +65 for content
+            autoDetect: this.collapsedSections?.autoDetect ? 25 : 125, // 25 for header, +100 for content (3 rows)
             presets: this.collapsedSections?.presets ? 25 : 55       // 25 for header, +30 for content
         };
         
@@ -144,6 +144,7 @@ class ResolutionMasterCanvas {
             rescaleValue: 1.0,
             autoDetect: false,
             autoFitOnChange: false,
+            autoResizeOnChange: false,
             selectedCategory: "Standard",
             selectedPreset: null,
             useCustomCalc: false,
@@ -340,7 +341,7 @@ class ResolutionMasterCanvas {
             
             collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
                 if (!preview) return this.drawAutoDetectSection(ctx, y);
-                return 65;
+                return 100;
             });
             
             collapsibleSection("Presets", "presets", (ctx, y, preview) => {
@@ -790,7 +791,7 @@ class ResolutionMasterCanvas {
         ctx.textAlign = "left";
         ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
         
-        // Drugi rząd: Detected info (po lewej) + Auto-calc button + Calc checkbox (idealnie pod Auto-fit)
+        // Drugi rząd: Detected info (po lewej) + Auto-Resize button + Auto checkbox
         currentY += 35;
         
         // Klikalny napis "Detected" wycentrowany pod switchem Auto-detect
@@ -822,12 +823,27 @@ class ResolutionMasterCanvas {
             ctx.fillText(detectedText, textX, currentY + 14);
         }
         
-        // Auto-calc button idealnie pod Auto-fit button
+        // Auto-Resize button pod Auto-fit button
+        this.controls.autoResizeBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "📐 Auto-Resize", this.hoverElement === 'autoResizeBtn');
+        
+        // Auto-Resize checkbox pod Auto checkbox
+        this.controls.autoResizeCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
+        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoResizeOnChange, this.hoverElement === 'autoResizeCheckbox');
+        
+        ctx.fillStyle = "#ddd";
+        ctx.font = "11px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
+        
+        // Trzeci rząd: Auto-calc button + Calc checkbox
+        currentY += 35;
+        
         this.controls.autoCalcBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
         const calcEnabled = props.useCustomCalc && props.selectedCategory;
         this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "⚡ Auto-calc", this.hoverElement === 'autoCalcBtn', !calcEnabled);
         
-        // Calc checkbox idealnie pod Auto checkbox
+        // Calc checkbox
         this.controls.customCalcCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
         this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.useCustomCalc, this.hoverElement === 'customCalcCheckbox');
         
@@ -836,7 +852,7 @@ class ResolutionMasterCanvas {
         ctx.textAlign = "left";
         ctx.fillText("Calc", autoCheckboxX + checkboxWidth + 4, currentY + 14);
         
-        return 65;
+        return 100;
     }
     
     drawPresetSection(ctx, y) {
@@ -1468,6 +1484,7 @@ class ResolutionMasterCanvas {
             resolutionBtn: () => this.handleResolutionScale(),
             megapixelsBtn: () => this.handleMegapixelsScale(),
             autoFitBtn: () => this.handleAutoFit(),
+            autoResizeBtn: () => this.handleAutoResize(),
             autoCalcBtn: () => this.handleAutoCalc(),
             detectedInfo: () => this.handleDetectedClick()
         };
@@ -1490,6 +1507,8 @@ class ResolutionMasterCanvas {
         const props = this.node.properties;
         if (checkboxName === 'autoFitCheckbox' && props.selectedCategory) {
             props.autoFitOnChange = !props.autoFitOnChange;
+        } else if (checkboxName === 'autoResizeCheckbox') {
+            props.autoResizeOnChange = !props.autoResizeOnChange;
         } else if (checkboxName === 'customCalcCheckbox') {
             props.useCustomCalc = !props.useCustomCalc;
         }
@@ -1878,10 +1897,7 @@ class ResolutionMasterCanvas {
     }
 
     handleScale() {
-        this.applyScaling(
-            () => this.node.properties.upscaleValue,
-            () => { this.node.properties.upscaleValue = 1.0; }
-        );
+        this.applyScaling(() => this.node.properties.upscaleValue);
     }
 
     handleResolutionScale() {
@@ -1978,6 +1994,28 @@ class ResolutionMasterCanvas {
         this.setDimensions(result.width, result.height);
         
         log.debug(`Auto-calc applied: ${currentWidth}x${currentHeight} → ${result.width}x${result.height} (${props.selectedCategory})`);
+    }
+    
+    handleAutoResize() {
+        // Funkcja Auto-Resize - stosuje skalowanie zgodnie z zaznaczonym radio button
+        const props = this.node.properties;
+        
+        if (!this.widthWidget || !this.heightWidget) {
+            log.debug("Auto-Resize: Width or height widget not found");
+            return;
+        }
+        
+        // Sprawdź który tryb skalowania jest zaznaczony i zastosuj odpowiednie skalowanie
+        if (props.rescaleMode === 'manual') {
+            this.handleScale();
+            log.debug(`Auto-Resize: Applied manual scaling with factor ${props.upscaleValue}`);
+        } else if (props.rescaleMode === 'resolution') {
+            this.handleResolutionScale();
+            log.debug(`Auto-Resize: Applied resolution scaling to ${props.targetResolution}p`);
+        } else if (props.rescaleMode === 'megapixels') {
+            this.handleMegapixelsScale();
+            log.debug(`Auto-Resize: Applied megapixels scaling to ${props.targetMegapixels}MP`);
+        }
     }
     
     handleDetectedClick() {
@@ -2361,6 +2399,11 @@ class ResolutionMasterCanvas {
                         this.widthWidget.value = this.detectedDimensions.width;
                         this.heightWidget.value = this.detectedDimensions.height;
                         this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
+                    }
+                    
+                    // Auto-Resize: Jeśli autoResizeOnChange jest włączone, zastosuj automatyczne skalowanie
+                    if (props.autoResizeOnChange) {
+                        this.handleAutoResize();
                     }
                     
                     app.graph.setDirtyCanvas(true);

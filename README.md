@@ -137,8 +137,22 @@ Extensive preset library organized by use case:
 
 ### Auto-Detect Section
 - **Auto-detect Toggle**: ON/OFF switch for automatic dimension detection from connected images
+  - Monitors input connection every second
+  - Updates dimensions when new image is detected
+  - Shows detected resolution in green text
 - **🎯 Auto-fit Button**: Finds best matching preset for current dimensions
-- **Auto Checkbox**: When checked, automatically applies Auto-fit when new image is detected
+  - Analyzes both aspect ratio and total pixels
+  - Checks both normal and flipped orientations
+  - Applies category-specific scaling when Custom Calc is enabled
+- **Auto Checkbox**: Enable automatic fitting when dimensions change
+  - Located next to Auto-Fit button
+  - Only active when category is selected and image detected
+- **📐 Auto-Resize Button**: Applies scaling based on selected mode (Manual/Resolution/Megapixels)
+  - Integrates with active scaling mode from Scaling section
+  - Maintains manual scale value without reset to 1.0x
+- **Auto Checkbox**: Automatically apply scaling when new image is detected
+  - Works in sequence after Auto-fit (if enabled)
+  - Applies chosen scaling mode to detected dimensions
 - **Detected Text (green)**: Click to apply the detected image's original dimensions
 - **⚡ Auto-calc Button**: Applies model-specific calculations to current dimensions
 - **Calc Checkbox**: Enables automatic model-specific optimizations
