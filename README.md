@@ -54,6 +54,7 @@ Extensive preset library organized by use case:
 - **Social Media**: Instagram, Twitter, Facebook, YouTube optimized sizes
 - **Print**: Standard print formats (A4, Letter, photo sizes)
 - **Cinema**: Professional film aspect ratios (2.39:1, 1.85:1, etc.)
+- **Display Resolutions**: Standard screen/video resolutions (720p, 1080p, 4K, 8K, etc.)
 
 ### 🤖 Model-Specific Optimizations
 
