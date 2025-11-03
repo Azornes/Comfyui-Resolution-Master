@@ -6,6 +6,7 @@ import { loadIcons } from "./utils/IconUtils.js";
 import { tooltips, presetCategories } from "./utils/ResolutionMasterConfig.js";
 import { DialogManager } from "./DialogManager.js";
 import { SearchableDropdown } from "./SearchableDropdown.js";
+import { AspectRatioSelector } from "./AspectRatioSelector.js";
 
 // Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
@@ -36,6 +37,9 @@ class ResolutionMasterCanvas {
         
         // Initialize SearchableDropdown
         this.searchableDropdown = new SearchableDropdown();
+        
+        // Initialize AspectRatioSelector
+        this.aspectRatioSelector = new AspectRatioSelector();
         
         // Tooltip state
         this.tooltipElement = null;
@@ -167,6 +171,8 @@ class ResolutionMasterCanvas {
             dropdown_resolution_expanded: false,
             dropdown_category_expanded: false,
             dropdown_preset_expanded: false,
+            // Preset selector mode
+            preset_selector_mode: 'visual', // 'visual' or 'list'
         };
 
         Object.entries(defaultProperties).forEach(([key, defaultValue]) => {
@@ -1836,6 +1842,51 @@ class ResolutionMasterCanvas {
         app.graph.setDirtyCanvas(true);
     }
     
+    showPresetSelector(e, mode) {
+        const props = this.node.properties;
+        const presets = this.presetCategories[props.selectedCategory];
+        if (!presets) return;
+        
+        const commonCallback = (presetName) => {
+            this.applyPreset(props.selectedCategory, presetName);
+        };
+        
+        const commonModeChange = (newMode) => {
+            props.preset_selector_mode = newMode;
+            // Call this function again with the new mode
+            this.showPresetSelector(e, newMode);
+        };
+        
+        if (mode === 'list') {
+            const presetItems = Object.entries(presets).map(([name, dims]) => 
+                `${name} (${dims.width}×${dims.height})`
+            );
+            
+            this.searchableDropdown.show(presetItems, {
+                event: e,
+                title: 'Select Preset',
+                currentMode: 'list',
+                initialExpanded: props.dropdown_preset_expanded || false,
+                onExpandedChange: (isExpanded) => {
+                    props.dropdown_preset_expanded = isExpanded;
+                },
+                callback: (selectedItem) => {
+                    const presetName = selectedItem.replace(/\s*\([^)]*\)$/, '');
+                    commonCallback(presetName);
+                },
+                onModeChange: () => commonModeChange('visual')
+            });
+        } else {
+            this.aspectRatioSelector.show(presets, {
+                event: e,
+                selectedPreset: props.selectedPreset,
+                currentMode: 'visual',
+                callback: commonCallback,
+                onModeChange: () => commonModeChange('list')
+            });
+        }
+    }
+    
     showDropdownMenu(dropdownName, e) {
         const props = this.node.properties;
         let items, callback, title, propertyKey;
@@ -1850,16 +1901,9 @@ class ResolutionMasterCanvas {
                 app.graph.setDirtyCanvas(true);
             };
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
-            const presets = this.presetCategories[props.selectedCategory];
-            items = Object.keys(presets).map(name => `${name} (${presets[name].width}×${presets[name].height})`);
-            title = 'Select Preset';
-            propertyKey = 'dropdown_preset_expanded';
-            callback = (value) => {
-               // Handle preset names that may contain parentheses by removing the last part with dimensions
-               const lastParenIndex = value.lastIndexOf(' (');
-               const presetName = value.substring(0, lastParenIndex);
-               this.applyPreset(props.selectedCategory, presetName);
-            };
+            const selectorMode = props.preset_selector_mode || 'visual';
+            this.showPresetSelector(e, selectorMode);
+            return;
         } else if (dropdownName === 'resolutionDropdown') {
             items = this.resolutions;
             title = 'Select Resolution';

@@ -29,7 +29,8 @@ export class SearchableDropdown {
      * @param {Function} options.onExpandedChange - Callback when expanded state changes
      */
     show(items, options = {}) {
-        if (this.isActive) {
+        // Always ensure we're fully cleaned up before showing
+        if (this.isActive || this.container) {
             this.hide();
         }
 
@@ -85,6 +86,67 @@ export class SearchableDropdown {
         this.container.style.top = `${initialTop}px`;
         this.originalTop = initialTop; // Store original position for later restoration
 
+        // Create mode toggle (at the very top) if onModeChange is provided
+        if (options.onModeChange) {
+            const modeToggleContainer = document.createElement('div');
+            modeToggleContainer.style.cssText = `
+                padding: 6px 8px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                border-bottom: 1px solid #444;
+                background: rgba(0, 0, 0, 0.2);
+            `;
+            
+            const modeLabel = document.createElement('span');
+            modeLabel.textContent = 'View:';
+            modeLabel.style.cssText = `
+                color: #aaa;
+                font-size: 11px;
+                font-weight: bold;
+            `;
+            
+            const modeToggle = document.createElement('button');
+            const useListMode = options.currentMode === 'list';
+            modeToggle.textContent = useListMode ? '📝 List' : '🎨 Visual';
+            modeToggle.style.cssText = `
+                padding: 4px 12px;
+                background: ${useListMode ? 'rgba(90, 170, 255, 0.2)' : 'rgba(100, 100, 100, 0.3)'};
+                border: 1px solid ${useListMode ? '#5af' : '#666'};
+                border-radius: 4px;
+                color: ${useListMode ? '#5af' : '#aaa'};
+                font-size: 11px;
+                cursor: pointer;
+                outline: none;
+                transition: all 0.2s;
+            `;
+            
+            modeToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const newMode = useListMode ? 'visual' : 'list';
+                
+                const callback = this.callback;
+                const items = this.items;
+                this.hide();
+                
+                if (options.onModeChange) {
+                    options.onModeChange(newMode, items, { callback, event: options.event });
+                }
+            });
+            
+            modeToggle.addEventListener('mouseenter', () => {
+                modeToggle.style.background = useListMode ? 'rgba(90, 170, 255, 0.3)' : 'rgba(120, 120, 120, 0.4)';
+            });
+            
+            modeToggle.addEventListener('mouseleave', () => {
+                modeToggle.style.background = useListMode ? 'rgba(90, 170, 255, 0.2)' : 'rgba(100, 100, 100, 0.3)';
+            });
+            
+            modeToggleContainer.appendChild(modeLabel);
+            modeToggleContainer.appendChild(modeToggle);
+            this.container.appendChild(modeToggleContainer);
+        }
+        
         // Create title if provided
         if (options.title) {
             const title = document.createElement('div');
