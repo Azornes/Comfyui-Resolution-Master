@@ -107,7 +107,7 @@ export class DialogManager {
             <div style="color: #fff; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-align: center;">Set Custom ${valueType}</div>
             <div style="margin-bottom: 10px;">
                 <label style="color: #ccc; font-size: 12px; display: block; margin-bottom: 5px;">Current: ${this.formatValueForDisplay(currentValue, valueType)}</label>
-                <input type="${valueType === 'Scale Factor' ? 'text' : 'number'}" id="customValueInput" value="${currentValue}" step="0.01" min="${minValue}"
+            <input type="${valueType === 'Scale Factor' ? 'text' : 'number'}" id="customValueInput" value="${currentValue}" step="${valueType === 'Width' || valueType === 'Height' ? '1' : '0.01'}" min="${minValue}"
                        style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #333; color: #fff; font-size: 14px; box-sizing: border-box;">
             </div>
             <div id="validationMessage" style="color: #f55; font-size: 11px; margin-bottom: 5px; min-height: 15px;"></div>
