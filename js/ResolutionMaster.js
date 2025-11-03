@@ -5,6 +5,7 @@ import { createModuleLogger } from "./utils/LoggerUtils.js";
 import { loadIcons } from "./utils/IconUtils.js";
 import { tooltips, presetCategories } from "./utils/ResolutionMasterConfig.js";
 import { DialogManager } from "./DialogManager.js";
+import { SearchableDropdown } from "./SearchableDropdown.js";
 
 // Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
@@ -32,6 +33,9 @@ class ResolutionMasterCanvas {
         
         // Initialize DialogManager
         this.dialogManager = new DialogManager(this);
+        
+        // Initialize SearchableDropdown
+        this.searchableDropdown = new SearchableDropdown();
         
         // Tooltip state
         this.tooltipElement = null;
@@ -159,6 +163,10 @@ class ResolutionMasterCanvas {
             section_scaling_collapsed: false,
             section_autoDetect_collapsed: false,
             section_presets_collapsed: false,
+            // Searchable dropdown expanded state
+            dropdown_resolution_expanded: false,
+            dropdown_category_expanded: false,
+            dropdown_preset_expanded: false,
         };
 
         Object.entries(defaultProperties).forEach(([key, defaultValue]) => {
@@ -720,7 +728,7 @@ class ResolutionMasterCanvas {
     
     drawResolutionRow(ctx, x, y) {
         const props = this.node.properties;
-        const selectedText = this.resolutions.find(r => parseInt(r) === props.targetResolution) || '1080p';
+        const selectedText = `${props.targetResolution}p`;
         const scaleFactor = this.calculateResolutionScale(props.targetResolution);
         
         this.drawScalingRowBase(ctx, x, y, {
@@ -1830,10 +1838,12 @@ class ResolutionMasterCanvas {
     
     showDropdownMenu(dropdownName, e) {
         const props = this.node.properties;
-        let items, callback;
+        let items, callback, title, propertyKey;
         
         if (dropdownName === 'categoryDropdown') {
             items = Object.keys(this.presetCategories);
+            title = 'Select Category';
+            propertyKey = 'dropdown_category_expanded';
             callback = (value) => {
                 props.selectedCategory = value;
                 props.selectedPreset = null;
@@ -1842,6 +1852,8 @@ class ResolutionMasterCanvas {
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
             const presets = this.presetCategories[props.selectedCategory];
             items = Object.keys(presets).map(name => `${name} (${presets[name].width}×${presets[name].height})`);
+            title = 'Select Preset';
+            propertyKey = 'dropdown_preset_expanded';
             callback = (value) => {
                // Handle preset names that may contain parentheses by removing the last part with dimensions
                const lastParenIndex = value.lastIndexOf(' (');
@@ -1850,15 +1862,31 @@ class ResolutionMasterCanvas {
             };
         } else if (dropdownName === 'resolutionDropdown') {
             items = this.resolutions;
+            title = 'Select Resolution';
+            propertyKey = 'dropdown_resolution_expanded';
             callback = (value) => {
-                props.targetResolution = parseInt(value);
+                // Ensure value has 'p' suffix for custom values
+                let resolutionValue = value.trim();
+                if (!resolutionValue.endsWith('p')) {
+                    resolutionValue = resolutionValue + 'p';
+                }
+                props.targetResolution = parseInt(resolutionValue);
                 if (props.rescaleMode === 'resolution') this.updateRescaleValue();
                 app.graph.setDirtyCanvas(true);
             };
         }
         
-        if (items?.length) {
-            new LiteGraph.ContextMenu(items, { event: e.originalEvent || e, callback });
+        if (items?.length && propertyKey) {
+            this.searchableDropdown.show(items, { 
+                event: e, 
+                callback, 
+                title,
+                allowCustomValues: dropdownName === 'resolutionDropdown',
+                initialExpanded: props[propertyKey] || false,
+                onExpandedChange: (isExpanded) => {
+                    props[propertyKey] = isExpanded;
+                }
+            });
         }
     }
     
