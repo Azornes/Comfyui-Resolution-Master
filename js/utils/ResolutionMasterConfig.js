@@ -86,12 +86,12 @@ export const presetCategories = {
     },
     'WAN': {
        // Community Presets
-       '16:9 Landscape': { width: 1280, height: 720 },
-       '16:9 Landscape': { width: 832, height: 480 },
-       '1:1 Square': { width: 512, height: 512 },
-       '1:1 Square': { width: 768, height: 768 },
+       '16:9 Landscape-1280': { width: 1280, height: 720 },
+       '16:9 Landscape-832': { width: 832, height: 480 },
+       '1:1 Square-512': { width: 512, height: 512 },
+       '1:1 Square-768': { width: 768, height: 768 },
        // Original Presets
-       '1:1 Square': { width: 720, height: 720 },
+       '1:1 Square-720': { width: 720, height: 720 },
        '2:3 Portrait': { width: 588, height: 882 },
        '3:4 Portrait': { width: 624, height: 832 },
        '9:21 Portrait': { width: 549, height: 1280 },
@@ -100,9 +100,9 @@ export const presetCategories = {
        '21:9 Landscape': { width: 1680, height: 720 }
     },
     'HiDream Dev': {
-        '1:1 Square': { width: 1024, height: 1024 },
-        '1:1 Square Large': { width: 1280, height: 1280 },
-        '1:1 Square XL': { width: 1536, height: 1536 },
+        '1:1 Square-1024': { width: 1024, height: 1024 },
+        '1:1 Square-1280': { width: 1280, height: 1280 },
+        '1:1 Square-1536': { width: 1536, height: 1536 },
         '16:9 Landscape': { width: 1360, height: 768 },
         '3:2 Landscape': { width: 1248, height: 832 },
         '4:3 Landscape': { width: 1168, height: 880 },
@@ -112,8 +112,9 @@ export const presetCategories = {
         '16:9 Landscape': { width: 1664, height: 928 },
         '4:3 Landscape': { width: 1472, height: 1140 },
         '3:2 Landscape': { width: 1584, height: 1056 },
-        '1:1 Test': { width: 1024, height: 1024 },
-        '4:3 Test': { width: 768, height: 1024 }
+        // Tests Presets
+        '1:1 Square-1024': { width: 1024, height: 1024 },
+        '4:3 Landscape': { width: 768, height: 1024 }
     },
     'Social Media': {
         // Instagram
