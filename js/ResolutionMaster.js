@@ -7,6 +7,8 @@ import { tooltips, presetCategories } from "./utils/ResolutionMasterConfig.js";
 import { DialogManager } from "./DialogManager.js";
 import { SearchableDropdown } from "./SearchableDropdown.js";
 import { AspectRatioSelector } from "./AspectRatioSelector.js";
+import { CustomPresetsManager } from "./utils/CustomPresetsManager.js";
+import { PresetManagerDialog } from "./utils/PresetManagerDialog.js";
 
 // Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
@@ -40,6 +42,12 @@ class ResolutionMasterCanvas {
         
         // Initialize AspectRatioSelector
         this.aspectRatioSelector = new AspectRatioSelector();
+        
+        // Initialize CustomPresetsManager
+        this.customPresetsManager = new CustomPresetsManager(this);
+        
+        // Initialize PresetManagerDialog
+        this.presetManagerDialog = new PresetManagerDialog(this.customPresetsManager);
         
         // Tooltip state
         this.tooltipElement = null;
@@ -103,7 +111,7 @@ class ResolutionMasterCanvas {
             actions: this.collapsedSections?.actions ? 25 : 55,      // 25 for header, +30 for content
             scaling: this.collapsedSections?.scaling ? 25 : 130,    // 25 for header, +105 for content
             autoDetect: this.collapsedSections?.autoDetect ? 25 : 125, // 25 for header, +100 for content (3 rows)
-            presets: this.collapsedSections?.presets ? 25 : 55       // 25 for header, +30 for content
+            presets: this.collapsedSections?.presets ? 25 : 90       // 25 for header, +65 for content (2 rows)
         };
         
         // Add section heights
@@ -173,6 +181,8 @@ class ResolutionMasterCanvas {
             dropdown_preset_expanded: false,
             // Preset selector mode
             preset_selector_mode: 'visual', // 'visual' or 'list'
+            // Custom presets storage
+            customPresetsJSON: '',
         };
 
         Object.entries(defaultProperties).forEach(([key, defaultValue]) => {
@@ -288,6 +298,11 @@ class ResolutionMasterCanvas {
         node.onGraphConfigured = function() {
             this.configured = true;
             this.onPropertyChanged();
+            
+            // Reload custom presets from properties (after workflow is fully loaded)
+            self.customPresetsManager.loadCustomPresets();
+            log.debug('Reloaded custom presets after graph configured');
+            
             if (this.properties.autoDetect) {
                 self.startAutoDetect();
             }
@@ -777,7 +792,7 @@ class ResolutionMasterCanvas {
         const availableWidth = node.size[0] - margin * 2;
         const gap = 8;
         
-        const toggleWidth = 140;
+        const toggleWidth = 110;
         const checkboxWidth = 18;
         const checkboxLabelWidth = 30;
         const autoFitWidth = availableWidth - toggleWidth - checkboxWidth - checkboxLabelWidth - (gap * 2);
@@ -794,7 +809,7 @@ class ResolutionMasterCanvas {
         const autoFitStartX = currentX + toggleWidth + gap;
         this.controls.autoFitBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
         const btnEnabled = props.selectedCategory; // Tylko wymaga wybranej kategorii, nie wykrytych wymiarów
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "🎯 Auto-fit", this.hoverElement === 'autoFitBtn', !btnEnabled);
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoFit, this.hoverElement === 'autoFitBtn', !btnEnabled, "Auto-fit");
         
         const autoCheckboxX = autoFitStartX + autoFitWidth + gap;
         this.controls.autoFitCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
@@ -839,7 +854,7 @@ class ResolutionMasterCanvas {
         
         // Auto-Resize button pod Auto-fit button
         this.controls.autoResizeBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "📐 Auto-Resize", this.hoverElement === 'autoResizeBtn');
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoResize, this.hoverElement === 'autoResizeBtn', false, "Auto-Resize");
         
         // Auto-Resize checkbox pod Auto checkbox
         this.controls.autoResizeCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
@@ -855,7 +870,7 @@ class ResolutionMasterCanvas {
         
         this.controls.autoCalcBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
         const calcEnabled = props.useCustomCalc && props.selectedCategory;
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, "⚡ Auto-calc", this.hoverElement === 'autoCalcBtn', !calcEnabled);
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoCalculate, this.hoverElement === 'autoCalcBtn', !calcEnabled, "Auto-calc");
         
         // Calc checkbox
         this.controls.customCalcCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
@@ -874,29 +889,41 @@ class ResolutionMasterCanvas {
         const props = node.properties;
         const margin = 20;
         const availableWidth = node.size[0] - margin * 2;
-        let currentHeight = 30;
+        let currentHeight = 30; // Single row
         const gap = 8;
         let currentX = margin;
+        let currentY = y;
+        const iconBtnWidth = 28;
 
+        // Calculate settings button position (aligned to right edge)
+        const settingsBtnX = node.size[0] - margin - iconBtnWidth;
+        
+        // Single row: Category and Preset dropdowns + Manage icon button on right
         if (props.selectedCategory) {
-            // Tylko dropdowny kategorii i presetów
-            const categoryDDWidth = availableWidth * 0.45;
-            const presetDDWidth = availableWidth * 0.55 - gap;
+            // Available width for dropdowns (excluding settings button and gaps)
+            const dropdownsWidth = availableWidth - iconBtnWidth - gap;
+            const categoryDDWidth = dropdownsWidth * 0.4;
+            const presetDDWidth = dropdownsWidth - categoryDDWidth - gap;
 
-            this.controls.categoryDropdown = { x: currentX, y, w: categoryDDWidth, h: 28 };
+            this.controls.categoryDropdown = { x: currentX, y: currentY, w: categoryDDWidth, h: 28 };
             const categoryText = props.selectedCategory || "Category...";
-            this.drawDropdown(ctx, currentX, y, categoryDDWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
+            this.drawDropdown(ctx, currentX, currentY, categoryDDWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
             currentX += categoryDDWidth + gap;
 
-            this.controls.presetDropdown = { x: currentX, y, w: presetDDWidth, h: 28 };
+            this.controls.presetDropdown = { x: currentX, y: currentY, w: presetDDWidth, h: 28 };
             const presetText = props.selectedPreset || "Select Preset...";
-            this.drawDropdown(ctx, currentX, y, presetDDWidth, 28, presetText, this.hoverElement === 'presetDropdown');
+            this.drawDropdown(ctx, currentX, currentY, presetDDWidth, 28, presetText, this.hoverElement === 'presetDropdown');
         } else {
-            // Category dropdown takes full width
-            this.controls.categoryDropdown = { x: currentX, y, w: availableWidth, h: 28 };
+            // Category dropdown takes all available width (excluding settings button and gap)
+            const categoryDDWidth = availableWidth - iconBtnWidth - gap;
+            this.controls.categoryDropdown = { x: currentX, y: currentY, w: categoryDDWidth, h: 28 };
             const categoryText = props.selectedCategory || "Category...";
-            this.drawDropdown(ctx, currentX, y, availableWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
+            this.drawDropdown(ctx, currentX, currentY, categoryDDWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
         }
+
+        // Manage Presets icon button - aligned to right edge
+        this.controls.managePresetsBtn = { x: settingsBtnX, y: currentY, w: iconBtnWidth, h: 28 };
+        this.drawButton(ctx, settingsBtnX, currentY, iconBtnWidth, 28, this.icons.settings, this.hoverElement === 'managePresetsBtn');
 
         return currentHeight;
     }
@@ -1005,7 +1032,7 @@ class ResolutionMasterCanvas {
     }
     
     // Drawing primitives
-    drawButton(ctx, x, y, w, h, content, hover = false, disabled = false) {
+    drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null) {
         const grad = ctx.createLinearGradient(x, y, x, y + h);
         if (disabled) {
             grad.addColorStop(0, "#4a4a4a");
@@ -1034,8 +1061,20 @@ class ResolutionMasterCanvas {
             ctx.fillText(content, x + w / 2, y + h / 2 + 1);
         } else if (content instanceof Image) {
             const iconSize = Math.min(w, h) - 12;
-            const iconX = x + (w - iconSize) / 2;
-            const iconY = y + (h - iconSize) / 2;
+            
+            // If text is provided, align icon to left; otherwise center it
+            let iconX, iconY;
+            if (text) {
+                // Icon aligned to left edge with small padding (for Auto-Detect buttons)
+                const iconPadding = 4;
+                iconX = x + iconPadding;
+                iconY = y + (h - iconSize) / 2;
+            } else {
+                // Icon centered (for other buttons like Scaling section)
+                iconX = x + (w - iconSize) / 2;
+                iconY = y + (h - iconSize) / 2;
+            }
+            
             if (content.complete) {
                 try {
                     if (disabled) ctx.globalAlpha = 0.5;
@@ -1047,6 +1086,15 @@ class ResolutionMasterCanvas {
                     ctx.font = "bold 14px Arial";
                     ctx.fillText("?", x + w / 2, y + h / 2 + 1);
                 }
+            }
+            
+            // Draw text if provided (centered)
+            if (text) {
+                ctx.fillStyle = disabled ? "#888" : "#ddd";
+                ctx.font = "12px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(text, x + w / 2, y + h / 2 + 1);
             }
         }
     }
@@ -1500,7 +1548,8 @@ class ResolutionMasterCanvas {
             autoFitBtn: () => this.handleAutoFit(),
             autoResizeBtn: () => this.handleAutoResize(),
             autoCalcBtn: () => this.handleAutoCalc(),
-            detectedInfo: () => this.handleDetectedClick()
+            detectedInfo: () => this.handleDetectedClick(),
+            managePresetsBtn: () => this.handleManagePresets()
         };
         actions[buttonName]?.();
     }
@@ -1556,6 +1605,11 @@ class ResolutionMasterCanvas {
     }
     
     // Helper methods
+    getAllPresets() {
+        // Get merged presets (built-in + custom)
+        return this.customPresetsManager.getMergedPresets(this.presetCategories);
+    }
+    
     validateWidgets() {
         return this.widthWidget && this.heightWidget;
     }
@@ -1844,7 +1898,8 @@ class ResolutionMasterCanvas {
     
     showPresetSelector(e, mode) {
         const props = this.node.properties;
-        const presets = this.presetCategories[props.selectedCategory];
+        const allPresets = this.getAllPresets();
+        const presets = allPresets[props.selectedCategory];
         if (!presets) return;
         
         const commonCallback = (presetName) => {
@@ -1858,9 +1913,14 @@ class ResolutionMasterCanvas {
         };
         
         if (mode === 'list') {
-            const presetItems = Object.entries(presets).map(([name, dims]) => 
-                `${name} (${dims.width}×${dims.height})`
-            );
+            // Create preset items with custom flag
+            const presetItems = Object.entries(presets).map(([name, dims]) => {
+                const isCustom = this.customPresetsManager.isCustomPreset(props.selectedCategory, name);
+                return {
+                    text: `${name} (${dims.width}×${dims.height})`,
+                    isCustom: isCustom
+                };
+            });
             
             this.searchableDropdown.show(presetItems, {
                 event: e,
@@ -1892,7 +1952,18 @@ class ResolutionMasterCanvas {
         let items, callback, title, propertyKey;
         
         if (dropdownName === 'categoryDropdown') {
-            items = Object.keys(this.presetCategories);
+            const allPresets = this.getAllPresets();
+            const categoryNames = Object.keys(allPresets);
+            
+            // Create category items with custom flag
+            items = categoryNames.map(categoryName => {
+                const isCustomCategory = this.customPresetsManager.categoryExists(categoryName);
+                return {
+                    text: categoryName,
+                    isCustom: isCustomCategory
+                };
+            });
+            
             title = 'Select Category';
             propertyKey = 'dropdown_category_expanded';
             callback = (value) => {
@@ -2108,6 +2179,11 @@ class ResolutionMasterCanvas {
         log.debug(`Detected click applied: Set dimensions to ${this.detectedDimensions.width}x${this.detectedDimensions.height}`);
     }
     
+    handleManagePresets() {
+        log.debug("Manage Presets button clicked - opening dialog");
+        this.presetManagerDialog.show();
+    }
+    
     applyDimensionChange() {
         const props = this.node.properties;
         let { value: width } = this.widthWidget;
@@ -2125,7 +2201,8 @@ class ResolutionMasterCanvas {
 
     applyPreset(category, presetName) {
         const props = this.node.properties;
-        const preset = this.presetCategories[category]?.[presetName];
+        const allPresets = this.getAllPresets();
+        const preset = allPresets[category]?.[presetName];
         if (!preset) return;
         
         if (this.widthWidget && this.heightWidget) {
@@ -2192,7 +2269,8 @@ class ResolutionMasterCanvas {
 
     // Unified preset finding logic
     findClosestPreset(width, height, category, options = {}) {
-        const presets = this.presetCategories[category];
+        const allPresets = this.getAllPresets();
+        const presets = allPresets[category];
         if (!presets) return null;
 
         let closestPreset = null;

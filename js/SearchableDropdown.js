@@ -1,5 +1,6 @@
 // SearchableDropdown.js - A searchable dropdown component for better UX with large lists
 import { createModuleLogger } from "./utils/LoggerUtils.js";
+import { loadIcons } from "./utils/IconUtils.js";
 
 const log = createModuleLogger('SearchableDropdown');
 
@@ -15,6 +16,12 @@ export class SearchableDropdown {
         this.selectedIndex = -1;
         this.callback = null;
         this.isExpanded = false;
+        
+        // Load custom preset icon
+        this.customPresetIcon = null;
+        const icons = {};
+        loadIcons(icons, "#ffffffff"); // Gold color for custom preset icon
+        this.customPresetIcon = icons.customPreset;
     }
 
     /**
@@ -149,16 +156,56 @@ export class SearchableDropdown {
         
         // Create title if provided
         if (options.title) {
+            const titleContainer = document.createElement('div');
+            titleContainer.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 12px 6px 12px;
+                border-bottom: 1px solid #444;
+            `;
+            
             const title = document.createElement('div');
             title.style.cssText = `
                 color: #fff;
                 font-size: 13px;
                 font-weight: bold;
-                padding: 8px 12px 6px 12px;
-                border-bottom: 1px solid #444;
             `;
             title.textContent = options.title;
-            this.container.appendChild(title);
+            
+            // Add close button (X)
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '×';
+            closeButton.style.cssText = `
+                background: transparent;
+                border: none;
+                color: #888;
+                font-size: 20px;
+                font-weight: bold;
+                cursor: pointer;
+                padding: 0;
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: color 0.2s;
+                outline: none;
+            `;
+            closeButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.hide();
+            });
+            closeButton.addEventListener('mouseenter', () => {
+                closeButton.style.color = '#fff';
+            });
+            closeButton.addEventListener('mouseleave', () => {
+                closeButton.style.color = '#888';
+            });
+            
+            titleContainer.appendChild(title);
+            titleContainer.appendChild(closeButton);
+            this.container.appendChild(titleContainer);
         }
 
         // Create search input
@@ -295,6 +342,10 @@ export class SearchableDropdown {
         const searchTerm = this.searchInput.value.toLowerCase().trim();
 
         this.filteredItems.forEach((item, index) => {
+            // Support both string items and object items with { text, isCustom } structure
+            const itemText = typeof item === 'string' ? item : item.text;
+            const isCustom = typeof item === 'object' && item.isCustom;
+            
             const itemElement = document.createElement('div');
             itemElement.className = 'dropdown-item';
             itemElement.style.cssText = `
@@ -307,22 +358,26 @@ export class SearchableDropdown {
                 line-height: 1.3;
             `;
 
+            // Add custom preset indicator (SVG icon) if this is a custom preset - on the RIGHT side
+            const customIndicator = isCustom && this.customPresetIcon ? 
+                `<img src="${this.customPresetIcon.src}" style="width: 14px; height: 14px; margin-left: 6px; vertical-align: middle;">` : '';
+
             // Highlight matching text
             if (searchTerm) {
-                const lowerItem = item.toLowerCase();
+                const lowerItem = itemText.toLowerCase();
                 const matchIndex = lowerItem.indexOf(searchTerm);
                 
                 if (matchIndex !== -1) {
-                    const before = item.substring(0, matchIndex);
-                    const match = item.substring(matchIndex, matchIndex + searchTerm.length);
-                    const after = item.substring(matchIndex + searchTerm.length);
+                    const before = itemText.substring(0, matchIndex);
+                    const match = itemText.substring(matchIndex, matchIndex + searchTerm.length);
+                    const after = itemText.substring(matchIndex + searchTerm.length);
                     
-                    itemElement.innerHTML = `${this.escapeHtml(before)}<span style="background: #5af; color: #000; font-weight: bold; padding: 1px 2px; border-radius: 2px;">${this.escapeHtml(match)}</span>${this.escapeHtml(after)}`;
+                    itemElement.innerHTML = `${this.escapeHtml(before)}<span style="background: #5af; color: #000; font-weight: bold; padding: 1px 2px; border-radius: 2px;">${this.escapeHtml(match)}</span>${this.escapeHtml(after)}${customIndicator}`;
                 } else {
-                    itemElement.textContent = item;
+                    itemElement.innerHTML = `${this.escapeHtml(itemText)}${customIndicator}`;
                 }
             } else {
-                itemElement.textContent = item;
+                itemElement.innerHTML = `${this.escapeHtml(itemText)}${customIndicator}`;
             }
 
             // Hover effect
@@ -338,9 +393,9 @@ export class SearchableDropdown {
                 }
             });
 
-            // Click handler
+            // Click handler - return the text value, not the object
             itemElement.addEventListener('click', () => {
-                this.selectItem(item);
+                this.selectItem(itemText);
             });
 
             this.itemsContainer.appendChild(itemElement);
@@ -351,19 +406,38 @@ export class SearchableDropdown {
     }
 
     /**
-     * Updates the visual selection of items
+     * Filters items based on search input
+     */
+    filterItems() {
+        const searchTerm = this.searchInput.value.toLowerCase().trim();
+        
+        if (!searchTerm) {
+            this.filteredItems = [...this.items];
+        } else {
+            this.filteredItems = this.items.filter(item => {
+                const itemText = typeof item === 'string' ? item : item.text;
+                return itemText.toLowerCase().includes(searchTerm);
+            });
+        }
+
+        this.selectedIndex = -1;
+        this.renderItems();
+    }
+
+    /**
+     * Updates visual selection highlighting
      */
     updateSelection() {
         const items = this.itemsContainer.querySelectorAll('.dropdown-item');
-        items.forEach((element, index) => {
+        items.forEach((item, index) => {
             if (index === this.selectedIndex) {
-                element.style.background = 'rgba(90, 150, 255, 0.3)';
-                element.style.color = '#fff';
+                item.style.background = 'rgba(90, 170, 255, 0.3)';
+                item.style.color = '#fff';
                 // Scroll into view if needed
-                element.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             } else {
-                element.style.background = 'transparent';
-                element.style.color = '#ddd';
+                item.style.background = 'transparent';
+                item.style.color = '#ddd';
             }
         });
     }
@@ -425,10 +499,14 @@ export class SearchableDropdown {
             case 'Enter':
                 e.preventDefault();
                 if (this.selectedIndex >= 0 && this.selectedIndex < this.filteredItems.length) {
-                    this.selectItem(this.filteredItems[this.selectedIndex]);
+                    const selectedItem = this.filteredItems[this.selectedIndex];
+                    const itemText = typeof selectedItem === 'string' ? selectedItem : selectedItem.text;
+                    this.selectItem(itemText);
                 } else if (this.filteredItems.length === 1) {
                     // Auto-select if only one item
-                    this.selectItem(this.filteredItems[0]);
+                    const singleItem = this.filteredItems[0];
+                    const itemText = typeof singleItem === 'string' ? singleItem : singleItem.text;
+                    this.selectItem(itemText);
                 } else if (this.allowCustomValues && this.searchInput.value.trim()) {
                     // Allow custom value only if allowCustomValues is true
                     this.selectItem(this.searchInput.value.trim());
