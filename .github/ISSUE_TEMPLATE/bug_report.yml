@@ -7,13 +7,13 @@ body:
     attributes:
       label: Prerequisites
       options:
+        - label: I have searched existing(open/closed) issues and Read [Known Issues / Compatibility](https://github.com/Azornes/Comfyui-Resolution-Master?tab=readme-ov-file#%EF%B8%8F-known-issues--compatibility) to make sure this isn't a duplicate
+          required: true
         - label: I am running the latest version of [ComfyUI](https://github.com/comfyanonymous/ComfyUI/releases)
           required: true
         - label: I am running the latest version of [ComfyUI_frontend](https://github.com/Comfy-Org/ComfyUI_frontend/releases)
           required: true
         - label: I am running the latest version of Resolution Master [Github](https://github.com/Azornes/Comfyui-Resolution-Master/releases) | [Manager](https://registry.comfy.org/publishers/azornes/nodes/Comfyui-Resolution-Master)
-          required: true
-        - label: I have searched existing(open/closed) issues to make sure this isn't a duplicate
           required: true
 
   - type: textarea
