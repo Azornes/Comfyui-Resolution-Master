@@ -455,6 +455,11 @@ You can either apply this tweak manually or report it to the mixlab authors so i
 </details>
 
 
+- **Incompatibility with Modern Node Design (Vue Nodes)**  
+  This node is not compatible with the new Vue Nodes display system.  
+  To use this node, you must revert the settings: Settings → (search) Vue Nodes → Disable "Modern Node Design (Vue Nodes)".
+
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit issues and pull requests.
