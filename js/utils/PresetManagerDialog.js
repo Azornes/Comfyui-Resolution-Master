@@ -4,6 +4,9 @@ import { SearchableDropdown } from "../SearchableDropdown.js";
 import { AspectRatioUtils } from "./AspectRatioUtils.js";
 import { loadIcons, getIconHtml } from "./IconUtils.js";
 
+// Import Prism.js for syntax highlighting (global object)
+const prismScriptLoaded = await import('../lib/prism.js');
+
 const log = createModuleLogger('PresetManagerDialog');
 
 export class PresetManagerDialog {
@@ -1514,6 +1517,11 @@ export class PresetManagerDialog {
                 this.exportPresets();
             });
             leftButtons.appendChild(exportBtn);
+
+            const editJsonBtn = this.createFooterButton('{ } Edit JSON', 'secondary', () => {
+                this.showJSONEditor();
+            });
+            leftButtons.appendChild(editJsonBtn);
         } else if (this.currentView === 'add') {
             const backBtn = this.createFooterButton('← Back to List', 'secondary', () => {
                 // Close SearchableDropdown if it's open
@@ -1714,8 +1722,7 @@ export class PresetManagerDialog {
      * Exports presets to JSON file
      */
     exportPresets() {
-        const customPresets = this.manager.getCustomPresets();
-        const json = JSON.stringify(customPresets, null, 2);
+        const json = this.manager.exportToJSON();
 
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
@@ -1824,42 +1831,87 @@ export class PresetManagerDialog {
                 font-size: 11px;
             `;
 
-            // Delete button (appears on hover)
-            const deleteBtn = document.createElement('button');
-            const deleteIconHtml = this.deleteIcon ? `<img src="${this.deleteIcon.src}" style="width: 12px; height: 12px; display: block;">` : '🗑️';
-            if (this.deleteIcon) {
-                deleteBtn.innerHTML = deleteIconHtml;
-            } else {
-                deleteBtn.textContent = '🗑️';
-            }
-            deleteBtn.title = 'Delete';
-            deleteBtn.style.cssText = `
-                position: absolute;
-                top: 2px;
-                right: 2px;
-                padding: 2px 4px;
-                border: none;
-                border-radius: 2px;
-                background: rgba(255,0,0,0.8);
-                color: #fff;
-                font-size: 10px;
-                cursor: pointer;
-                opacity: 0;
-                transition: opacity 0.2s;
-            `;
-
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (confirm(`Delete preset "${preset.name}"?`)) {
-                    this.manager.deletePreset(this.selectedCategory, preset.name);
-                    this.updatePresetPreview();
-                    log.debug(`Deleted preset: ${this.selectedCategory}/${preset.name}`);
+            // Action button - only for built-in presets (toggle hide/unhide)
+            // Action buttons
+            if (preset.isCustom) {
+                // This is a custom preset - add red delete button
+                const deleteBtn = document.createElement('button');
+                const deleteIconHtml = this.deleteIcon ? `<img src="${this.deleteIcon.src}" style="width: 12px; height: 12px; display: block;">` : '🗑️';
+                if (this.deleteIcon) {
+                    deleteBtn.innerHTML = deleteIconHtml;
+                } else {
+                    deleteBtn.textContent = '🗑️';
                 }
-            });
+                deleteBtn.title = 'Delete preset';
+                deleteBtn.style.cssText = `
+                    position: absolute;
+                    top: 2px;
+                    right: 2px;
+                    padding: 2px 4px;
+                    border: none;
+                    border-radius: 2px;
+                    background: rgba(255, 80, 80, 0.8);
+                    color: #fff;
+                    font-size: 10px;
+                    cursor: pointer;
+                    opacity: 0;
+                    transition: opacity 0.2s, background 0.2s;
+                `;
+
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Delete custom preset "${preset.name}"?`)) {
+                        this.manager.deletePreset(this.selectedCategory, preset.name);
+                        this.updatePresetPreview();
+                    }
+                });
+                
+                presetItem.appendChild(deleteBtn);
+            } else {
+                // This is a built-in preset - add toggle hide/unhide button
+                const isHidden = this.manager.isBuiltInPresetHidden(this.selectedCategory, preset.name);
+                
+                const toggleBtn = document.createElement('button');
+                const deleteIconHtml = this.deleteIcon ? `<img src="${this.deleteIcon.src}" style="width: 12px; height: 12px; display: block;">` : '🗑️';
+                if (this.deleteIcon) {
+                    toggleBtn.innerHTML = deleteIconHtml;
+                } else {
+                    toggleBtn.textContent = '🗑️';
+                }
+                toggleBtn.title = isHidden ? 'Unhide preset' : 'Hide preset';
+                toggleBtn.style.cssText = `
+                    position: absolute;
+                    top: 2px;
+                    right: 2px;
+                    padding: 2px 4px;
+                    border: none;
+                    border-radius: 2px;
+                    background: ${isHidden ? 'rgba(80, 255, 80, 0.8)' : 'rgba(255, 200, 0, 0.8)'};
+                    color: #fff;
+                    font-size: 10px;
+                    cursor: pointer;
+                    opacity: 0;
+                    transition: opacity 0.2s, background 0.2s;
+                `;
+
+                toggleBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    // Toggle visibility
+                    this.manager.toggleBuiltInPresetVisibility(this.selectedCategory, preset.name);
+                    // Refresh preview immediately
+                    this.updatePresetPreview();
+                });
+                
+                presetItem.appendChild(toggleBtn);
+                
+                // Red border if hidden
+                if (isHidden) {
+                    presetItem.style.borderColor = '#f00';
+                }
+            }
 
             presetItem.appendChild(nameDiv);
             presetItem.appendChild(dimensionsDiv);
-            presetItem.appendChild(deleteBtn);
 
             // Click to load preset values into quick add form
             presetItem.addEventListener('click', () => {
@@ -1887,14 +1939,18 @@ export class PresetManagerDialog {
 
             presetItem.addEventListener('mouseenter', () => {
                 presetItem.style.background = 'rgba(255, 255, 255, 0.15)';
-                presetItem.style.borderColor = '#666';
-                deleteBtn.style.opacity = '1';
+                presetItem.style.borderColor = preset.isHidden ? '#f00' : '#666';
+                // Show button for all presets (custom and built-in)
+                const btn = presetItem.querySelector('button');
+                if (btn) btn.style.opacity = '1';
             });
 
             presetItem.addEventListener('mouseleave', () => {
                 presetItem.style.background = 'rgba(255, 255, 255, 0.05)';
-                presetItem.style.borderColor = '#444';
-                deleteBtn.style.opacity = '0';
+                presetItem.style.borderColor = preset.isHidden ? '#f00' : '#444';
+                // Hide button for all presets
+                const btn = presetItem.querySelector('button');
+                if (btn) btn.style.opacity = '0';
             });
 
             presetListContainer.appendChild(presetItem);
@@ -2665,6 +2721,562 @@ export class PresetManagerDialog {
             // Save on blur
             handleSave();
         });
+    }
+
+    /**
+     * Shows JSON editor dialog for direct JSON editing
+     */
+    showJSONEditor() {
+        // Get current JSON
+        const currentJSON = this.manager.exportToJSON();
+        
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7); z-index: 10000;
+        `;
+        
+        // Create dialog container
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+            border: 2px solid #555;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            z-index: 10001;
+            font-family: Arial, sans-serif;
+            width: 90vw;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+        `;
+        
+        // Header
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 16px 20px;
+            border-bottom: 2px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        `;
+        
+        const title = document.createElement('div');
+        title.style.cssText = 'color: #fff; font-size: 18px; font-weight: bold;';
+        title.textContent = '{ } JSON Editor';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            background: transparent;
+            border: none;
+            color: #aaa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            line-height: 32px;
+            text-align: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        `;
+        closeBtn.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            document.body.removeChild(dialog);
+        });
+        closeBtn.addEventListener('mouseenter', () => {
+            closeBtn.style.background = 'rgba(255,255,255,0.1)';
+            closeBtn.style.color = '#fff';
+        });
+        closeBtn.addEventListener('mouseleave', () => {
+            closeBtn.style.background = 'transparent';
+            closeBtn.style.color = '#aaa';
+        });
+        
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        dialog.appendChild(header);
+        
+        // Info message
+        const infoDiv = document.createElement('div');
+        infoDiv.style.cssText = `
+            padding: 12px 20px;
+            background: rgba(90, 170, 255, 0.1);
+            border-bottom: 1px solid rgba(90, 170, 255, 0.3);
+            color: #5af;
+            font-size: 12px;
+            line-height: 1.5;
+        `;
+        infoDiv.innerHTML = `
+            💡 <strong>Direct JSON editing</strong><br>
+            Edit the JSON below to modify custom presets and hidden built-in presets.<br>
+            Changes will replace current configuration when you click "Apply Changes".
+        `;
+        dialog.appendChild(infoDiv);
+        
+        // Content area with line numbers and code editor
+        const content = document.createElement('div');
+        content.style.cssText = `
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        `;
+        
+        // Load Prism CSS dynamically
+        if (!document.getElementById('prism-css-link')) {
+            const prismCSS = document.createElement('link');
+            prismCSS.id = 'prism-css-link';
+            prismCSS.rel = 'stylesheet';
+            prismCSS.href = new URL('../lib/prism.css', import.meta.url).href;
+            document.head.appendChild(prismCSS);
+        }
+        
+        // Editor container (line numbers + code editor)
+        const editorContainer = document.createElement('div');
+        editorContainer.style.cssText = `
+            flex: 1;
+            display: flex;
+            border: 1px solid #555;
+            border-radius: 6px;
+            overflow: hidden;
+            background: #1a1a1a;
+        `;
+        
+        // Line numbers container
+        const lineNumbers = document.createElement('div');
+        lineNumbers.style.cssText = `
+            padding: 12px 8px 12px 4px;
+            background: #0d0d0d;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #333;
+            overflow: hidden;
+            min-width: 50px;
+        `;
+        
+        // Scrollable editor wrapper
+        const editorWrapper = document.createElement('div');
+        editorWrapper.style.cssText = `
+            flex: 1;
+            overflow: auto;
+            position: relative;
+        `;
+        
+        // Code container (pre + code with contenteditable)
+        const pre = document.createElement('pre');
+        pre.style.cssText = `
+            margin: 0;
+            padding: 12px;
+            background: transparent;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow: visible;
+        `;
+        
+        const code = document.createElement('code');
+        code.className = 'language-json';
+        code.contentEditable = 'true';
+        code.spellcheck = false;
+        code.textContent = currentJSON;
+        code.style.cssText = `
+            outline: none;
+            display: block;
+            white-space: pre;
+            color: #ddd;
+        `;
+        
+        // Undo/Redo history management
+        let undoStack = [currentJSON];
+        let redoStack = [];
+        let currentHistoryIndex = 0;
+        let isUndoRedoOperation = false;
+        
+        pre.appendChild(code);
+        editorWrapper.appendChild(pre);
+        
+        // Function to update line numbers
+        const updateLineNumbers = () => {
+            const lines = code.textContent.split('\n').length;
+            lineNumbers.innerHTML = '';
+            for (let i = 1; i <= lines; i++) {
+                const lineDiv = document.createElement('div');
+                lineDiv.textContent = i;
+                lineDiv.style.cssText = 'height: 19.5px;';
+                lineNumbers.appendChild(lineDiv);
+            }
+        };
+        
+        // Function to apply syntax highlighting
+        const applySyntaxHighlighting = () => {
+            // Save cursor position
+            const selection = window.getSelection();
+            const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+            const cursorOffset = range ? range.startOffset : 0;
+            const cursorNode = range ? range.startContainer : null;
+            
+            // Get text content
+            const text = code.textContent;
+            
+            // Apply Prism highlighting
+            if (window.Prism) {
+                code.innerHTML = window.Prism.highlight(text, window.Prism.languages.json, 'json');
+            }
+            
+            // Update line numbers
+            updateLineNumbers();
+            
+            // Restore cursor position (approximate)
+            try {
+                if (cursorNode && code.childNodes.length > 0) {
+                    const newRange = document.createRange();
+                    const newSelection = window.getSelection();
+                    
+                    // Try to restore cursor to similar position
+                    let textNode = code.firstChild;
+                    let currentOffset = 0;
+                    
+                    // Find the text node that contains our cursor position
+                    while (textNode) {
+                        if (textNode.nodeType === Node.TEXT_NODE) {
+                            if (currentOffset + textNode.length >= cursorOffset) {
+                                newRange.setStart(textNode, Math.min(cursorOffset - currentOffset, textNode.length));
+                                newRange.collapse(true);
+                                newSelection.removeAllRanges();
+                                newSelection.addRange(newRange);
+                                break;
+                            }
+                            currentOffset += textNode.length;
+                        }
+                        textNode = textNode.nextSibling;
+                    }
+                }
+            } catch (e) {
+                // Cursor restoration failed, that's okay
+                console.warn('Could not restore cursor position:', e);
+            }
+        };
+        
+        // Initial highlighting
+        applySyntaxHighlighting();
+        
+        // Handle input with debouncing for performance and live validation
+        let highlightTimeout;
+        code.addEventListener('input', () => {
+            // Save to undo history if not an undo/redo operation
+            if (!isUndoRedoOperation) {
+                const currentText = code.textContent;
+                // Add to undo stack if text changed
+                if (undoStack[undoStack.length - 1] !== currentText) {
+                    undoStack.push(currentText);
+                    redoStack = []; // Clear redo stack on new input
+                }
+            }
+            isUndoRedoOperation = false;
+            
+            clearTimeout(highlightTimeout);
+            highlightTimeout = setTimeout(() => {
+                applySyntaxHighlighting();
+                
+                // Live JSON validation
+                try {
+                    JSON.parse(code.textContent);
+                    // Valid JSON - clear error message and show success
+                    validationMsg.style.color = '#5f5';
+                    validationMsg.textContent = '✓ Valid JSON';
+                    editorContainer.style.borderColor = '#5f5';
+                } catch (error) {
+                    // Invalid JSON - show error message
+                    validationMsg.style.color = '#f55';
+                    validationMsg.textContent = `❌ ${error.message}`;
+                    editorContainer.style.borderColor = '#f55';
+                }
+            }, 300); // Debounce 300ms
+        });
+        
+        // Handle Undo/Redo keyboard shortcuts
+        code.addEventListener('keydown', (e) => {
+            // Ctrl+Z or Cmd+Z - Undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                if (undoStack.length > 1) {
+                    // Save current state to redo stack
+                    const currentText = code.textContent;
+                    redoStack.push(currentText);
+                    
+                    // Remove current state from undo stack
+                    undoStack.pop();
+                    
+                    // Restore previous state
+                    const previousText = undoStack[undoStack.length - 1];
+                    isUndoRedoOperation = true;
+                    code.textContent = previousText;
+                    applySyntaxHighlighting();
+                    
+                    // Try to validate
+                    try {
+                        JSON.parse(code.textContent);
+                        validationMsg.style.color = '#5f5';
+                        validationMsg.textContent = '✓ Valid JSON';
+                        editorContainer.style.borderColor = '#5f5';
+                    } catch (error) {
+                        validationMsg.style.color = '#f55';
+                        validationMsg.textContent = `❌ ${error.message}`;
+                        editorContainer.style.borderColor = '#f55';
+                    }
+                }
+                return;
+            }
+            
+            // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z - Redo
+            if (((e.ctrlKey || e.metaKey) && e.key === 'y') || 
+                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
+                e.preventDefault();
+                if (redoStack.length > 0) {
+                    // Get state from redo stack
+                    const nextText = redoStack.pop();
+                    
+                    // Add current state to undo stack
+                    undoStack.push(nextText);
+                    
+                    // Restore next state
+                    isUndoRedoOperation = true;
+                    code.textContent = nextText;
+                    applySyntaxHighlighting();
+                    
+                    // Try to validate
+                    try {
+                        JSON.parse(code.textContent);
+                        validationMsg.style.color = '#5f5';
+                        validationMsg.textContent = '✓ Valid JSON';
+                        editorContainer.style.borderColor = '#5f5';
+                    } catch (error) {
+                        validationMsg.style.color = '#f55';
+                        validationMsg.textContent = `❌ ${error.message}`;
+                        editorContainer.style.borderColor = '#f55';
+                    }
+                }
+                return;
+            }
+        });
+        
+        // Handle Tab key
+        code.addEventListener('keydown', (e) => {
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                document.execCommand('insertText', false, '\t');
+            }
+        });
+        
+        // Handle copy event - copy plain text instead of HTML
+        code.addEventListener('copy', (e) => {
+            e.preventDefault();
+            const selection = window.getSelection();
+            const selectedText = selection.toString();
+            if (selectedText) {
+                e.clipboardData.setData('text/plain', selectedText);
+            }
+        });
+        
+        // Handle cut event - cut plain text instead of HTML
+        code.addEventListener('cut', (e) => {
+            e.preventDefault();
+            const selection = window.getSelection();
+            const selectedText = selection.toString();
+            if (selectedText) {
+                e.clipboardData.setData('text/plain', selectedText);
+                document.execCommand('delete');
+            }
+        });
+        
+        // Synchronize scroll between code editor and line numbers
+        editorWrapper.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editorWrapper.scrollTop;
+        });
+        
+        // Focus/blur border effects
+        code.addEventListener('focus', () => {
+            editorContainer.style.borderColor = '#5af';
+        });
+        
+        code.addEventListener('blur', () => {
+            editorContainer.style.borderColor = '#555';
+            // Apply final highlighting on blur
+            applySyntaxHighlighting();
+        });
+        
+        editorContainer.appendChild(lineNumbers);
+        editorContainer.appendChild(editorWrapper);
+        content.appendChild(editorContainer);
+        dialog.appendChild(content);
+        
+        // Validation message
+        const validationMsg = document.createElement('div');
+        validationMsg.style.cssText = `
+            padding: 0 20px 10px 20px;
+            color: #f55;
+            font-size: 12px;
+            min-height: 18px;
+            user-select: text;
+            cursor: text;
+        `;
+        dialog.appendChild(validationMsg);
+        
+        // Footer with buttons
+        const footer = document.createElement('div');
+        footer.style.cssText = `
+            padding: 16px 20px;
+            border-top: 2px solid #444;
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+        `;
+        
+        const leftBtns = document.createElement('div');
+        leftBtns.style.cssText = 'display: flex; gap: 12px;';
+        
+        // Format button
+        const formatBtn = document.createElement('button');
+        formatBtn.textContent = '{ } Format JSON';
+        formatBtn.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #666;
+            color: #ddd;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        formatBtn.addEventListener('click', () => {
+            try {
+                const parsed = JSON.parse(code.textContent);
+                code.textContent = JSON.stringify(parsed, null, 2);
+                applySyntaxHighlighting();
+                validationMsg.textContent = '';
+                validationMsg.style.color = '#5f5';
+                validationMsg.textContent = '✓ JSON formatted successfully';
+                setTimeout(() => {
+                    validationMsg.textContent = '';
+                }, 2000);
+            } catch (error) {
+                validationMsg.style.color = '#f55';
+                validationMsg.textContent = `❌ Invalid JSON: ${error.message}`;
+            }
+        });
+        formatBtn.addEventListener('mouseenter', () => {
+            formatBtn.style.background = 'rgba(255,255,255,0.15)';
+        });
+        formatBtn.addEventListener('mouseleave', () => {
+            formatBtn.style.background = 'rgba(255,255,255,0.1)';
+        });
+        
+        leftBtns.appendChild(formatBtn);
+        
+        const rightBtns = document.createElement('div');
+        rightBtns.style.cssText = 'display: flex; gap: 12px;';
+        
+        // Cancel button
+        const cancelBtn = document.createElement('button');
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid #666;
+            color: #ddd;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        cancelBtn.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+            document.body.removeChild(dialog);
+        });
+        cancelBtn.addEventListener('mouseenter', () => {
+            cancelBtn.style.background = 'rgba(255,255,255,0.15)';
+        });
+        cancelBtn.addEventListener('mouseleave', () => {
+            cancelBtn.style.background = 'rgba(255,255,255,0.1)';
+        });
+        
+        // Apply button
+        const applyBtn = document.createElement('button');
+        applyBtn.textContent = 'Apply Changes';
+        applyBtn.style.cssText = `
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #5af;
+            color: #000;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        `;
+        applyBtn.addEventListener('click', () => {
+            try {
+                // Validate and parse JSON
+                const parsed = JSON.parse(code.textContent);
+                
+                // Import with replace mode
+                const success = this.manager.importFromJSON(code.textContent, false);
+                
+                if (success) {
+                    validationMsg.style.color = '#5f5';
+                    validationMsg.textContent = '✓ Changes applied successfully!';
+                    
+                    // Close dialog after short delay
+                    setTimeout(() => {
+                        document.body.removeChild(overlay);
+                        document.body.removeChild(dialog);
+                        // Refresh main dialog
+                        this.renderDialog();
+                    }, 1000);
+                } else {
+                    validationMsg.style.color = '#f55';
+                    validationMsg.textContent = '❌ Failed to apply changes. Check console for details.';
+                }
+            } catch (error) {
+                validationMsg.style.color = '#f55';
+                validationMsg.textContent = `❌ Invalid JSON: ${error.message}`;
+            }
+        });
+        applyBtn.addEventListener('mouseenter', () => {
+            applyBtn.style.background = '#7cf';
+        });
+        applyBtn.addEventListener('mouseleave', () => {
+            applyBtn.style.background = '#5af';
+        });
+        
+        rightBtns.appendChild(cancelBtn);
+        rightBtns.appendChild(applyBtn);
+        
+        footer.appendChild(leftBtns);
+        footer.appendChild(rightBtns);
+        dialog.appendChild(footer);
+        
+        // Add to DOM
+        document.body.appendChild(overlay);
+        document.body.appendChild(dialog);
+        
+        // Focus textarea
+        setTimeout(() => textarea.focus(), 100);
     }
 
     /**

@@ -40,6 +40,16 @@ export class AspectRatioSelector {
         
         // Group presets by aspect ratio
         this.groupedPresets = AspectRatioUtils.groupPresetsByAspectRatio(this.presets);
+        
+        // Filter out hidden built-in presets from grouped presets
+        for (const ratio in this.groupedPresets) {
+            this.groupedPresets[ratio] = this.groupedPresets[ratio].filter(preset => !preset.isHidden);
+            
+            // Remove empty ratios (if all presets were hidden)
+            if (this.groupedPresets[ratio].length === 0) {
+                delete this.groupedPresets[ratio];
+            }
+        }
 
         // Create overlay
         this.overlay = document.createElement('div');

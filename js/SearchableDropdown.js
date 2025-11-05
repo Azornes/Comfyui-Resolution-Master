@@ -294,24 +294,6 @@ export class SearchableDropdown {
     }
 
     /**
-     * Filters items based on search input
-     */
-    filterItems() {
-        const searchTerm = this.searchInput.value.toLowerCase().trim();
-        
-        if (!searchTerm) {
-            this.filteredItems = [...this.items];
-        } else {
-            this.filteredItems = this.items.filter(item => 
-                item.toLowerCase().includes(searchTerm)
-            );
-        }
-
-        this.selectedIndex = -1;
-        this.renderItems();
-    }
-
-    /**
      * Renders the filtered items list
      */
     renderItems() {

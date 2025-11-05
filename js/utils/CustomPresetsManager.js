@@ -7,6 +7,7 @@ export class CustomPresetsManager {
     constructor(resolutionMasterInstance) {
         this.rm = resolutionMasterInstance;
         this.customPresets = {};
+        this.hiddenBuiltInPresets = {};
         this.loadCustomPresets();
     }
     
@@ -17,15 +18,33 @@ export class CustomPresetsManager {
         try {
             const props = this.rm.node.properties;
             if (props.customPresetsJSON && typeof props.customPresetsJSON === 'string') {
-                this.customPresets = JSON.parse(props.customPresetsJSON);
+                const data = JSON.parse(props.customPresetsJSON);
+                
+                // Support both old and new format
+                if (data.customPresets) {
+                    // New format with hiddenBuiltInPresets
+                    this.customPresets = data.customPresets || {};
+                    this.hiddenBuiltInPresets = data.hiddenBuiltInPresets || {};
+                } else {
+                    // Old format - just custom presets
+                    this.customPresets = data;
+                    this.hiddenBuiltInPresets = {};
+                }
+                
+                // Clean up empty categories
+                this.cleanEmptyCategories();
+                
                 log.debug('Loaded custom presets:', this.customPresets);
+                log.debug('Loaded hidden built-in presets:', this.hiddenBuiltInPresets);
             } else {
                 this.customPresets = {};
+                this.hiddenBuiltInPresets = {};
                 log.debug('No custom presets found, initialized empty');
             }
         } catch (error) {
             log.error('Error loading custom presets:', error);
             this.customPresets = {};
+            this.hiddenBuiltInPresets = {};
         }
     }
     
@@ -34,11 +53,32 @@ export class CustomPresetsManager {
      */
     saveCustomPresets() {
         try {
-            this.rm.node.properties.customPresetsJSON = JSON.stringify(this.customPresets);
-            log.debug('Saved custom presets to node properties');
+            // Clean up empty categories before saving
+            this.cleanEmptyCategories();
+            
+            const data = {
+                customPresets: this.customPresets,
+                hiddenBuiltInPresets: this.hiddenBuiltInPresets
+            };
+            this.rm.node.properties.customPresetsJSON = JSON.stringify(data);
+            log.debug('Saved custom presets and hidden built-in presets to node properties');
         } catch (error) {
             log.error('Error saving custom presets:', error);
         }
+    }
+    
+    /**
+     * Removes empty categories from customPresets
+     */
+    cleanEmptyCategories() {
+        Object.keys(this.customPresets).forEach(category => {
+            if (!this.customPresets[category] || 
+                typeof this.customPresets[category] !== 'object' ||
+                Object.keys(this.customPresets[category]).length === 0) {
+                delete this.customPresets[category];
+                log.debug(`Removed empty category: ${category}`);
+            }
+        });
     }
     
     /**
@@ -52,21 +92,26 @@ export class CustomPresetsManager {
     /**
      * Gets merged presets (built-in + custom)
      * Custom presets OVERRIDE built-in presets with the same name
+     * Hidden built-in presets are FILTERED OUT
      * @param {Object} builtInPresets - Built-in preset categories
-     * @returns {Object} Merged presets with custom indicator
+     * @returns {Object} Merged presets with custom indicator and hidden flag
      */
     getMergedPresets(builtInPresets) {
         // Start with deep copy of built-in presets
         const merged = {};
         
-        // First, copy all built-in presets
+        // First, copy all built-in presets (including hidden ones, but mark them)
         Object.entries(builtInPresets).forEach(([categoryName, presets]) => {
             merged[categoryName] = {};
             Object.entries(presets).forEach(([presetName, dimensions]) => {
+                // Mark as hidden if in hiddenBuiltInPresets list
+                const isHidden = this.isBuiltInPresetHidden(categoryName, presetName);
+                
                 merged[categoryName][presetName] = {
                     width: dimensions.width,
                     height: dimensions.height,
-                    isCustom: false
+                    isCustom: false,
+                    isHidden: isHidden
                 };
             });
         });
@@ -84,6 +129,7 @@ export class CustomPresetsManager {
                     width: dimensions.width,
                     height: dimensions.height,
                     isCustom: true,
+                    isHidden: false,
                     originalCategory: categoryName
                 };
             });
@@ -318,12 +364,16 @@ export class CustomPresetsManager {
     }
     
     /**
-     * Exports custom presets to JSON string
-     * @returns {string} JSON string of custom presets
+     * Exports custom presets and hidden built-in presets to JSON string
+     * @returns {string} JSON string of custom presets and hidden built-in presets
      */
     exportToJSON() {
         try {
-            return JSON.stringify(this.customPresets, null, 2);
+            const data = {
+                customPresets: this.customPresets,
+                hiddenBuiltInPresets: this.hiddenBuiltInPresets
+            };
+            return JSON.stringify(data, null, 2);
         } catch (error) {
             log.error('Error exporting presets:', error);
             return null;
@@ -332,6 +382,7 @@ export class CustomPresetsManager {
     
     /**
      * Imports presets from JSON string
+     * Supports both old format (direct presets) and new format (with customPresets and hiddenBuiltInPresets)
      * @param {string} jsonString - JSON string to import
      * @param {boolean} merge - If true, merge with existing. If false, replace.
      * @returns {boolean} Success status
@@ -345,8 +396,23 @@ export class CustomPresetsManager {
                 throw new Error('Invalid preset format');
             }
             
+            // Detect format: new format has 'customPresets' field, old format doesn't
+            let presetsToImport;
+            let hiddenToImport = {};
+            
+            if (imported.customPresets) {
+                // New format with customPresets and hiddenBuiltInPresets
+                presetsToImport = imported.customPresets;
+                hiddenToImport = imported.hiddenBuiltInPresets || {};
+                log.debug('Importing new format (with hiddenBuiltInPresets)');
+            } else {
+                // Old format - direct presets object
+                presetsToImport = imported;
+                log.debug('Importing old format (without hiddenBuiltInPresets)');
+            }
+            
             // Validate each preset
-            for (const [category, presets] of Object.entries(imported)) {
+            for (const [category, presets] of Object.entries(presetsToImport)) {
                 if (typeof presets !== 'object') {
                     throw new Error(`Invalid category format: ${category}`);
                 }
@@ -362,15 +428,29 @@ export class CustomPresetsManager {
             
             if (merge) {
                 // Merge with existing presets
-                Object.entries(imported).forEach(([category, presets]) => {
+                Object.entries(presetsToImport).forEach(([category, presets]) => {
                     if (!this.customPresets[category]) {
                         this.customPresets[category] = {};
                     }
                     Object.assign(this.customPresets[category], presets);
                 });
+                
+                // Merge hidden built-in presets
+                Object.entries(hiddenToImport).forEach(([category, hiddenPresets]) => {
+                    if (!this.hiddenBuiltInPresets[category]) {
+                        this.hiddenBuiltInPresets[category] = [];
+                    }
+                    // Merge arrays, avoiding duplicates
+                    hiddenPresets.forEach(presetName => {
+                        if (!this.hiddenBuiltInPresets[category].includes(presetName)) {
+                            this.hiddenBuiltInPresets[category].push(presetName);
+                        }
+                    });
+                });
             } else {
                 // Replace all presets
-                this.customPresets = imported;
+                this.customPresets = presetsToImport;
+                this.hiddenBuiltInPresets = hiddenToImport;
             }
             
             this.saveCustomPresets();
@@ -583,6 +663,66 @@ export class CustomPresetsManager {
         } catch (error) {
             log.error('Error moving preset:', error);
             return false;
+        }
+    }
+    
+    /**
+     * Gets all hidden built-in presets
+     * @returns {Object} Hidden built-in presets object
+     */
+    getHiddenBuiltInPresets() {
+        return this.hiddenBuiltInPresets;
+    }
+    
+    /**
+     * Checks if a built-in preset is hidden
+     * @param {string} category - Category name
+     * @param {string} name - Preset name
+     * @returns {boolean} True if hidden
+     */
+    isBuiltInPresetHidden(category, name) {
+        return !!(this.hiddenBuiltInPresets[category] && 
+                  this.hiddenBuiltInPresets[category].includes(name));
+    }
+    
+    /**
+     * Toggles visibility of a built-in preset (hide/unhide)
+     * @param {string} category - Category name
+     * @param {string} name - Preset name
+     * @returns {boolean} New visibility state (true = now hidden, false = now visible)
+     */
+    toggleBuiltInPresetVisibility(category, name) {
+        try {
+            if (!this.hiddenBuiltInPresets[category]) {
+                this.hiddenBuiltInPresets[category] = [];
+            }
+            
+            const index = this.hiddenBuiltInPresets[category].indexOf(name);
+            
+            if (index === -1) {
+                // Not hidden yet - hide it
+                this.hiddenBuiltInPresets[category].push(name);
+                log.debug(`Hidden built-in preset: ${category}/${name}`);
+                
+                this.saveCustomPresets();
+                return true; // Now hidden
+            } else {
+                // Already hidden - unhide it
+                this.hiddenBuiltInPresets[category].splice(index, 1);
+                
+                // Remove category if empty
+                if (this.hiddenBuiltInPresets[category].length === 0) {
+                    delete this.hiddenBuiltInPresets[category];
+                }
+                
+                log.debug(`Unhidden built-in preset: ${category}/${name}`);
+                
+                this.saveCustomPresets();
+                return false; // Now visible
+            }
+        } catch (error) {
+            log.error('Error toggling built-in preset visibility:', error);
+            return this.isBuiltInPresetHidden(category, name);
         }
     }
 }

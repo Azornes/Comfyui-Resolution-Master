@@ -1913,14 +1913,16 @@ class ResolutionMasterCanvas {
         };
         
         if (mode === 'list') {
-            // Create preset items with custom flag
-            const presetItems = Object.entries(presets).map(([name, dims]) => {
-                const isCustom = this.customPresetsManager.isCustomPreset(props.selectedCategory, name);
-                return {
-                    text: `${name} (${dims.width}×${dims.height})`,
-                    isCustom: isCustom
-                };
-            });
+            // Create preset items with custom flag - filter out hidden presets
+            const presetItems = Object.entries(presets)
+                .filter(([name, dims]) => !dims.isHidden)  // Filter out hidden built-in presets
+                .map(([name, dims]) => {
+                    const isCustom = this.customPresetsManager.isCustomPreset(props.selectedCategory, name);
+                    return {
+                        text: `${name} (${dims.width}×${dims.height})`,
+                        isCustom: isCustom
+                    };
+                });
             
             this.searchableDropdown.show(presetItems, {
                 event: e,

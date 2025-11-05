@@ -100,7 +100,9 @@ export class AspectRatioUtils {
                 name,
                 width: dimensions.width,
                 height: dimensions.height,
-                pixels: dimensions.width * dimensions.height
+                pixels: dimensions.width * dimensions.height,
+                isCustom: dimensions.isCustom || false,
+                isHidden: dimensions.isHidden || false
             });
         }
         
