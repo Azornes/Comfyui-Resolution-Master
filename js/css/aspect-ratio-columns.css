@@ -87,13 +87,19 @@
     border-color: var(--color-primary);
 }
 
-/* Hidden built-in preset */
-.aspect-ratio-preset-item.hidden {
-    border-color: var(--color-error);
+/* Hidden built-in preset - only red border, nothing else changes */
+/* Using .preset-is-hidden instead of .hidden to avoid conflicts with global CSS */
+.aspect-ratio-preset-item.preset-is-hidden {
+    border-color: var(--color-error) !important;
 }
 
-.aspect-ratio-preset-item.hidden:hover {
-    border-color: var(--color-error);
+.aspect-ratio-preset-item.preset-is-hidden:hover {
+    border-color: var(--color-error) !important;
+}
+
+/* Always show action button for hidden presets (so user can unhide them) */
+.aspect-ratio-preset-item.preset-is-hidden .aspect-ratio-preset-action-btn {
+    opacity: 1 !important;
 }
 
 /* Preset item for column view (flexible height) */

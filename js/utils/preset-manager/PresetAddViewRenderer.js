@@ -638,8 +638,7 @@ export class PresetAddViewRenderer {
      */
     createPresetItemForColumn(preset) {
         const presetItem = document.createElement('div');
-        presetItem.className = 'aspect-ratio-preset-item aspect-ratio-preset-item-column' + (preset.isHidden ? ' hidden' : '');
-
+        presetItem.className = 'aspect-ratio-preset-item aspect-ratio-preset-item-column' + (preset.isHidden ? ' preset-is-hidden' : '');
         // Preset name with custom icon if applicable
         const nameDiv = document.createElement('div');
         nameDiv.className = 'aspect-ratio-preset-item-name';
