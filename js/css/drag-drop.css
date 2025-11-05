@@ -1,0 +1,48 @@
+/**
+ * Drag & Drop Handler Styles
+ * Visual indicators for drag & drop operations using cascade patterns
+ * Note: Variables are defined in css-variables.css
+ */
+
+/* ===== BASE STYLES - Using attribute selector for automatic inheritance ===== */
+/* All drag-drop-indicator classes automatically get no transition */
+[class^="drag-drop-indicator-"],
+[class*=" drag-drop-indicator-"] {
+    transition: none;
+}
+
+/* ===== REORDER INDICATORS (Blue) ===== */
+/* Standard reorder within same category */
+.drag-drop-indicator-top {
+    box-shadow: inset 0 2px 0 0 var(--drag-color-reorder);
+}
+
+.drag-drop-indicator-bottom {
+    box-shadow: inset 0 -2px 0 0 var(--drag-color-reorder);
+}
+
+/* ===== MOVE INDICATORS (Orange) ===== */
+/* Move to different category */
+.drag-drop-indicator-top-move {
+    box-shadow: inset 0 2px 0 0 var(--drag-color-move);
+}
+
+.drag-drop-indicator-bottom-move {
+    box-shadow: inset 0 -2px 0 0 var(--drag-color-move);
+}
+
+/* ===== ERROR INDICATORS (Red) ===== */
+/* Conflict or invalid drop */
+.drag-drop-indicator-top-error {
+    box-shadow: inset 0 2px 0 0 var(--drag-color-error);
+}
+
+.drag-drop-indicator-bottom-error {
+    box-shadow: inset 0 -2px 0 0 var(--drag-color-error);
+}
+
+/* ===== CLEAR INDICATOR ===== */
+/* Remove all visual indicators */
+.drag-drop-no-indicator {
+    box-shadow: none;
+}

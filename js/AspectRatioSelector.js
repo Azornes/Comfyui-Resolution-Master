@@ -258,7 +258,7 @@ export class AspectRatioSelector {
             });
             
             // Update scroll indicators after filtering
-            updateColumnScrollIndicators();
+            AspectRatioUtils.updateColumnScrollIndicators(columns);
             updateHorizontalScrollIndicator();
             
             // Reposition container to center after size change
@@ -286,33 +286,8 @@ export class AspectRatioSelector {
             }
         `;
 
-        // Function to update scroll indicators for columns
-        const updateColumnScrollIndicators = () => {
-            columns.forEach(column => {
-                const presetListContainer = column.children[2];
-                let scrollIndicator = column.children[3];
-                
-                const needsIndicator = presetListContainer && 
-                                      presetListContainer.scrollHeight > presetListContainer.clientHeight;
-                
-                if (needsIndicator && !scrollIndicator) {
-                    scrollIndicator = document.createElement('div');
-                    scrollIndicator.textContent = '↓ Scroll for more';
-                    scrollIndicator.style.cssText = `
-                        color: #888;
-                        font-size: 10px;
-                        margin-top: 2px;
-                        text-align: center;
-                        padding: 2px;
-                    `;
-                    column.appendChild(scrollIndicator);
-                } else if (!needsIndicator && scrollIndicator) {
-                    column.removeChild(scrollIndicator);
-                }
-            });
-        };
-        
-        updateColumnScrollIndicators();
+        // Use unified scroll indicators from AspectRatioUtils
+        AspectRatioUtils.updateColumnScrollIndicators(columns);
 
         // Function to reposition container (center on screen)
         const repositionContainer = () => {
@@ -340,43 +315,25 @@ export class AspectRatioSelector {
         // Initial positioning
         repositionContainer();
 
-        // Function to dynamically update horizontal scroll indicator
-        const updateHorizontalScrollIndicator = () => {
-            const needsIndicator = scrollWrapper.scrollWidth > scrollWrapper.clientWidth;
-            
-            if (needsIndicator && !this.horizontalScrollIndicator) {
-                // Create and add indicator (fixed at bottom, outside scroll area)
-                this.horizontalScrollIndicator = document.createElement('div');
-                this.horizontalScrollIndicator.textContent = '→ Scroll right for more';
-                this.horizontalScrollIndicator.style.cssText = `
-                    flex-shrink: 0;
-                    color: #aaa;
-                    font-size: 10px;
-                    text-align: center;
-                    padding: 4px;
-                    border-top: 1px solid #555;
-                    cursor: pointer;
-                `;
-                
-                // Enable horizontal scrolling with mouse wheel over the indicator
-                this.horizontalScrollIndicator.addEventListener('wheel', (e) => {
-                    e.preventDefault();
-                    scrollWrapper.scrollLeft += e.deltaY;
-                });
-                
-                this.container.appendChild(this.horizontalScrollIndicator);
-            } else if (!needsIndicator && this.horizontalScrollIndicator) {
-                // Remove indicator
-                this.container.removeChild(this.horizontalScrollIndicator);
-                this.horizontalScrollIndicator = null;
-            }
-        };
+        // Use unified horizontal scroll manager from AspectRatioUtils
+        const horizontalScrollState = { indicator: null };
+        const updateHorizontalScrollIndicator = AspectRatioUtils.createHorizontalScrollManager(
+            scrollWrapper, 
+            this.container, 
+            horizontalScrollState
+        );
+        
+        // Store reference to indicator state for cleanup
+        this.horizontalScrollIndicator = horizontalScrollState;
         
         // Initial check after positioning
         updateHorizontalScrollIndicator();
         
-        // Listen for window resize to update indicator dynamically
-        this.resizeHandler = () => updateHorizontalScrollIndicator();
+        // Listen for window resize to update both indicators dynamically
+        this.resizeHandler = () => {
+            updateHorizontalScrollIndicator();
+            AspectRatioUtils.updateColumnScrollIndicators(columns);
+        };
         window.addEventListener('resize', this.resizeHandler);
 
         // Auto-focus search input for immediate typing
@@ -387,9 +344,22 @@ export class AspectRatioSelector {
     }
 
     /**
-     * Create a column for one aspect ratio
+     * Create a column for one aspect ratio (using unified AspectRatioUtils method)
      */
     createRatioColumn(ratio, presetList) {
+        // Use unified method from AspectRatioUtils with AspectRatioSelector-specific options
+        return AspectRatioUtils.createPresetColumn(ratio, presetList, {
+            selectedPreset: this.selectedPreset,
+            customPresetIcon: this.customPresetIcon,
+            onPresetClick: (presetName) => this.selectPreset(presetName)
+        });
+    }
+
+    /**
+     * DEPRECATED: Old implementation kept for reference
+     * This code has been moved to AspectRatioUtils.createPresetColumn()
+     */
+    _oldCreateRatioColumn_DEPRECATED(ratio, presetList) {
         const column = document.createElement('div');
         column.style.cssText = `
             display: flex;

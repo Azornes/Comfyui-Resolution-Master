@@ -17,6 +17,11 @@ export class SearchableDropdown {
         this.callback = null;
         this.isExpanded = false;
         
+        // Constants for layout calculations
+        this.ITEM_HEIGHT = 28; // Height per item in pixels (padding + line-height)
+        this.DEFAULT_MAX_HEIGHT = 300; // Default max-height of itemsContainer
+        this.EXPANDED_BOTTOM_MARGIN = 100; // Bottom margin when expanded
+        
         // Load custom preset icon
         this.customPresetIcon = null;
         const icons = {};
@@ -52,10 +57,7 @@ export class SearchableDropdown {
 
         // Create overlay
         this.overlay = document.createElement('div');
-        this.overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: transparent; z-index: 9998;
-        `;
+        this.overlay.className = 'searchable-dropdown-overlay';
         this.overlay.addEventListener('mousedown', () => this.hide());
         document.body.appendChild(this.overlay);
 
@@ -63,20 +65,6 @@ export class SearchableDropdown {
         this.container = document.createElement('div');
         this.container.className = 'searchable-dropdown';
         this.container.addEventListener('mousedown', (e) => e.stopPropagation());
-        this.container.style.cssText = `
-            position: fixed;
-            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-            border: 2px solid #555;
-            border-radius: 8px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-            z-index: 9999;
-            font-family: Arial, sans-serif;
-            min-width: 250px;
-            max-width: 400px;
-            max-height: 400px;
-            display: flex;
-            flex-direction: column;
-        `;
 
         // Position container
         const event = options.event;
@@ -157,50 +145,19 @@ export class SearchableDropdown {
         // Create title if provided
         if (options.title) {
             const titleContainer = document.createElement('div');
-            titleContainer.style.cssText = `
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 8px 12px 6px 12px;
-                border-bottom: 1px solid #444;
-            `;
+            titleContainer.className = 'searchable-dropdown-title-container';
             
             const title = document.createElement('div');
-            title.style.cssText = `
-                color: #fff;
-                font-size: 13px;
-                font-weight: bold;
-            `;
+            title.className = 'searchable-dropdown-title';
             title.textContent = options.title;
             
             // Add close button (X)
             const closeButton = document.createElement('button');
+            closeButton.className = 'searchable-dropdown-close-btn';
             closeButton.textContent = '×';
-            closeButton.style.cssText = `
-                background: transparent;
-                border: none;
-                color: #888;
-                font-size: 20px;
-                font-weight: bold;
-                cursor: pointer;
-                padding: 0;
-                width: 20px;
-                height: 20px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                transition: color 0.2s;
-                outline: none;
-            `;
             closeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.hide();
-            });
-            closeButton.addEventListener('mouseenter', () => {
-                closeButton.style.color = '#fff';
-            });
-            closeButton.addEventListener('mouseleave', () => {
-                closeButton.style.color = '#888';
             });
             
             titleContainer.appendChild(title);
@@ -212,65 +169,29 @@ export class SearchableDropdown {
         this.searchInput = document.createElement('input');
         this.searchInput.type = 'text';
         this.searchInput.placeholder = 'Search...';
-        this.searchInput.style.cssText = `
-            width: 100%;
-            padding: 8px 12px;
-            border: none;
-            border-bottom: 1px solid #444;
-            background: #333;
-            color: #fff;
-            font-size: 13px;
-            box-sizing: border-box;
-            outline: none;
-        `;
+        this.searchInput.className = 'searchable-dropdown-search';
         this.searchInput.addEventListener('input', () => this.filterItems());
         this.searchInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
         this.container.appendChild(this.searchInput);
 
         // Create items container
         this.itemsContainer = document.createElement('div');
-        this.itemsContainer.style.cssText = `
-            overflow-y: auto;
-            max-height: 300px;
-            padding: 5px 0;
-        `;
+        this.itemsContainer.className = 'searchable-dropdown-items';
         this.container.appendChild(this.itemsContainer);
 
         // Add expand button
         this.expandButton = document.createElement('button');
-        this.expandButton.style.cssText = `
-            padding: 4px 12px;
-            border: none;
-            border-top: 1px solid #444;
-            background: #333;
-            color: #5af;
-            font-size: 10px;
-            cursor: pointer;
-            transition: background 0.2s;
-            outline: none;
-        `;
+        this.expandButton.className = 'searchable-dropdown-expand-btn';
         this.expandButton.textContent = 'Show All';
         this.expandButton.addEventListener('click', (e) => {
             e.stopPropagation();
             this.toggleExpand();
         });
-        this.expandButton.addEventListener('mouseenter', () => {
-            this.expandButton.style.background = '#444';
-        });
-        this.expandButton.addEventListener('mouseleave', () => {
-            this.expandButton.style.background = '#333';
-        });
         this.container.appendChild(this.expandButton);
 
         // Add items count indicator
         this.countIndicator = document.createElement('div');
-        this.countIndicator.style.cssText = `
-            padding: 6px 12px;
-            border-top: 1px solid #444;
-            color: #888;
-            font-size: 10px;
-            text-align: center;
-        `;
+        this.countIndicator.className = 'searchable-dropdown-count';
         this.container.appendChild(this.countIndicator);
 
         document.body.appendChild(this.container);
@@ -301,17 +222,30 @@ export class SearchableDropdown {
 
         if (this.filteredItems.length === 0) {
             const noResults = document.createElement('div');
-            noResults.style.cssText = `
-                padding: 20px 15px;
-                color: #888;
-                text-align: center;
-                font-size: 13px;
-                line-height: 1.4;
-            `;
+            noResults.className = 'searchable-dropdown-no-results';
             
             // Show hint about custom values if allowed and search has text
             if (this.allowCustomValues && this.searchInput.value.trim()) {
-                noResults.innerHTML = 'No results found<br><span style="color: #5af; font-size: 11px;">Press Enter to use custom value</span>';
+                // Create "No results found" text
+                const noResultsText = document.createElement('div');
+                noResultsText.textContent = 'No results found';
+                noResults.appendChild(noResultsText);
+                
+                // Add button that acts like Enter key - ABOVE the hint text
+                const useCustomButton = document.createElement('button');
+                useCustomButton.className = 'searchable-dropdown-use-custom-btn';
+                useCustomButton.textContent = 'Use Custom Value';
+                useCustomButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.selectItem(this.searchInput.value.trim());
+                });
+                noResults.appendChild(useCustomButton);
+                
+                // Add hint text below the button
+                const hintText = document.createElement('div');
+                hintText.className = 'searchable-dropdown-hint';
+                hintText.textContent = 'Press Enter to use custom value';
+                noResults.appendChild(hintText);
             } else {
                 noResults.textContent = 'No results found';
             }
@@ -329,16 +263,7 @@ export class SearchableDropdown {
             const isCustom = typeof item === 'object' && item.isCustom;
             
             const itemElement = document.createElement('div');
-            itemElement.className = 'dropdown-item';
-            itemElement.style.cssText = `
-                padding: 5px 12px;
-                cursor: pointer;
-                color: #ddd;
-                font-size: 12px;
-                transition: background 0.1s;
-                user-select: none;
-                line-height: 1.3;
-            `;
+            itemElement.className = 'searchable-dropdown-item';
 
             // Add custom preset indicator (SVG icon) if this is a custom preset - on the RIGHT side
             const customIndicator = isCustom && this.customPresetIcon ? 
@@ -354,7 +279,7 @@ export class SearchableDropdown {
                     const match = itemText.substring(matchIndex, matchIndex + searchTerm.length);
                     const after = itemText.substring(matchIndex + searchTerm.length);
                     
-                    itemElement.innerHTML = `${this.escapeHtml(before)}<span style="background: #5af; color: #000; font-weight: bold; padding: 1px 2px; border-radius: 2px;">${this.escapeHtml(match)}</span>${this.escapeHtml(after)}${customIndicator}`;
+                    itemElement.innerHTML = `${this.escapeHtml(before)}<span class="searchable-dropdown-highlight">${this.escapeHtml(match)}</span>${this.escapeHtml(after)}${customIndicator}`;
                 } else {
                     itemElement.innerHTML = `${this.escapeHtml(itemText)}${customIndicator}`;
                 }
@@ -410,16 +335,14 @@ export class SearchableDropdown {
      * Updates visual selection highlighting
      */
     updateSelection() {
-        const items = this.itemsContainer.querySelectorAll('.dropdown-item');
+        const items = this.itemsContainer.querySelectorAll('.searchable-dropdown-item');
         items.forEach((item, index) => {
             if (index === this.selectedIndex) {
-                item.style.background = 'rgba(90, 170, 255, 0.3)';
-                item.style.color = '#fff';
+                item.classList.add('selected');
                 // Scroll into view if needed
                 item.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             } else {
-                item.style.background = 'transparent';
-                item.style.color = '#ddd';
+                item.classList.remove('selected');
             }
         });
     }
@@ -439,18 +362,16 @@ export class SearchableDropdown {
         
         // Show/hide expand button based on whether all items fit in default height
         if (this.expandButton) {
-            const itemHeight = 22; // Approximate height per item
-            const defaultMaxHeight = 300; // Default max-height of itemsContainer
-            const neededHeight = this.filteredItems.length * itemHeight;
+            const neededHeight = this.filteredItems.length * this.ITEM_HEIGHT;
             
-            if (neededHeight > defaultMaxHeight) {
+            if (neededHeight > this.DEFAULT_MAX_HEIGHT) {
                 this.expandButton.style.display = 'block';
             } else {
                 this.expandButton.style.display = 'none';
                 // Also reset to collapsed state if button is hidden
                 if (this.isExpanded) {
                     this.isExpanded = false;
-                    this.itemsContainer.style.maxHeight = '300px';
+                    this.itemsContainer.style.maxHeight = `${this.DEFAULT_MAX_HEIGHT}px`;
                     this.container.style.maxHeight = '400px';
                 }
             }
@@ -525,9 +446,8 @@ export class SearchableDropdown {
         if (!this.isExpanded) return;
         
         // Expand to show all items
-        const itemHeight = 22;
-        const neededHeight = this.filteredItems.length * itemHeight + 10;
-        const maxExpandedHeight = Math.min(neededHeight, window.innerHeight - 200);
+        const neededHeight = this.filteredItems.length * this.ITEM_HEIGHT + 20;
+        const maxExpandedHeight = Math.min(neededHeight, window.innerHeight - this.EXPANDED_BOTTOM_MARGIN);
         
         this.itemsContainer.style.maxHeight = `${maxExpandedHeight}px`;
         this.container.style.maxHeight = `${maxExpandedHeight + 200}px`;
@@ -560,10 +480,8 @@ export class SearchableDropdown {
         
         if (this.isExpanded) {
             // Expand to show all items
-            // Calculate needed height: items * ~22px per item + some padding
-            const itemHeight = 22;
-            const neededHeight = this.filteredItems.length * itemHeight + 10;
-            const maxExpandedHeight = Math.min(neededHeight, window.innerHeight - 200);
+            const neededHeight = this.filteredItems.length * this.ITEM_HEIGHT + 20;
+            const maxExpandedHeight = Math.min(neededHeight, window.innerHeight - this.EXPANDED_BOTTOM_MARGIN);
             
             this.itemsContainer.style.maxHeight = `${maxExpandedHeight}px`;
             this.container.style.maxHeight = `${maxExpandedHeight + 200}px`;
@@ -588,7 +506,7 @@ export class SearchableDropdown {
             });
         } else {
             // Collapse back to default
-            this.itemsContainer.style.maxHeight = '300px';
+            this.itemsContainer.style.maxHeight = `${this.DEFAULT_MAX_HEIGHT}px`;
             this.container.style.maxHeight = '400px';
             this.expandButton.textContent = 'Show All';
             

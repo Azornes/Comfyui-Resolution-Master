@@ -1,0 +1,149 @@
+/**
+ * CSS Custom Properties (Variables)
+ * Centralne definicje dla całego projektu
+ */
+
+:root {
+    /* ===== KOLORY - PRIMARY ===== */
+    --color-primary: #5af;              /* Główny niebieski */
+    --color-primary-light: #7cf;        /* Jaśniejszy niebieski (hover) */
+    --color-primary-lighter: #7bf;      /* Najjaśniejszy niebieski */
+    
+    /* ===== KOLORY - STATES ===== */
+    --color-success: #5f5;              /* Zielony sukces */
+    --color-error: #f00;                /* Czerwony błąd */
+    --color-error-light: #f55;          /* Jaśniejszy czerwony */
+    --color-error-lighter: #f77;        /* Najjaśniejszy czerwony */
+    --color-warning: #fa0;              /* Pomarańczowy warning */
+    
+    /* ===== KOLORY - GRAYSCALE ===== */
+    --color-white: #fff;
+    --color-black: #000;
+    --color-gray-100: #ddd;             /* Bardzo jasny */
+    --color-gray-200: #ccc;             /* Jasny */
+    --color-gray-300: #aaa;             /* Średnio jasny */
+    --color-gray-400: #999;             /* Disabled text */
+    --color-gray-500: #888;             /* Średni */
+    --color-gray-600: #666;             /* Średnio ciemny */
+    --color-gray-700: #555;             /* Ciemny */
+    --color-gray-800: #444;             /* Bardzo ciemny */
+    --color-gray-900: #333;             /* Najciemniejszy */
+    
+    /* ===== KOLORY - BACKGROUND ===== */
+    --color-bg-dark-1: #2a2a2a;         /* Gradient start */
+    --color-bg-dark-2: #1e1e1e;         /* Gradient end */
+    --color-bg-dark-3: #1a1a1a;         /* JSON editor container */
+    --color-bg-dark-4: #0d0d0d;         /* JSON editor line numbers */
+    --color-bg-hover: #3a3a3a;          /* Generic hover background */
+    
+    /* ===== RGBA - OVERLAYS (Dark) ===== */
+    --overlay-dark-20: rgba(0, 0, 0, 0.2);
+    --overlay-dark-50: rgba(0, 0, 0, 0.5);
+    --overlay-dark-70: rgba(0, 0, 0, 0.7);
+    --overlay-dark-80: rgba(0, 0, 0, 0.8);
+    
+    /* ===== RGBA - OVERLAYS (Light) ===== */
+    --overlay-light-05: rgba(255, 255, 255, 0.05);
+    --overlay-light-08: rgba(255, 255, 255, 0.08);
+    --overlay-light-10: rgba(255, 255, 255, 0.1);
+    --overlay-light-15: rgba(255, 255, 255, 0.15);
+    --overlay-light-20: rgba(255, 255, 255, 0.2);
+    
+    /* ===== RGBA - PRIMARY BACKGROUNDS ===== */
+    --bg-primary-10: rgba(90, 170, 255, 0.1);
+    --bg-primary-20: rgba(90, 170, 255, 0.2);
+    --bg-primary-30: rgba(90, 170, 255, 0.3);
+    --bg-primary-40: rgba(90, 170, 255, 0.4);
+    --bg-primary-50: rgba(90, 170, 255, 0.5);
+    
+    /* ===== RGBA - SUCCESS BACKGROUNDS ===== */
+    --bg-success-10: rgba(80, 255, 80, 0.1);
+    --bg-success-50: rgba(80, 255, 80, 0.5);
+    
+    /* ===== RGBA - ERROR BACKGROUNDS ===== */
+    --bg-error-10: rgba(255, 0, 0, 0.1);
+    --bg-error-20: rgba(255, 0, 0, 0.2);
+    
+    /* ===== RGBA - GRAY BACKGROUNDS ===== */
+    --bg-gray-30: rgba(100, 100, 100, 0.3);
+    --bg-gray-40: rgba(120, 120, 120, 0.4);
+    
+    /* ===== LINE HEIGHTS ===== */
+    --line-height-tight: 1.3;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.6;
+    --line-height-editor: 19.5px;       /* JSON editor specific */
+    
+    /* ===== COMMON WIDTHS ===== */
+    --width-dropdown-min: 250px;
+    --width-dropdown-max: 400px;
+    --width-input-inline-sm: 120px;
+    --width-input-inline-md: 200px;
+    --width-dialog-sm: 320px;
+    --width-dialog-md: 800px;
+    
+    /* ===== Z-INDEX SCALE ===== */
+    --z-dropdown: 9998;
+    --z-dialog: 9999;
+    --z-rename-dialog: 10000;
+    --z-json-editor: 10001;
+    
+    /* ===== SPACING ===== */
+    --spacing-1: 1px;
+    --spacing-2: 2px;
+    --spacing-3: 3px;
+    --spacing-4: 4px;
+    --spacing-5: 5px;
+    --spacing-6: 6px;
+    --spacing-8: 8px;
+    --spacing-10: 10px;
+    --spacing-12: 12px;
+    --spacing-15: 15px;
+    --spacing-16: 16px;
+    --spacing-20: 20px;
+    --spacing-24: 24px;
+    --spacing-32: 32px;
+    --spacing-40: 40px;
+    --spacing-48: 48px;
+    
+    /* ===== BORDER RADIUS ===== */
+    --radius-sm: 2px;
+    --radius-md: 4px;
+    --radius-lg: 6px;
+    --radius-xl: 8px;
+    --radius-2xl: 12px;
+    
+    /* ===== FONT SIZES ===== */
+    --font-xs: 10px;
+    --font-sm: 11px;
+    --font-md: 12px;
+    --font-base: 13px;
+    --font-lg: 14px;
+    --font-xl: 16px;
+    --font-2xl: 18px;
+    --font-3xl: 20px;
+    --font-4xl: 24px;
+    --font-5xl: 48px;
+    
+    /* ===== TRANSITIONS ===== */
+    --transition-fast: 0.1s;
+    --transition-normal: 0.2s;
+    --transition-all-fast: all 0.1s;
+    --transition-all: all 0.2s;
+    --transition-bg-fast: background 0.1s;
+    --transition-bg: background 0.2s;
+    --transition-color: color 0.2s;
+    --transition-border: border-color 0.2s;
+    --transition-opacity: opacity 0.2s;
+    
+    /* ===== SHADOWS ===== */
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.8);
+    
+    /* ===== GRADIENTS ===== */
+    --gradient-dark: linear-gradient(135deg, var(--color-bg-dark-1) 0%, var(--color-bg-dark-2) 100%);
+    
+    /* ===== DRAG & DROP ===== */
+    --drag-color-reorder: var(--color-primary);
+    --drag-color-move: var(--color-warning);
+    --drag-color-error: var(--color-error);
+}

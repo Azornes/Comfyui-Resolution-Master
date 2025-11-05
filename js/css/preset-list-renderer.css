@@ -1,0 +1,127 @@
+/**
+ * Preset List Renderer Styles
+ * Renders the preset list view with categories and presets
+ * Note: Variables are defined in css-variables.css
+ * Common styles (edit category button, preset items, cards) are in common-components.css
+ */
+
+/* Stats Header */
+.preset-list-stats {
+    background: var(--bg-primary-10);
+    border: 1px solid var(--bg-primary-30);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-12);
+    margin-bottom: var(--spacing-20);
+    color: var(--color-primary);
+    font-size: var(--font-base);
+}
+
+/* Empty State */
+.preset-list-empty {
+    text-align: center;
+    padding: 40px var(--spacing-20);
+    color: var(--color-gray-500);
+}
+
+.preset-list-empty-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-16);
+}
+
+.preset-list-empty-title {
+    font-size: var(--font-xl);
+    margin-bottom: var(--spacing-8);
+}
+
+.preset-list-empty-subtitle {
+    font-size: var(--font-base);
+}
+
+/* Category Section */
+.preset-list-category-section {
+    padding-bottom: var(--spacing-24);
+}
+
+/* Category Header */
+.preset-list-category-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-12);
+    padding-bottom: var(--spacing-8);
+    border-bottom: 1px solid var(--color-gray-800);
+    cursor: move;
+    transition: var(--transition-all);
+}
+
+.preset-list-category-header.dragging {
+    opacity: 0.5;
+}
+
+/* Category Title */
+.preset-list-category-title {
+    color: var(--color-primary);
+    font-size: var(--font-lg);
+    font-weight: bold;
+    user-select: none;
+    flex: 1;
+}
+
+.preset-list-category-icon {
+    margin-left: var(--spacing-6);
+    vertical-align: middle;
+}
+
+/* Preset Item - Dragging State */
+.preset-list-item.dragging {
+    opacity: 0.5;
+}
+
+/* Bulk Delete Checkbox */
+.preset-list-checkbox {
+    width: var(--spacing-16);
+    height: var(--spacing-16);
+    cursor: pointer;
+    margin-right: var(--spacing-8);
+}
+
+/* Keyboard focus accessibility for checkbox */
+.preset-list-checkbox:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Preset Info */
+.preset-list-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-6);
+}
+
+.preset-list-name-container {
+    color: var(--color-white);
+    font-size: var(--font-base);
+}
+
+.preset-list-name {
+    cursor: pointer;
+    user-select: none;
+}
+
+.preset-list-dims {
+    color: var(--color-gray-500);
+    font-size: var(--font-md);
+}
+
+/* Action Buttons */
+.preset-list-actions {
+    display: flex;
+    gap: var(--spacing-3);
+}
+
+/* Keyboard focus accessibility for action buttons */
+.preset-list-actions button:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}

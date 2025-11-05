@@ -1,0 +1,114 @@
+/**
+ * JSON Editor Dialog Styles
+ * JSON editor with syntax highlighting and Undo/Redo
+ * Note: Variables are defined in css-variables.css
+ * Common styles (overlay, dialog, header, title, close button, footer, buttons, validation) are in common-components.css
+ */
+
+/* Dialog Container - Component-specific sizing */
+.json-editor-dialog {
+    width: 90vw;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    z-index: var(--z-json-editor);
+}
+
+/* Overlay - Component-specific z-index */
+.json-editor-overlay {
+    z-index: var(--z-rename-dialog);
+}
+
+/* Info Message */
+.json-editor-info {
+    padding: var(--spacing-12) var(--spacing-20);
+    background: var(--bg-primary-10);
+    border-bottom: 1px solid var(--bg-primary-30);
+    color: var(--color-primary);
+    font-size: var(--font-md);
+    line-height: 1.5;
+}
+
+/* Content Area */
+.json-editor-content {
+    flex: 1;
+    padding: var(--spacing-20);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Editor Container */
+.json-editor-container {
+    flex: 1;
+    display: flex;
+    border: 1px solid var(--color-gray-700);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--color-bg-dark-3);
+}
+
+.json-editor-container:focus-within {
+    border-color: var(--color-primary);
+}
+
+/* Line Numbers */
+.json-editor-line-numbers {
+    padding: var(--spacing-12) var(--spacing-8) var(--spacing-12) var(--spacing-4);
+    background: var(--color-bg-dark-4);
+    color: var(--color-gray-600);
+    font-family: 'Courier New', monospace;
+    font-size: var(--font-base);
+    line-height: var(--line-height-normal);
+    text-align: right;
+    user-select: none;
+    border-right: 1px solid var(--color-gray-900);
+    overflow: hidden;
+    min-width: 50px;
+}
+
+.json-editor-line-number {
+    height: var(--line-height-editor);
+}
+
+/* Editor Wrapper */
+.json-editor-wrapper {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+
+/* Code Editor */
+.json-editor-pre {
+    margin: 0;
+    padding: var(--spacing-12);
+    background: transparent;
+    font-family: 'Courier New', monospace;
+    font-size: var(--font-base);
+    line-height: var(--line-height-normal);
+    overflow: visible;
+}
+
+.json-editor-code {
+    outline: none;
+    display: block;
+    white-space: pre;
+    color: var(--color-gray-100);
+}
+
+/* Validation States - border colors for container */
+.json-editor-container.valid {
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+
+.json-editor-container.invalid {
+    border-color: var(--color-error-light);
+}
+
+/* Footer Sections */
+.json-editor-footer-left,
+.json-editor-footer-right {
+    display: flex;
+    gap: var(--spacing-12);
+}

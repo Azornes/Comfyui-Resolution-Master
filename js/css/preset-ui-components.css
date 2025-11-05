@@ -1,0 +1,55 @@
+/**
+ * Preset UI Components Styles
+ * UI component helpers for PresetManagerDialog
+ * Note: Variables are defined in css-variables.css
+ * Common styles (form elements, action buttons, footer buttons, cards) are in common-components.css
+ */
+
+/* Form Group - Component-specific layout */
+.preset-ui-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-6);
+}
+
+/* Preset Card Name - Component-specific styling */
+.preset-ui-card-name {
+    color: var(--color-white);
+    font-size: var(--font-base);
+    font-weight: bold;
+    margin-bottom: var(--spacing-4);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Preset Card Dimensions - Component-specific styling */
+.preset-ui-card-dims {
+    color: var(--color-gray-500);
+    font-size: var(--font-md);
+    margin-bottom: var(--spacing-6);
+}
+
+/* Preset Card Delete Button - Component-specific styling */
+.preset-ui-card-delete-btn {
+    width: 100%;
+    padding: var(--spacing-4);
+    border: 1px solid var(--color-gray-600);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 0, 0, 0.1);
+    color: var(--color-error-light);
+    font-size: var(--font-md);
+    cursor: pointer;
+    transition: var(--transition-all);
+}
+
+.preset-ui-card-delete-btn:hover {
+    background: rgba(255, 0, 0, 0.2);
+}
+
+.preset-ui-card-delete-icon {
+    width: var(--spacing-12);
+    height: var(--spacing-12);
+    display: block;
+    margin: 0 auto;
+}

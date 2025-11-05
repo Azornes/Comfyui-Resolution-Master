@@ -125,4 +125,143 @@ export class AspectRatioUtils {
         
         return sortedGrouped;
     }
+
+    /**
+     * Creates a preset column with list of presets for a given aspect ratio
+     * Unified method used by both AspectRatioSelector and PresetAddViewRenderer
+     * @param {string} ratio - Aspect ratio string (e.g., "16:9")
+     * @param {Array} presetList - Array of preset objects
+     * @param {Object} options - Configuration options
+     * @param {Function} options.renderPresetItem - Function to render individual preset item
+     * @returns {HTMLElement} Column element
+     */
+    static createPresetColumn(ratio, presetList, options = {}) {
+        const column = document.createElement('div');
+        column.className = 'aspect-ratio-column';
+
+        // Icon at the top
+        const firstPreset = presetList[0];
+        const iconContainer = document.createElement('div');
+        iconContainer.className = 'aspect-ratio-column-icon';
+        iconContainer.innerHTML = this.getAspectRatioIcon(firstPreset.width, firstPreset.height);
+        column.appendChild(iconContainer);
+
+        // Ratio text below icon
+        const ratioText = document.createElement('div');
+        ratioText.className = 'aspect-ratio-column-title';
+        ratioText.textContent = ratio;
+        column.appendChild(ratioText);
+
+        // Preset list (vertical scrollable)
+        const presetListContainer = document.createElement('div');
+        presetListContainer.className = 'aspect-ratio-column-list';
+
+        // Render each preset using provided function
+        presetList.forEach(preset => {
+            const presetItem = options.renderPresetItem 
+                ? options.renderPresetItem(preset)
+                : this.createDefaultPresetItem(preset, options);
+            presetListContainer.appendChild(presetItem);
+        });
+
+        column.appendChild(presetListContainer);
+        return column;
+    }
+
+    /**
+     * Creates a default preset item (used by AspectRatioSelector)
+     * @param {Object} preset - Preset object
+     * @param {Object} options - Configuration options
+     * @returns {HTMLElement} Preset item element
+     */
+    static createDefaultPresetItem(preset, options = {}) {
+        const { selectedPreset, customPresetIcon, onPresetClick } = options;
+        const isSelected = selectedPreset === preset.name;
+        
+        const presetItem = document.createElement('div');
+        presetItem.className = 'aspect-ratio-preset-item' + (isSelected ? ' selected' : '');
+        presetItem.setAttribute('data-preset-item', 'true');
+        presetItem.setAttribute('data-preset-name', preset.name);
+        presetItem.setAttribute('data-preset-dimensions', `${preset.width}×${preset.height}`);
+
+        // Preset name with custom icon if applicable
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'aspect-ratio-preset-item-name';
+        const customIcon = preset.isCustom && customPresetIcon ? 
+            `<img src="${customPresetIcon.src}" class="aspect-ratio-preset-custom-icon">` : '';
+        nameDiv.innerHTML = `${preset.name}${customIcon}`;
+        
+        // Dimensions below name
+        const dimensionsDiv = document.createElement('div');
+        dimensionsDiv.className = 'aspect-ratio-preset-item-dims';
+        dimensionsDiv.textContent = `${preset.width}×${preset.height}`;
+
+        presetItem.appendChild(nameDiv);
+        presetItem.appendChild(dimensionsDiv);
+
+        // Click handler
+        if (onPresetClick) {
+            presetItem.addEventListener('click', () => onPresetClick(preset.name));
+        }
+
+        return presetItem;
+    }
+
+    /**
+     * Updates scroll indicators for columns (adds "↓ Scroll for more" if needed)
+     * @param {Array} columns - Array of column elements
+     */
+    static updateColumnScrollIndicators(columns) {
+        columns.forEach(column => {
+            // Preset list container is the 3rd child (after icon and ratio text)
+            const presetListContainer = column.children[2];
+            let scrollIndicator = column.children[3];
+            
+            const needsIndicator = presetListContainer && 
+                                  presetListContainer.scrollHeight > presetListContainer.clientHeight;
+            
+            if (needsIndicator && !scrollIndicator) {
+                scrollIndicator = document.createElement('div');
+                scrollIndicator.className = 'aspect-ratio-column-scroll-indicator';
+                scrollIndicator.textContent = '↓ Scroll for more';
+                column.appendChild(scrollIndicator);
+            } else if (!needsIndicator && scrollIndicator) {
+                column.removeChild(scrollIndicator);
+            }
+        });
+    }
+
+    /**
+     * Creates and manages horizontal scroll indicator ("→ Scroll right for more")
+     * @param {HTMLElement} scrollWrapper - The scrollable wrapper element
+     * @param {HTMLElement} container - The parent container to append indicator to
+     * @param {Object} state - Object to store indicator reference {indicator: null}
+     * @returns {Function} Update function to call when checking if indicator is needed
+     */
+    static createHorizontalScrollManager(scrollWrapper, container, state) {
+        const updateIndicator = () => {
+            const needsIndicator = scrollWrapper.scrollWidth > scrollWrapper.clientWidth;
+            
+            if (needsIndicator && !state.indicator) {
+                // Create and add indicator
+                state.indicator = document.createElement('div');
+                state.indicator.className = 'aspect-ratio-horizontal-scroll-indicator';
+                state.indicator.textContent = '→ Scroll right for more';
+                
+                // Enable horizontal scrolling with mouse wheel over the indicator
+                state.indicator.addEventListener('wheel', (e) => {
+                    e.preventDefault();
+                    scrollWrapper.scrollLeft += e.deltaY;
+                });
+                
+                container.appendChild(state.indicator);
+            } else if (!needsIndicator && state.indicator) {
+                // Remove indicator
+                container.removeChild(state.indicator);
+                state.indicator = null;
+            }
+        };
+        
+        return updateIndicator;
+    }
 }

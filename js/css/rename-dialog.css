@@ -1,0 +1,53 @@
+/**
+ * Rename Dialog Styles
+ * Dialogs for renaming categories and presets
+ * Note: Variables are defined in css-variables.css
+ * Common styles (overlay, dialog, title, input, label, validation, buttons, inline inputs) are in common-components.css
+ */
+
+/* Dialog Container - Component-specific sizing */
+.rename-dialog {
+    padding: var(--spacing-20);
+    z-index: var(--z-rename-dialog);
+    min-width: var(--width-dialog-sm);
+}
+
+/* Overlay - Component-specific z-index */
+.rename-dialog-overlay {
+    z-index: var(--z-dialog);
+}
+
+/* Responsive: smaller padding on mobile */
+@media (max-width: 480px) {
+    .rename-dialog {
+        padding: var(--spacing-12);
+        min-width: 280px;
+    }
+}
+
+/* Input Group - Component-specific styling */
+.rename-dialog-input-group {
+    margin-bottom: var(--spacing-10);
+}
+
+/* Buttons Container - Component-specific layout */
+.rename-dialog-buttons {
+    display: flex;
+    gap: var(--spacing-10);
+    justify-content: flex-end;
+}
+
+/* Renameable Elements - Component-specific cursor and user-select */
+.rename-category-title {
+    color: var(--color-primary);
+    font-size: var(--font-lg);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Preset Name Element (for double-click rename) */
+.rename-preset-name {
+    cursor: pointer;
+    user-select: none;
+}

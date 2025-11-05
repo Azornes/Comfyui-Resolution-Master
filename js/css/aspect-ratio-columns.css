@@ -1,0 +1,231 @@
+/**
+ * Aspect Ratio Columns Styles
+ * Shared styles for aspect ratio column rendering
+ * Used by AspectRatioSelector, AspectRatioUtils, and PresetAddViewRenderer
+ * Note: Variables are defined in css-variables.css
+ */
+
+/* ========================================
+   COLUMN CONTAINER
+   ======================================== */
+
+.aspect-ratio-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 auto;
+    background: var(--overlay-dark-20);
+    border: 1px solid var(--color-gray-800);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-3);
+}
+
+/* ========================================
+   COLUMN HEADER
+   ======================================== */
+
+.aspect-ratio-column-icon {
+    color: var(--color-primary);
+    margin-bottom: var(--spacing-2);
+}
+
+.aspect-ratio-column-title {
+    color: var(--color-primary);
+    font-size: var(--font-base);
+    font-weight: bold;
+    margin-bottom: var(--spacing-3);
+    padding-bottom: var(--spacing-2);
+    border-bottom: 1px solid var(--color-gray-800);
+    width: 100%;
+    text-align: center;
+}
+
+/* ========================================
+   PRESET LIST (Scrollable)
+   ======================================== */
+
+.aspect-ratio-column-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-2);
+    width: 100%;
+    max-height: 400px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    scrollbar-gutter: stable;
+}
+
+/* ========================================
+   PRESET ITEMS
+   ======================================== */
+
+.aspect-ratio-preset-item {
+    padding: var(--spacing-3) var(--spacing-4);
+    background: var(--overlay-light-05);
+    border: 1px solid var(--color-gray-800);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition-all);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+}
+
+.aspect-ratio-preset-item:hover {
+    background: var(--overlay-light-15);
+    border-color: var(--color-gray-600);
+}
+
+/* Selected state */
+.aspect-ratio-preset-item.selected {
+    background: var(--bg-primary-30);
+    border-color: var(--color-primary);
+}
+
+.aspect-ratio-preset-item.selected:hover {
+    background: var(--bg-primary-30);
+    border-color: var(--color-primary);
+}
+
+/* Hidden built-in preset */
+.aspect-ratio-preset-item.hidden {
+    border-color: var(--color-error);
+}
+
+.aspect-ratio-preset-item.hidden:hover {
+    border-color: var(--color-error);
+}
+
+/* Preset item for column view (flexible height) */
+.aspect-ratio-preset-item-column {
+    position: relative;
+    min-height: 38px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+/* ========================================
+   PRESET ITEM CONTENT
+   ======================================== */
+
+.aspect-ratio-preset-item-name {
+    color: var(--color-gray-100);
+    font-size: var(--font-lg);
+    font-weight: normal;
+    margin-bottom: var(--spacing-1);
+    word-wrap: break-word;
+    word-break: break-word;
+    max-width: 100px;
+}
+
+/* Selected state name */
+.aspect-ratio-preset-item.selected .aspect-ratio-preset-item-name {
+    color: var(--color-white);
+    font-weight: bold;
+}
+
+.aspect-ratio-preset-item-dims {
+    color: var(--color-gray-500);
+    font-size: var(--font-base);
+}
+
+/* Selected state dimensions */
+.aspect-ratio-preset-item.selected .aspect-ratio-preset-item-dims {
+    color: var(--color-primary);
+}
+
+/* Custom preset icon */
+.aspect-ratio-preset-custom-icon {
+    width: var(--spacing-12);
+    height: var(--spacing-12);
+    margin-left: var(--spacing-3);
+    vertical-align: middle;
+}
+
+/* ========================================
+   ACTION BUTTONS (Delete/Toggle)
+   ======================================== */
+
+.aspect-ratio-preset-action-btn {
+    position: absolute;
+    top: var(--spacing-2);
+    right: var(--spacing-2);
+    padding: var(--spacing-2) var(--spacing-4);
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-white);
+    font-size: var(--font-xs);
+    cursor: pointer;
+    opacity: 0;
+    transition: var(--transition-opacity), var(--transition-bg);
+}
+
+.aspect-ratio-preset-item:hover .aspect-ratio-preset-action-btn {
+    opacity: 1;
+}
+
+.aspect-ratio-preset-action-btn.delete {
+    background: rgba(255, 80, 80, 0.8);
+}
+
+.aspect-ratio-preset-action-btn.hide {
+    background: rgba(255, 200, 0, 0.8);
+}
+
+.aspect-ratio-preset-action-btn.unhide {
+    background: rgba(80, 255, 80, 0.8);
+}
+
+.aspect-ratio-preset-action-icon {
+    width: var(--spacing-12);
+    height: var(--spacing-12);
+    display: block;
+}
+
+/* ========================================
+   SCROLL INDICATORS
+   ======================================== */
+
+/* Vertical scroll indicator (↓ Scroll for more) */
+.aspect-ratio-column-scroll-indicator {
+    color: var(--color-gray-500);
+    font-size: var(--font-xs);
+    margin-top: var(--spacing-2);
+    text-align: center;
+    padding: var(--spacing-2);
+}
+
+/* Horizontal scroll indicator (→ Scroll right for more) */
+.aspect-ratio-horizontal-scroll-indicator {
+    flex-shrink: 0;
+    color: var(--color-gray-300);
+    font-size: var(--font-xs);
+    text-align: center;
+    padding: var(--spacing-4);
+    border-top: 1px solid var(--color-gray-700);
+    cursor: pointer;
+}
+
+/* ========================================
+   CUSTOM SCROLLBAR
+   ======================================== */
+
+.aspect-ratio-scrollable::-webkit-scrollbar {
+    height: 12px;
+    width: 12px;
+}
+
+.aspect-ratio-scrollable::-webkit-scrollbar-track {
+    background: var(--overlay-dark-20);
+    border-radius: var(--radius-md);
+}
+
+.aspect-ratio-scrollable::-webkit-scrollbar-thumb {
+    background: var(--color-gray-600);
+    border-radius: var(--radius-lg);
+    border: 2px solid var(--overlay-dark-20);
+}
+
+.aspect-ratio-scrollable::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gray-500);
+}
