@@ -287,7 +287,7 @@ export class PresetListRenderer {
         const isTrulyCustomCategory = !builtInPresets.hasOwnProperty(category);
         const customIcon = isTrulyCustomCategory ? getIconHtml(this.parentDialog.customPresetIcon, '', 14, 'margin-left: 6px; vertical-align: middle;') : '';
         categoryTitle.innerHTML = `${category} (${Object.keys(presets).length})${customIcon || ''}`;
-        categoryTitle.title = 'Double-click to rename category, drag to reorder';
+        
         
         categoryTitle.addEventListener('dblclick', (e) => {
             e.stopPropagation();
@@ -304,7 +304,7 @@ export class PresetListRenderer {
         const editCategoryBtn = document.createElement('button');
         editCategoryBtn.className = 'preset-list-edit-category-btn';
         editCategoryBtn.innerHTML = getIconHtml(this.parentDialog.editIcon, '✏️');
-        editCategoryBtn.title = `Edit ${category} category`;
+        
         
         editCategoryBtn.addEventListener('click', () => {
             this.parentDialog.currentView = 'add';
@@ -470,7 +470,7 @@ export class PresetListRenderer {
         const nameElement = document.createElement('strong');
         nameElement.className = 'preset-list-name';
         nameElement.textContent = name;
-        nameElement.title = 'Double-click to rename preset';
+        
 
         nameElement.addEventListener('dblclick', (e) => {
             e.stopPropagation();

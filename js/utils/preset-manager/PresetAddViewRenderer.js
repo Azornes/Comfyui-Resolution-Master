@@ -105,7 +105,7 @@ export class PresetAddViewRenderer {
         const renameCategoryBtn = document.createElement('button');
         renameCategoryBtn.className = 'preset-add-rename-category-btn';
         renameCategoryBtn.innerHTML = getIconHtml(this.parentDialog.editIcon, '✏️');
-        renameCategoryBtn.title = `Rename "${this.parentDialog.selectedCategory}" category`;
+        
 
         renameCategoryBtn.addEventListener('click', () => {
             this.parentDialog.renameDialogManager.showRenameCategoryDialog(this.parentDialog.selectedCategory);
@@ -514,7 +514,7 @@ export class PresetAddViewRenderer {
         const addButton = document.createElement('button');
         addButton.id = 'quick-add-button';
         addButton.textContent = isEditMode ? 'OK' : '+';
-        addButton.title = isEditMode ? 'Save changes' : 'Add preset';
+        
         const buttonFontSize = isEditMode ? '14px' : '20px';
         
         addButton.style.cssText = `
@@ -545,7 +545,7 @@ export class PresetAddViewRenderer {
         if (this.parentDialog.editingPresetName) {
             const cancelButton = document.createElement('button');
             cancelButton.textContent = '✕';
-            cancelButton.title = 'Cancel editing';
+            
             cancelButton.style.cssText = `
                 padding: 4px 12px;
                 border: 1px solid #666;
@@ -693,7 +693,7 @@ export class PresetAddViewRenderer {
     createDeleteButton(preset) {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'aspect-ratio-preset-action-btn delete';
-        deleteBtn.title = 'Delete preset';
+        
         
         if (this.parentDialog.deleteIcon) {
             deleteBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="aspect-ratio-preset-action-icon">`;
@@ -720,7 +720,7 @@ export class PresetAddViewRenderer {
         
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'aspect-ratio-preset-action-btn' + (isHidden ? ' unhide' : ' hide');
-        toggleBtn.title = isHidden ? 'Unhide preset' : 'Hide preset';
+        
         
         if (this.parentDialog.deleteIcon) {
             toggleBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="aspect-ratio-preset-action-icon">`;

@@ -1,11 +1,15 @@
 // JSONEditorDialog.js - JSON editor with syntax highlighting and Undo/Redo
 
+import { TooltipManager } from './TooltipManager.js';
+import { presetManagerTooltips } from '../ResolutionMasterConfig.js';
+
 /**
  * JSON Editor Dialog with advanced features
  */
 export class JSONEditorDialog {
     constructor(parentDialog) {
         this.parentDialog = parentDialog;
+        this.tooltipManager = null;
     }
 
     /**
@@ -14,6 +18,12 @@ export class JSONEditorDialog {
     async show() {
         // Get current JSON
         const currentJSON = this.parentDialog.manager.exportToJSON();
+        
+        // Initialize tooltip manager for this dialog
+        this.tooltipManager = new TooltipManager({
+            delay: 500,
+            maxWidth: 300
+        });
         
         // Create overlay
         const overlay = document.createElement('div');
@@ -297,6 +307,11 @@ export class JSONEditorDialog {
         
         // Footer with buttons
         const footer = this.createFooter(code, editorContainer, validationMsg, () => {
+            // Clean up tooltips before closing
+            if (this.tooltipManager) {
+                this.tooltipManager.destroy();
+                this.tooltipManager = null;
+            }
             document.body.removeChild(overlay);
             document.body.removeChild(dialog);
         });
@@ -305,6 +320,9 @@ export class JSONEditorDialog {
         // Add to DOM
         document.body.appendChild(overlay);
         document.body.appendChild(dialog);
+        
+        // Attach tooltips to buttons
+        this.attachTooltips(dialog);
     }
 
     /**
@@ -321,6 +339,7 @@ export class JSONEditorDialog {
         title.textContent = '{ } JSON Editor';
         
         const closeBtn = document.createElement('button');
+        closeBtn.id = 'json-editor-close-btn';
         closeBtn.className = 'json-editor-close-btn';
         closeBtn.textContent = '✕';
         closeBtn.addEventListener('click', onClose);
@@ -392,6 +411,7 @@ export class JSONEditorDialog {
      */
     createFormatButton(code, validationMsg, editorContainer) {
         const formatBtn = document.createElement('button');
+        formatBtn.id = 'json-editor-format-btn';
         formatBtn.className = 'json-editor-format-btn';
         formatBtn.textContent = '{ } Format JSON';
         formatBtn.addEventListener('click', () => {
@@ -428,6 +448,7 @@ export class JSONEditorDialog {
      */
     createCancelButton(onClose) {
         const cancelBtn = document.createElement('button');
+        cancelBtn.id = 'json-editor-cancel-btn';
         cancelBtn.className = 'json-editor-cancel-btn';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.addEventListener('click', onClose);
@@ -444,6 +465,7 @@ export class JSONEditorDialog {
      */
     createApplyButton(code, validationMsg, onClose) {
         const applyBtn = document.createElement('button');
+        applyBtn.id = 'json-editor-apply-btn';
         applyBtn.className = 'json-editor-apply-btn';
         applyBtn.textContent = 'Apply Changes';
         applyBtn.addEventListener('click', () => {
@@ -475,5 +497,24 @@ export class JSONEditorDialog {
         });
         
         return applyBtn;
+    }
+
+    /**
+     * Attaches tooltips to JSON editor buttons
+     * @param {HTMLElement} dialog - Dialog container
+     */
+    attachTooltips(dialog) {
+        if (!this.tooltipManager) return;
+        
+        // Attach tooltips to all buttons with IDs
+        const closeBtn = dialog.querySelector('#json-editor-close-btn');
+        const formatBtn = dialog.querySelector('#json-editor-format-btn');
+        const cancelBtn = dialog.querySelector('#json-editor-cancel-btn');
+        const applyBtn = dialog.querySelector('#json-editor-apply-btn');
+        
+        if (closeBtn) this.tooltipManager.attach(closeBtn, presetManagerTooltips['json-editor-close-btn']);
+        if (formatBtn) this.tooltipManager.attach(formatBtn, presetManagerTooltips['json-editor-format-btn']);
+        if (cancelBtn) this.tooltipManager.attach(cancelBtn, presetManagerTooltips['json-editor-cancel-btn']);
+        if (applyBtn) this.tooltipManager.attach(applyBtn, presetManagerTooltips['json-editor-apply-btn']);
     }
 }

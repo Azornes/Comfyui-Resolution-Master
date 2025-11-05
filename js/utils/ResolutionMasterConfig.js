@@ -46,6 +46,38 @@ export const tooltips = {
     presetsHeader: "Click to collapse/expand Presets section"
 };
 
+// Tooltips for Preset Manager Dialog
+export const presetManagerTooltips = {
+    // Footer buttons
+    'add-preset-btn': 'Add a new custom preset to manage your resolution presets',
+    'delete-selected-btn': 'Delete all selected presets at once (use Shift+Click to select multiple)',
+    'import-btn': 'Import custom presets from a JSON file',
+    'export-btn': 'Export your custom presets to a JSON file for backup or sharing',
+    'edit-json-btn': 'Edit presets directly in JSON format with syntax highlighting',
+    'close-btn': 'Close the Preset Manager dialog',
+    'back-btn': 'Return to the preset list view',
+    
+    // Add/Edit view
+    'category-select-btn': 'Select or create a category for your presets',
+    'rename-category-btn': 'Rename this category',
+    'quick-add-button': 'Add or save this preset to the selected category',
+    
+    // List view
+    'manage-presets-btn': 'Open the preset manager to add, edit, or delete custom presets',
+    'preset-edit-btn': 'Edit this preset\'s name and dimensions',
+    'preset-delete-btn': 'Delete this custom preset',
+    'preset-toggle-btn': 'Toggle visibility of this built-in preset',
+    'category-header': 'Double-click to rename, drag to reorder categories',
+    'preset-item-name': 'Double-click to rename this preset',
+    'preset-checkbox': 'Select for bulk deletion (Shift+Click for range selection)',
+    
+    // JSON Editor Dialog
+    'json-editor-close-btn': 'Close JSON editor without saving changes',
+    'json-editor-format-btn': 'Auto-format JSON with proper indentation (Ctrl+Shift+F)',
+    'json-editor-cancel-btn': 'Close editor and discard any changes',
+    'json-editor-apply-btn': 'Save changes and update presets configuration'
+};
+
 export const presetCategories = {
     'Standard': {
         '1:1 Square': { width: 512, height: 512 },

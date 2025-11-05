@@ -229,7 +229,7 @@ export class RenameDialogManager {
         const newTitle = document.createElement('div');
         newTitle.className = 'rename-category-title';
         newTitle.textContent = text;
-        newTitle.title = 'Double-click to rename category';
+        
         newTitle.addEventListener('dblclick', () => {
             this.startRenamingCategory(newTitle, categoryName);
         });
@@ -344,7 +344,7 @@ export class RenameDialogManager {
         const newNameElement = document.createElement('strong');
         newNameElement.className = 'rename-preset-name';
         newNameElement.textContent = text;
-        newNameElement.title = 'Double-click to rename preset';
+        
         newNameElement.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             this.startRenamingPreset(newNameElement, category, presetName, dims);

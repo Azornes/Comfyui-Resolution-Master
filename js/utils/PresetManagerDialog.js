@@ -10,12 +10,14 @@ import { createModuleLogger } from "./LoggerUtils.js";
 import { SearchableDropdown } from "../SearchableDropdown.js";
 import { AspectRatioUtils } from "./AspectRatioUtils.js";
 import { loadIcons, getIconHtml } from "./IconUtils.js";
+import { presetManagerTooltips } from "./ResolutionMasterConfig.js";
 import { PresetUIComponents } from './preset-manager/PresetUIComponents.js';
 import { DragDropHandler } from './preset-manager/DragDropHandler.js';
 import { RenameDialogManager } from './preset-manager/RenameDialogManager.js';
 import { JSONEditorDialog } from './preset-manager/JSONEditorDialog.js';
 import { PresetListRenderer } from './preset-manager/PresetListRenderer.js';
 import { PresetAddViewRenderer } from './preset-manager/PresetAddViewRenderer.js';
+import { TooltipManager } from './preset-manager/TooltipManager.js';
 
 // Import Prism.js for syntax highlighting (global object)
 const prismScriptLoaded = await import('../lib/prism.js');
@@ -76,6 +78,94 @@ export class PresetManagerDialog {
         this.jsonEditor = new JSONEditorDialog(this);
         this.listRenderer = new PresetListRenderer(this);
         this.addViewRenderer = new PresetAddViewRenderer(this);
+        
+        // Initialize tooltip manager
+        this.tooltipManager = new TooltipManager({
+            delay: 500,
+            maxWidth: 300
+        });
+        
+        // Register tooltips for common elements
+        this.registerTooltips();
+    }
+
+    /**
+     * Registers all tooltips for the dialog
+     */
+    registerTooltips() {
+        // Use tooltips from ResolutionMasterConfig.js
+        this.tooltipManager.registerTooltips(presetManagerTooltips);
+    }
+
+    /**
+     * Attaches tooltips to rendered elements
+     */
+    attachTooltips() {
+        // Attach tooltips to footer buttons
+        const footerButtons = this.container.querySelectorAll('.preset-manager-footer button');
+        footerButtons.forEach(btn => {
+            if (btn.id) {
+                this.tooltipManager.attach(btn);
+            }
+        });
+        
+        // Attach tooltips to action buttons in list view
+        const editButtons = this.container.querySelectorAll('.preset-list-edit-btn, .preset-add-rename-category-btn');
+        editButtons.forEach(btn => {
+            this.tooltipManager.attach(btn, 'Edit this item');
+        });
+        
+        const deleteButtons = this.container.querySelectorAll('.aspect-ratio-preset-action-btn.delete');
+        deleteButtons.forEach(btn => {
+            this.tooltipManager.attach(btn, 'Delete this custom preset');
+        });
+        
+        const toggleButtons = this.container.querySelectorAll('.aspect-ratio-preset-action-btn.hide');
+        toggleButtons.forEach(btn => {
+            this.tooltipManager.attach(btn, 'Hide this built-in preset from the main selector');
+        });
+        
+        const unhideButtons = this.container.querySelectorAll('.aspect-ratio-preset-action-btn.unhide');
+        unhideButtons.forEach(btn => {
+            this.tooltipManager.attach(btn, 'Show this hidden preset in the main selector');
+        });
+        
+        // Attach to category headers
+        const categoryHeaders = this.container.querySelectorAll('.preset-list-category-header');
+        categoryHeaders.forEach(header => {
+            this.tooltipManager.attach(header, 'Double-click to rename, drag to reorder this category');
+        });
+        
+        // Attach to preset names
+        const presetNames = this.container.querySelectorAll('.preset-list-name');
+        presetNames.forEach(name => {
+            this.tooltipManager.attach(name, 'Double-click to rename this preset');
+        });
+        
+        // Attach to checkboxes
+        const checkboxes = this.container.querySelectorAll('.preset-list-checkbox');
+        checkboxes.forEach(cb => {
+            this.tooltipManager.attach(cb, 'Select for bulk deletion (use Shift+Click to select a range)');
+        });
+        
+        // Attach to category select button in add view
+        const categoryBtn = this.container.querySelector('#category-select-btn');
+        if (categoryBtn) {
+            this.tooltipManager.attach(categoryBtn, 'Select or create a category for your presets');
+        }
+        
+        // Attach to rename category button in add view
+        const renameCategoryBtn = this.container.querySelector('.preset-add-rename-category-btn');
+        if (renameCategoryBtn) {
+            this.tooltipManager.attach(renameCategoryBtn, 'Rename this category');
+        }
+        
+        // Attach to quick add button
+        const quickAddBtn = this.container.querySelector('#quick-add-button');
+        if (quickAddBtn) {
+            const isEditing = this.editingPresetName !== null;
+            this.tooltipManager.attach(quickAddBtn, isEditing ? 'Save changes to this preset' : 'Add this preset to the selected category');
+        }
     }
 
     /**
@@ -143,6 +233,9 @@ export class PresetManagerDialog {
 
         // Footer with action buttons
         this.renderFooter();
+        
+        // Attach tooltips to rendered elements
+        this.attachTooltips();
     }
 
     /**
@@ -740,6 +833,17 @@ export class PresetManagerDialog {
         // Close SearchableDropdown if it's open
         if (this.searchableDropdown) {
             this.searchableDropdown.hide();
+        }
+        
+        // Clean up tooltips
+        if (this.tooltipManager) {
+            this.tooltipManager.destroy();
+            // Recreate for next use
+            this.tooltipManager = new TooltipManager({
+                delay: 500,
+                maxWidth: 300
+            });
+            this.registerTooltips();
         }
 
         if (this.container && this.container.parentNode) {

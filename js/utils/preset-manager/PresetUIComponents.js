@@ -76,7 +76,7 @@ export class PresetUIComponents {
         } else {
             btn.textContent = icon;
         }
-        btn.title = tooltip;
+         (tooltip parameter kept for compatibility)
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -125,7 +125,7 @@ export class PresetUIComponents {
         const nameDiv = document.createElement('div');
         nameDiv.className = 'preset-ui-card-name';
         nameDiv.textContent = name;
-        nameDiv.title = name; // Tooltip for long names
+        
 
         // Dimensions
         const dimsDiv = document.createElement('div');
@@ -135,7 +135,7 @@ export class PresetUIComponents {
         // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'preset-ui-card-delete-btn';
-        deleteBtn.title = 'Delete';
+        
         
         if (deleteIcon) {
             deleteBtn.innerHTML = `<img src="${deleteIcon.src}" class="preset-ui-card-delete-icon">`;
