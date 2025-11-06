@@ -237,6 +237,158 @@ You can customize various parameters by accessing the node's Properties panel in
    - Automatically adjusts dimensions to model requirements
 4. **Apply**: Dimensions are automatically updated
 
+## 🎯 Advanced Preset Management
+
+ResolutionMaster includes a powerful **Preset Manager** system for creating, organizing, and managing custom presets. Access it by clicking the **"⚙️ Manage Presets"** button in the Presets section.
+
+### Preset Manager Features
+
+#### 📋 List View
+The main view shows all your custom presets organized by category:
+
+- **Statistics Header**: Displays total categories and preset count
+- **Category Sections**: Each category shows its presets with dimensions
+- **Bulk Operations**: Select multiple presets for batch deletion (Shift+Click for range selection)
+- **Empty State**: Helpful message when no custom presets exist
+
+#### ➕ Add/Edit Preset View
+Create or modify presets with an intuitive interface:
+
+- **Category Selection**: Choose target category from dropdown
+- **Rename Category**: Click the ✏️ button next to category name to rename
+- **Quick Add Form**: 
+  - Name field with real-time validation
+  - Width and Height inputs (minimum 64px)
+  - Live preview showing aspect ratio and shape visualization
+  - Visual feedback for edit mode (green accents) vs add mode (blue accents)
+- **Preset Preview**: Grid view of all presets in selected category
+  - Click any preset to load its values into the form for editing
+  - Delete custom presets or hide/unhide built-in presets
+  - Visual indicators for custom (⚙️ icon) and hidden presets
+
+#### 🔄 Drag & Drop Operations
+
+The Preset Manager supports advanced drag & drop with visual feedback:
+
+##### Preset Reordering & Moving
+- **Drag Handle (left side)**: Drag presets to reorder within category or move between categories
+- **Visual Indicators**:
+  - **Blue line**: Reordering within same category
+  - **Orange line**: Moving to different category
+  - **Red line**: Invalid drop (name conflict)
+  - **Green line**: Duplicate/clone operation
+- **Modifier Keys**:
+  - **Normal Drag**: Move preset to new position
+  - **Drag by Clone Handle (⊕)**: Duplicate preset to new location
+
+##### Category Reordering
+- **Drag Category Headers**: Reorder entire categories by dragging their headers
+- **Drop Zones**: 
+  - Above any category header
+  - Below last category (in category section body)
+  - At top (drop on statistics header)
+
+#### 🔄 Clone/Duplicate Presets
+- **Clone Handle (⊕ icon)**: Drag this handle to duplicate a preset
+- **Auto-naming**: Automatically generates unique names (e.g., "Preset (1)", "Preset (2)")
+- **Cross-category Cloning**: Duplicate presets between different categories
+- **Smart Positioning**: Dropped preset appears at the exact position where you drop it
+
+#### ✏️ Rename Functionality
+
+##### Inline Renaming
+- **Double-click** on any preset or category name to rename in-place
+- **Enter**: Save changes
+- **Escape**: Cancel editing
+- **Auto-validation**: Prevents duplicate names, empty names
+- **Auto-unique naming** (categories): Adds suffix "(1)", "(2)" if name exists
+
+##### Rename Dialog (Categories)
+- Click ✏️ button next to category name in Add view
+- Real-time validation with error messages
+- Shows current name for reference
+- Enter to apply, Escape to cancel
+
+#### 📝 JSON Editor
+
+Advanced users can directly edit the preset configuration as JSON:
+
+- **Multiple Editor Modes**: Code, Tree, Form, Text, View, Preview
+- **Syntax Highlighting**: VS Code-style dark theme (Twilight)
+- **Real-time Validation**: Instant feedback on JSON syntax errors
+- **Drag & Drop**: Drop .json files directly into the editor to load them
+- **Full Editing**: Add, remove, or modify categories and presets
+- **Import/Export**: 
+  - Apply changes to replace current configuration
+  - Export current configuration as JSON file
+- **All Features Available**: Sort, transform, search, and more
+
+**Access**: Click **"{ } JSON Editor"** button in Preset Manager footer
+
+**Use Cases**:
+- Bulk editing multiple presets
+- Importing preset collections from files
+- Creating complex preset structures
+- Backup and restore configurations
+- Sharing preset collections with others
+
+#### 🗑️ Deletion Options
+
+- **Individual Delete**: Click 🗑️ button on any custom preset
+- **Hide Built-in Presets**: Click 🗑️ on built-in presets to hide them (they remain in system)
+- **Unhide**: Click 🗑️ again on hidden presets to restore visibility
+- **Bulk Delete**: 
+  - Select multiple presets using checkboxes
+  - Click **"Delete Selected"** button
+  - Shift+Click for range selection
+- **Delete Empty Categories**: Option in footer to clean up categories with no presets
+
+#### 🎨 Visual Feedback & Tooltips
+
+- **Color-coded Indicators**: Different colors for different drag operations
+- **Interactive Tooltips**: Hover over buttons for helpful descriptions
+- **Mode Indicators**: Visual distinction between add and edit modes
+- **Real-time Validation**: Instant feedback on errors and conflicts
+- **Shape Preview**: Visual representation of aspect ratio in add/edit form
+
+#### ⌨️ Keyboard Shortcuts & Interactions
+
+- **Double-click**: Rename preset or category name
+- **Enter**: Apply rename or save changes
+- **Escape**: Cancel current operation or close dialog
+- **Shift+Click**: Select range of presets (bulk operations)
+- **Ctrl/Cmd+Drag**: Fine control for drag operations
+
+### Import/Export Presets
+
+#### Export
+1. Open Preset Manager
+2. Click **"📥 Export JSON"** button
+3. JSON file downloads with current preset configuration
+4. Share or backup your custom presets
+
+#### Import
+1. Open Preset Manager
+2. Click **"📤 Import JSON"** button
+3. Choose merge or replace mode:
+   - **Merge**: Add new presets, keep existing ones
+   - **Replace**: Completely replace current configuration
+4. Select your .json file
+5. Presets are loaded instantly
+
+**Alternative**: Use the JSON Editor's drag & drop feature to load preset files directly
+
+### Preset Manager Tips
+
+1. **Organize by Category**: Keep related presets together for easier management
+2. **Use Descriptive Names**: Clear names make presets easier to find and use
+3. **Clone for Variations**: Duplicate similar presets and adjust slightly
+4. **Regular Backups**: Export your presets periodically
+5. **Hide Unused Built-ins**: Declutter your preset list by hiding unused built-in presets
+6. **Keyboard Navigation**: Use double-click rename for quick adjustments
+7. **Visual Validation**: Watch the preview shape when creating presets to verify aspect ratio
+8. **Drag to Organize**: Quickly reorder presets and categories with drag & drop
+
 ### Scaling Workflow
 
 The node provides three scaling methods that work together:
