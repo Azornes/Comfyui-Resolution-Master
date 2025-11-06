@@ -19,9 +19,6 @@ import { PresetListRenderer } from './preset-manager/PresetListRenderer.js';
 import { PresetAddViewRenderer } from './preset-manager/PresetAddViewRenderer.js';
 import { TooltipManager } from './preset-manager/TooltipManager.js';
 
-// Import Prism.js for syntax highlighting (global object)
-const prismScriptLoaded = await import('../lib/prism.js');
-
 const log = createModuleLogger('PresetManagerDialog');
 
 export class PresetManagerDialog {
