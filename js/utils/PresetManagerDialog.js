@@ -325,16 +325,7 @@ export class PresetManagerDialog {
             leftButtons.appendChild(backBtn);
         }
 
-        // Right side button
-        const rightButtons = document.createElement('div');
-        rightButtons.className = 'preset-manager-footer-right';
-        const closeBtn = PresetUIComponents.createFooterButton('Close', 'secondary', () => {
-            this.hide();
-        });
-        rightButtons.appendChild(closeBtn);
-
         footer.appendChild(leftButtons);
-        footer.appendChild(rightButtons);
         this.container.appendChild(footer);
     }
 
