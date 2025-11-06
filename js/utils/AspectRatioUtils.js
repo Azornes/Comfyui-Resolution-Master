@@ -252,12 +252,14 @@ export class AspectRatioUtils {
                 state.indicator.addEventListener('wheel', (e) => {
                     e.preventDefault();
                     scrollWrapper.scrollLeft += e.deltaY;
-                });
+                }, { passive: false });
                 
                 container.appendChild(state.indicator);
             } else if (!needsIndicator && state.indicator) {
-                // Remove indicator
-                container.removeChild(state.indicator);
+                // Remove indicator (with safety check to prevent errors)
+                if (state.indicator.parentNode === container) {
+                    container.removeChild(state.indicator);
+                }
                 state.indicator = null;
             }
         };

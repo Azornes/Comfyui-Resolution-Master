@@ -478,6 +478,22 @@ export class PresetManagerDialog {
         const presetsGrid = this.presetsGrid;
         if (!presetsGrid || !this.selectedCategory) return;
 
+        // Save scroll positions before clearing DOM
+        const scrollPositions = new Map();
+        
+        // Save main grid horizontal scroll
+        const gridScrollLeft = presetsGrid.scrollLeft;
+        
+        // Save each column's vertical scroll position
+        const existingColumns = presetsGrid.querySelectorAll('.aspect-ratio-column');
+        existingColumns.forEach(column => {
+            const ratioText = column.querySelector('.aspect-ratio-column-title')?.textContent;
+            const ratioList = column.querySelector('.aspect-ratio-column-list');
+            if (ratioText && ratioList) {
+                scrollPositions.set(ratioText, ratioList.scrollTop);
+            }
+        });
+
         presetsGrid.innerHTML = '';
         
         // Change to flex layout for columns (matching AspectRatioSelector structure)
@@ -556,8 +572,21 @@ export class PresetManagerDialog {
             this.presetPreviewResizeHandler = null;
         }
 
-        // Update scroll indicators after DOM renders (using setTimeout to ensure layout is complete)
-        setTimeout(() => {
+        // Update scroll indicators after DOM renders (using requestAnimationFrame to ensure layout is complete)
+        requestAnimationFrame(() => {
+            // Restore scroll positions after DOM is recreated
+            // Restore horizontal scroll of main grid
+            presetsGrid.scrollLeft = gridScrollLeft;
+            
+            // Restore vertical scroll of each column
+            columns.forEach(column => {
+                const ratioText = column.querySelector('.aspect-ratio-column-title')?.textContent;
+                const ratioList = column.querySelector('.aspect-ratio-column-list');
+                if (ratioText && ratioList && scrollPositions.has(ratioText)) {
+                    ratioList.scrollTop = scrollPositions.get(ratioText);
+                }
+            });
+            
             // Update column scroll indicators
             AspectRatioUtils.updateColumnScrollIndicators(columns);
             
@@ -575,7 +604,7 @@ export class PresetManagerDialog {
                 AspectRatioUtils.updateColumnScrollIndicators(columns);
             };
             window.addEventListener('resize', this.presetPreviewResizeHandler);
-        }, 0);
+        });
     }
 
     /**

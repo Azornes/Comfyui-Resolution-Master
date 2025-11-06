@@ -253,6 +253,7 @@ export class TooltipManager {
      * Hides the tooltip
      */
     hideTooltip() {
+        if (!this.tooltipElement) return;
         this.tooltipElement.style.opacity = '0';
     }
 
