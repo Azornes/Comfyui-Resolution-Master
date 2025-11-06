@@ -9,7 +9,6 @@ import { presetManagerTooltips } from '../ResolutionMasterConfig.js';
 export class JSONEditorDialog {
     constructor(parentDialog) {
         this.parentDialog = parentDialog;
-        this.tooltipManager = null;
     }
 
     /**
@@ -19,12 +18,6 @@ export class JSONEditorDialog {
         // Get current JSON
         const currentJSON = this.parentDialog.manager.exportToJSON();
         
-        // Initialize tooltip manager for this dialog
-        this.tooltipManager = new TooltipManager({
-            delay: 500,
-            maxWidth: 300
-        });
-        
         // Create overlay
         const overlay = document.createElement('div');
         overlay.className = 'json-editor-overlay';
@@ -33,8 +26,19 @@ export class JSONEditorDialog {
         const dialog = document.createElement('div');
         dialog.className = 'json-editor-dialog';
         
+        // Create tooltip manager
+        const tooltipManager = new TooltipManager({
+            delay: 500,
+            maxWidth: 300
+        });
+        
+        // Register tooltips
+        tooltipManager.registerTooltips(presetManagerTooltips);
+        
         // Header
         const header = this.createHeader(() => {
+            // Cleanup tooltips before closing
+            tooltipManager.destroy();
             document.body.removeChild(overlay);
             document.body.removeChild(dialog);
         });
@@ -307,11 +311,8 @@ export class JSONEditorDialog {
         
         // Footer with buttons
         const footer = this.createFooter(code, editorContainer, validationMsg, () => {
-            // Clean up tooltips before closing
-            if (this.tooltipManager) {
-                this.tooltipManager.destroy();
-                this.tooltipManager = null;
-            }
+            // Cleanup tooltips before closing
+            tooltipManager.destroy();
             document.body.removeChild(overlay);
             document.body.removeChild(dialog);
         });
@@ -321,8 +322,16 @@ export class JSONEditorDialog {
         document.body.appendChild(overlay);
         document.body.appendChild(dialog);
         
-        // Attach tooltips to buttons
-        this.attachTooltips(dialog);
+        // Attach tooltips to buttons (after adding to DOM)
+        const closeBtn = dialog.querySelector('#json-editor-close-btn');
+        const formatBtn = dialog.querySelector('#json-editor-format-btn');
+        const cancelBtn = dialog.querySelector('#json-editor-cancel-btn');
+        const applyBtn = dialog.querySelector('#json-editor-apply-btn');
+        
+        if (closeBtn) tooltipManager.attach(closeBtn);
+        if (formatBtn) tooltipManager.attach(formatBtn);
+        if (cancelBtn) tooltipManager.attach(cancelBtn);
+        if (applyBtn) tooltipManager.attach(applyBtn);
     }
 
     /**
@@ -497,24 +506,5 @@ export class JSONEditorDialog {
         });
         
         return applyBtn;
-    }
-
-    /**
-     * Attaches tooltips to JSON editor buttons
-     * @param {HTMLElement} dialog - Dialog container
-     */
-    attachTooltips(dialog) {
-        if (!this.tooltipManager) return;
-        
-        // Attach tooltips to all buttons with IDs
-        const closeBtn = dialog.querySelector('#json-editor-close-btn');
-        const formatBtn = dialog.querySelector('#json-editor-format-btn');
-        const cancelBtn = dialog.querySelector('#json-editor-cancel-btn');
-        const applyBtn = dialog.querySelector('#json-editor-apply-btn');
-        
-        if (closeBtn) this.tooltipManager.attach(closeBtn, presetManagerTooltips['json-editor-close-btn']);
-        if (formatBtn) this.tooltipManager.attach(formatBtn, presetManagerTooltips['json-editor-format-btn']);
-        if (cancelBtn) this.tooltipManager.attach(cancelBtn, presetManagerTooltips['json-editor-cancel-btn']);
-        if (applyBtn) this.tooltipManager.attach(applyBtn, presetManagerTooltips['json-editor-apply-btn']);
     }
 }

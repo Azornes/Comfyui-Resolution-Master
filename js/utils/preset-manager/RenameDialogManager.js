@@ -229,7 +229,7 @@ export class RenameDialogManager {
         const newTitle = document.createElement('div');
         newTitle.className = 'rename-category-title';
         newTitle.textContent = text;
-        
+        // Tooltip handled by TooltipManager
         newTitle.addEventListener('dblclick', () => {
             this.startRenamingCategory(newTitle, categoryName);
         });
@@ -344,7 +344,7 @@ export class RenameDialogManager {
         const newNameElement = document.createElement('strong');
         newNameElement.className = 'rename-preset-name';
         newNameElement.textContent = text;
-        
+        // Tooltip handled by TooltipManager
         newNameElement.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             this.startRenamingPreset(newNameElement, category, presetName, dims);
