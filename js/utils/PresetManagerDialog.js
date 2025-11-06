@@ -70,6 +70,7 @@ export class PresetManagerDialog {
         this.exportIcon = iconContainer.export;
         this.editIcon = iconContainer.edit;
         this.customPresetIcon = iconContainer.customPreset;
+        this.dragAndDuplicateIcon = iconContainer.dragAndDuplicate;
         
         // Initialize helper modules
         this.uiComponents = new PresetUIComponents(this);
@@ -101,71 +102,30 @@ export class PresetManagerDialog {
      * Attaches tooltips to rendered elements
      */
     attachTooltips() {
-        // Attach tooltips to footer buttons
-        const footerButtons = this.container.querySelectorAll('.preset-manager-footer button');
-        footerButtons.forEach(btn => {
-            if (btn.id) {
-                this.tooltipManager.attach(btn);
-            }
+        // List of selectors for elements that should have tooltips
+        const selectors = [
+            '.preset-manager-footer button[id]',
+            '.preset-list-edit-btn',
+            '.preset-add-rename-category-btn',
+            '.preset-list-delete-btn',
+            '.aspect-ratio-preset-action-btn.delete',
+            '.aspect-ratio-preset-action-btn.hide',
+            '.aspect-ratio-preset-action-btn.unhide',
+            '.preset-list-category-header',
+            '.preset-list-category-name',
+            '.preset-list-edit-category-btn',
+            '.preset-list-name',
+            '.preset-list-checkbox',
+            '#category-select-btn',
+            '#quick-add-button',
+            '.preset-list-clone-handle'
+        ];
+        
+        // Attach tooltips to all matching elements
+        selectors.forEach(selector => {
+            const elements = this.container.querySelectorAll(selector);
+            elements.forEach(el => this.tooltipManager.attach(el));
         });
-        
-        // Attach tooltips to action buttons in list view
-        const editButtons = this.container.querySelectorAll('.preset-list-edit-btn, .preset-add-rename-category-btn');
-        editButtons.forEach(btn => {
-            this.tooltipManager.attach(btn, 'Edit this item');
-        });
-        
-        const deleteButtons = this.container.querySelectorAll('.aspect-ratio-preset-action-btn.delete');
-        deleteButtons.forEach(btn => {
-            this.tooltipManager.attach(btn, 'Delete this custom preset');
-        });
-        
-        const toggleButtons = this.container.querySelectorAll('.aspect-ratio-preset-action-btn.hide');
-        toggleButtons.forEach(btn => {
-            this.tooltipManager.attach(btn, 'Hide this built-in preset from the main selector');
-        });
-        
-        const unhideButtons = this.container.querySelectorAll('.aspect-ratio-preset-action-btn.unhide');
-        unhideButtons.forEach(btn => {
-            this.tooltipManager.attach(btn, 'Show this hidden preset in the main selector');
-        });
-        
-        // Attach to category headers
-        const categoryHeaders = this.container.querySelectorAll('.preset-list-category-header');
-        categoryHeaders.forEach(header => {
-            this.tooltipManager.attach(header, 'Double-click to rename, drag to reorder this category');
-        });
-        
-        // Attach to preset names
-        const presetNames = this.container.querySelectorAll('.preset-list-name');
-        presetNames.forEach(name => {
-            this.tooltipManager.attach(name, 'Double-click to rename this preset');
-        });
-        
-        // Attach to checkboxes
-        const checkboxes = this.container.querySelectorAll('.preset-list-checkbox');
-        checkboxes.forEach(cb => {
-            this.tooltipManager.attach(cb, 'Select for bulk deletion (use Shift+Click to select a range)');
-        });
-        
-        // Attach to category select button in add view
-        const categoryBtn = this.container.querySelector('#category-select-btn');
-        if (categoryBtn) {
-            this.tooltipManager.attach(categoryBtn, 'Select or create a category for your presets');
-        }
-        
-        // Attach to rename category button in add view
-        const renameCategoryBtn = this.container.querySelector('.preset-add-rename-category-btn');
-        if (renameCategoryBtn) {
-            this.tooltipManager.attach(renameCategoryBtn, 'Rename this category');
-        }
-        
-        // Attach to quick add button
-        const quickAddBtn = this.container.querySelector('#quick-add-button');
-        if (quickAddBtn) {
-            const isEditing = this.editingPresetName !== null;
-            this.tooltipManager.attach(quickAddBtn, isEditing ? 'Save changes to this preset' : 'Add this preset to the selected category');
-        }
     }
 
     /**
@@ -255,6 +215,7 @@ export class PresetManagerDialog {
                 this.editingPreset = null;
                 this.renderDialog();
             });
+            addBtn.id = 'add-preset-btn';
             leftButtons.appendChild(addBtn);
 
             // Delete selected button (only shown when there are selected items)
@@ -298,17 +259,20 @@ export class PresetManagerDialog {
             const importBtn = PresetUIComponents.createFooterButton(importIconHtml + ' Import', 'secondary', () => {
                 this.importPresets();
             });
+            importBtn.id = 'import-btn';
             leftButtons.appendChild(importBtn);
 
             const exportIconHtml = getIconHtml(this.exportIcon, '📤', 18, 'vertical-align: middle; margin-right: 4px;');
             const exportBtn = PresetUIComponents.createFooterButton(exportIconHtml + ' Export', 'secondary', () => {
                 this.exportPresets();
             });
+            exportBtn.id = 'export-btn';
             leftButtons.appendChild(exportBtn);
 
             const editJsonBtn = PresetUIComponents.createFooterButton('{ } Edit JSON', 'secondary', () => {
                 this.showJSONEditor();
             });
+            editJsonBtn.id = 'edit-json-btn';
             leftButtons.appendChild(editJsonBtn);
         } else if (this.currentView === 'add') {
             const backBtn = PresetUIComponents.createFooterButton('← Back to List', 'secondary', () => {
@@ -322,6 +286,7 @@ export class PresetManagerDialog {
                 this.selectedCategory = null; // Reset selected category
                 this.renderDialog();
             });
+            backBtn.id = 'back-btn';
             leftButtons.appendChild(backBtn);
         }
 

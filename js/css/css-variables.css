@@ -146,4 +146,5 @@
     --drag-color-reorder: var(--color-primary);
     --drag-color-move: var(--color-warning);
     --drag-color-error: var(--color-error);
+    --drag-color-clone: var(--color-success);
 }

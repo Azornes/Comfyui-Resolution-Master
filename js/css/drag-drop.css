@@ -41,6 +41,16 @@
     box-shadow: inset 0 -2px 0 0 var(--drag-color-error);
 }
 
+/* ===== CLONE INDICATORS (Green) ===== */
+/* Duplicate/copy operation */
+.drag-drop-indicator-top-clone {
+    box-shadow: inset 0 2px 0 0 var(--drag-color-clone);
+}
+
+.drag-drop-indicator-bottom-clone {
+    box-shadow: inset 0 -2px 0 0 var(--drag-color-clone);
+}
+
 /* ===== CLEAR INDICATOR ===== */
 /* Remove all visual indicators */
 .drag-drop-no-indicator {

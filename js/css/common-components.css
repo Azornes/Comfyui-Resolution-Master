@@ -440,11 +440,27 @@
     color: var(--color-gray-100);
     padding: var(--spacing-3) var(--spacing-6);
     font-size: var(--font-base);
+    transition: all 0.2s ease;
 }
 
 .preset-ui-action-btn:hover {
     background: var(--overlay-light-20);
     border-color: var(--color-gray-500);
+    transform: scale(1.1);
+}
+
+.preset-ui-action-btn:active {
+    transform: scale(0.95);
+}
+
+/* Square action buttons in preset list (Edit, Delete) - match clone handle size */
+.preset-list-actions .preset-ui-action-btn {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* ========================================

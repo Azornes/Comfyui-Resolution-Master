@@ -7,19 +7,21 @@ export class DragDropHandler {
     /**
      * Sets a drop indicator line at the top of an element
      * @param {HTMLElement} element - The element to show the indicator on
-     * @param {string} color - Color of the indicator (default: #5af for reorder, #fa0 for move, #f00 for error)
+     * @param {string} color - Color of the indicator (default: #5af for reorder, #fa0 for move, #f00 for error, #0f0 for clone)
      */
     static setDropIndicatorTop(element, color = '#5af') {
         if (!element) return;
         
         // Remove all indicator classes first
-        element.classList.remove('drag-drop-indicator-top', 'drag-drop-indicator-top-move', 'drag-drop-indicator-top-error');
+        element.classList.remove('drag-drop-indicator-top', 'drag-drop-indicator-top-move', 'drag-drop-indicator-top-error', 'drag-drop-indicator-top-clone');
         
         // Add appropriate class based on color
         if (color === '#fa0') {
             element.classList.add('drag-drop-indicator-top-move');
         } else if (color === '#f00') {
             element.classList.add('drag-drop-indicator-top-error');
+        } else if (color === '#0f0') {
+            element.classList.add('drag-drop-indicator-top-clone');
         } else {
             element.classList.add('drag-drop-indicator-top');
         }
@@ -28,19 +30,21 @@ export class DragDropHandler {
     /**
      * Sets a drop indicator line at the bottom of an element
      * @param {HTMLElement} element - The element to show the indicator on
-     * @param {string} color - Color of the indicator (default: #5af for reorder, #fa0 for move, #f00 for error)
+     * @param {string} color - Color of the indicator (default: #5af for reorder, #fa0 for move, #f00 for error, #0f0 for clone)
      */
     static setDropIndicatorBottom(element, color = '#5af') {
         if (!element) return;
         
         // Remove all indicator classes first
-        element.classList.remove('drag-drop-indicator-bottom', 'drag-drop-indicator-bottom-move', 'drag-drop-indicator-bottom-error');
+        element.classList.remove('drag-drop-indicator-bottom', 'drag-drop-indicator-bottom-move', 'drag-drop-indicator-bottom-error', 'drag-drop-indicator-bottom-clone');
         
         // Add appropriate class based on color
         if (color === '#fa0') {
             element.classList.add('drag-drop-indicator-bottom-move');
         } else if (color === '#f00') {
             element.classList.add('drag-drop-indicator-bottom-error');
+        } else if (color === '#0f0') {
+            element.classList.add('drag-drop-indicator-bottom-clone');
         } else {
             element.classList.add('drag-drop-indicator-bottom');
         }
@@ -58,9 +62,11 @@ export class DragDropHandler {
             'drag-drop-indicator-top',
             'drag-drop-indicator-top-move',
             'drag-drop-indicator-top-error',
+            'drag-drop-indicator-top-clone',
             'drag-drop-indicator-bottom',
             'drag-drop-indicator-bottom-move',
-            'drag-drop-indicator-bottom-error'
+            'drag-drop-indicator-bottom-error',
+            'drag-drop-indicator-bottom-clone'
         );
     }
 

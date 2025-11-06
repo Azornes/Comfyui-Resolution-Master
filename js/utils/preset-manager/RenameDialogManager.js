@@ -182,15 +182,28 @@ export class RenameDialogManager {
                 return;
             }
             
-            // Try to rename
-            const success = this.parentDialog.manager.renameCategory(categoryNameOnly, newName);
+            // Generate unique name if needed (auto-add suffix like "(1)", "(2)", etc.)
+            let finalNewName = newName;
+            const customPresets = this.parentDialog.manager.getCustomPresets();
+            
+            // If category name already exists (and it's not the same category), add suffix
+            if (customPresets[finalNewName] && finalNewName !== categoryNameOnly) {
+                let counter = 1;
+                while (customPresets[`${newName} (${counter})`]) {
+                    counter++;
+                }
+                finalNewName = `${newName} (${counter})`;
+            }
+            
+            // Try to rename with the final unique name
+            const success = this.parentDialog.manager.renameCategory(categoryNameOnly, finalNewName);
             
             if (success) {
                 // Success - refresh dialog
                 this.parentDialog.renderDialog();
             } else {
                 // Failed - show error and keep editing
-                alert(`Cannot rename category to "${newName}". It may already exist or be invalid.\n\nOld name: "${categoryNameOnly}"\nCheck browser console for details.`);
+                alert(`Cannot rename category to "${finalNewName}".\n\nOld name: "${categoryNameOnly}"\nCheck browser console for details.`);
                 input.focus();
                 input.select();
             }

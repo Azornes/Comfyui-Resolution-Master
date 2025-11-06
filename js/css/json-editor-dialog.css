@@ -46,10 +46,35 @@
     border-radius: var(--radius-lg);
     overflow: hidden;
     background: var(--color-bg-dark-3);
+    transition: all 0.2s ease;
 }
 
 .json-editor-container:focus-within {
     border-color: var(--color-primary);
+}
+
+/* Drag and Drop States */
+.json-editor-container.drag-over {
+    border-color: var(--color-primary);
+    border-width: 2px;
+    background: rgba(var(--color-primary-rgb, 88, 166, 255), 0.05);
+    box-shadow: 0 0 20px rgba(var(--color-primary-rgb, 88, 166, 255), 0.3);
+}
+
+.json-editor-container.drag-over::before {
+    content: '📄 Drop JSON file here';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 18px;
+    color: var(--color-primary);
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px 40px;
+    border-radius: var(--radius-lg);
+    border: 2px dashed var(--color-primary);
+    pointer-events: none;
+    z-index: 1000;
 }
 
 /* Line Numbers */

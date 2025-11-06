@@ -283,16 +283,36 @@ export class PresetListRenderer {
         const categoryTitle = document.createElement('div');
         categoryTitle.className = 'preset-list-category-title';
         
+        // Create clickable name element (like preset names)
+        const nameElement = document.createElement('strong');
+        nameElement.className = 'preset-list-category-name';
+        nameElement.textContent = category;
+        nameElement.style.cursor = 'pointer';
+        
+        // Add double-click handler only to the name
+        nameElement.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            this.parentDialog.renameDialogManager.startRenamingCategory(nameElement, category);
+        });
+        
+        categoryTitle.appendChild(nameElement);
+        
+        // Add preset count
+        const countSpan = document.createElement('span');
+        countSpan.textContent = ` (${Object.keys(presets).length})`;
+        categoryTitle.appendChild(countSpan);
+        
+        // Add custom icon if needed
         const builtInPresets = this.parentDialog.manager.rm.presetCategories;
         const isTrulyCustomCategory = !builtInPresets.hasOwnProperty(category);
-        const customIcon = isTrulyCustomCategory ? getIconHtml(this.parentDialog.customPresetIcon, '', 14, 'margin-left: 6px; vertical-align: middle;') : '';
-        categoryTitle.innerHTML = `${category} (${Object.keys(presets).length})${customIcon || ''}`;
-        // Tooltip handled by TooltipManager
-        
-        categoryTitle.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            this.parentDialog.renameDialogManager.startRenamingCategory(categoryTitle, category);
-        });
+        if (isTrulyCustomCategory) {
+            const customIcon = getIconHtml(this.parentDialog.customPresetIcon, '', 14, 'margin-left: 6px; vertical-align: middle;');
+            if (customIcon) {
+                const iconSpan = document.createElement('span');
+                iconSpan.innerHTML = customIcon;
+                categoryTitle.appendChild(iconSpan);
+            }
+        }
         
         return categoryTitle;
     }
@@ -334,7 +354,7 @@ export class PresetListRenderer {
         item.dataset.presetIndex = presetIndex;
         item.dataset.category = category;
 
-        // Drag & drop handlers
+        // Drag & drop handlers for MOVE mode
         this.attachPresetDragHandlers(item, category, name, presetIndex);
 
         // Checkbox for bulk deletion
@@ -343,8 +363,8 @@ export class PresetListRenderer {
         // Preset info
         const info = this.createPresetInfo(category, name, dims);
 
-        // Action buttons
-        const actions = this.createActionButtons(category, name, dims);
+        // Action buttons (includes clone handle, edit, and delete)
+        const actions = this.createActionButtons(category, name, dims, presetIndex);
 
         item.appendChild(checkbox);
         item.appendChild(info);
@@ -375,15 +395,26 @@ export class PresetListRenderer {
         item.addEventListener('dragover', (e) => {
             if (this.parentDialog.draggedPresetName && this.parentDialog.draggedPresetName !== name) {
                 e.preventDefault();
-                e.dataTransfer.dropEffect = 'move';
+                
+                // Set drop effect based on mode
+                if (this.parentDialog.isDuplicateMode) {
+                    e.dataTransfer.dropEffect = 'copy';
+                } else {
+                    e.dataTransfer.dropEffect = 'move';
+                }
                 
                 const rect = item.getBoundingClientRect();
                 const midpoint = rect.top + rect.height / 2;
                 
                 let color;
-                if (this.parentDialog.draggedPresetCategory === category) {
+                if (this.parentDialog.isDuplicateMode) {
+                    // Clone mode - use green/cyan to indicate copy
+                    color = '#0f0'; // Green for clone
+                } else if (this.parentDialog.draggedPresetCategory === category) {
+                    // Same category reorder - blue
                     color = '#5af';
                 } else {
+                    // Different category move - orange or red if name exists
                     const customPresets = this.parentDialog.manager.getCustomPresets();
                     const targetCategoryPresets = customPresets[category] || {};
                     const nameExists = Object.keys(targetCategoryPresets).includes(this.parentDialog.draggedPresetName);
@@ -417,15 +448,118 @@ export class PresetListRenderer {
                     targetIndex = presetIndex + 1;
                 }
                 
-                if (this.parentDialog.draggedPresetCategory === category) {
-                    this.parentDialog.manager.reorderPresets(category, this.parentDialog.draggedPresetName, targetIndex);
+                // Check if in duplicate mode
+                if (this.parentDialog.isDuplicateMode) {
+                    // CLONE MODE: Duplicate the preset
+                    const sourceName = this.parentDialog.draggedPresetName;
+                    const sourceCategory = this.parentDialog.draggedPresetCategory;
+                    
+                    // Generate unique name for the duplicate
+                    let targetName = sourceName;
+                    const customPresets = this.parentDialog.manager.getCustomPresets();
+                    const targetCategoryPresets = customPresets[category] || {};
+                    
+                    // If name exists in target category, add a suffix
+                    if (Object.keys(targetCategoryPresets).includes(targetName)) {
+                        let counter = 1;
+                        while (Object.keys(targetCategoryPresets).includes(`${sourceName} (${counter})`)) {
+                            counter++;
+                        }
+                        targetName = `${sourceName} (${counter})`;
+                    }
+                    
+                    // Get built-in presets for duplicatePreset method
+                    const builtInPresets = this.parentDialog.manager.rm.presetCategories;
+                    
+                    // Duplicate the preset
+                    const success = this.parentDialog.manager.duplicatePreset(
+                        sourceCategory,
+                        sourceName,
+                        category,
+                        targetName,
+                        builtInPresets
+                    );
+                    
+                    if (success) {
+                        // If duplicated to same category, reorder it to the target position
+                        if (sourceCategory === category) {
+                            this.parentDialog.manager.reorderPresets(category, targetName, targetIndex);
+                        }
+                    }
                 } else {
-                    this.parentDialog.manager.movePreset(this.parentDialog.draggedPresetCategory, this.parentDialog.draggedPresetName, category, targetIndex);
+                    // MOVE MODE: Move or reorder the preset
+                    if (this.parentDialog.draggedPresetCategory === category) {
+                        this.parentDialog.manager.reorderPresets(category, this.parentDialog.draggedPresetName, targetIndex);
+                    } else {
+                        this.parentDialog.manager.movePreset(this.parentDialog.draggedPresetCategory, this.parentDialog.draggedPresetName, category, targetIndex);
+                    }
                 }
                 
                 this.parentDialog.renderDialog();
             }
         });
+    }
+
+    /**
+     * Creates clone handle for duplicate drag & drop
+     */
+    createCloneHandle(category, name, dims, presetIndex) {
+        const cloneHandle = document.createElement('div');
+        cloneHandle.className = 'preset-list-clone-handle';
+        cloneHandle.draggable = true;
+        cloneHandle.innerHTML = getIconHtml(this.parentDialog.dragAndDuplicateIcon, '⊕', 16);
+        
+        // Prevent the clone handle from being selected as text
+        cloneHandle.style.userSelect = 'none';
+        cloneHandle.style.cursor = 'grab';
+        
+        // Clone-specific drag handlers
+        cloneHandle.addEventListener('dragstart', (e) => {
+            // Set clone/duplicate mode
+            this.parentDialog.isDuplicateMode = true;
+            this.parentDialog.draggedPresetName = name;
+            this.parentDialog.draggedPresetCategory = category;
+            this.parentDialog.draggedPresetDims = dims;
+            
+            // Visual feedback
+            const item = cloneHandle.closest('.preset-list-item');
+            if (item) {
+                item.style.opacity = '0.5';
+            }
+            
+            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('text/html', cloneHandle.innerHTML);
+            e.stopPropagation(); // Prevent parent item drag
+        });
+        
+        cloneHandle.addEventListener('dragend', (e) => {
+            // Reset clone mode
+            this.parentDialog.isDuplicateMode = false;
+            
+            // Reset visual feedback
+            const item = cloneHandle.closest('.preset-list-item');
+            if (item) {
+                item.style.opacity = '1';
+            }
+            
+            DragDropHandler.clearDropIndicator(item);
+            this.parentDialog.draggedPresetName = null;
+            this.parentDialog.draggedPresetCategory = null;
+            this.parentDialog.draggedPresetDims = null;
+            e.stopPropagation();
+        });
+        
+        // Prevent click from bubbling
+        cloneHandle.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Prevent double-click from bubbling
+        cloneHandle.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+        });
+        
+        return cloneHandle;
     }
 
     /**
@@ -499,21 +633,28 @@ export class PresetListRenderer {
     /**
      * Creates action buttons for preset item
      */
-    createActionButtons(category, name, dims) {
+    createActionButtons(category, name, dims, presetIndex) {
         const actions = document.createElement('div');
         actions.className = 'preset-list-actions';
 
+        // Clone handle (first button)
+        const cloneHandle = this.createCloneHandle(category, name, dims, presetIndex);
+        actions.appendChild(cloneHandle);
+
+        // Edit button
         const editIconHtml = getIconHtml(this.parentDialog.editIcon, '✏️');
         const editBtn = PresetUIComponents.createActionButton(editIconHtml, 'Edit', () => {
             this.parentDialog.editPreset(category, name, dims);
         });
+        editBtn.classList.add('preset-list-edit-btn');
+        actions.appendChild(editBtn);
 
+        // Delete button
         const deleteIcon = getIconHtml(this.parentDialog.deleteIcon, '🗑️');
         const deleteBtn = PresetUIComponents.createActionButton(deleteIcon, 'Delete', () => {
             this.parentDialog.deletePreset(category, name);
         });
-
-        actions.appendChild(editBtn);
+        deleteBtn.classList.add('preset-list-delete-btn');
         actions.appendChild(deleteBtn);
 
         return actions;

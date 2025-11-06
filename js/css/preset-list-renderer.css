@@ -60,6 +60,9 @@
 
 /* Category Title */
 .preset-list-category-title {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
     color: var(--color-primary);
     font-size: var(--font-lg);
     font-weight: bold;
@@ -112,6 +115,36 @@
 .preset-list-dims {
     color: var(--color-gray-500);
     font-size: var(--font-md);
+}
+
+/* Clone Handle */
+.preset-list-clone-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--overlay-light-10);
+    border: 1px solid var(--color-gray-600);
+    border-radius: 4px;
+    color: var(--color-gray-100);
+    font-size: 16px;
+    font-weight: bold;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.preset-list-clone-handle:hover {
+    background: var(--overlay-light-20);
+    border-color: var(--color-gray-500);
+    transform: scale(1.1);
+}
+
+.preset-list-clone-handle:active {
+    cursor: grabbing;
+    transform: scale(0.95);
 }
 
 /* Action Buttons */

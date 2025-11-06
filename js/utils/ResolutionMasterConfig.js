@@ -64,9 +64,22 @@ export const presetManagerTooltips = {
     
     // List view
     'manage-presets-btn': 'Open the preset manager to add, edit, or delete custom presets',
-    'preset-edit-btn': 'Edit this preset\'s name and dimensions',
+    'preset-edit-btn': 'Edit this item',
+    'preset-list-edit-btn': 'Edit this item',
     'preset-delete-btn': 'Delete this custom preset',
+    'preset-list-delete-btn': 'Delete this custom preset',
     'preset-toggle-btn': 'Toggle visibility of this built-in preset',
+    'preset-list-edit-category-btn': 'Edit this category',
+    'preset-list-category-header': 'Drag to reorder categories',
+    'preset-list-category-name': 'Double-click to rename',
+    'preset-list-name': 'Double-click to rename this preset',
+    'preset-list-checkbox': 'Select for bulk deletion (use Shift+Click to select a range)',
+    'preset-list-clone-handle': 'Drag to duplicate this preset',
+    'aspect-ratio-preset-action-btn': {
+        'delete': 'Delete this custom preset',
+        'hide': 'Hide this built-in preset from the main selector',
+        'unhide': 'Show this hidden preset in the main selector'
+    },
     'category-header': 'Double-click to rename, drag to reorder categories',
     'preset-item-name': 'Double-click to rename this preset',
     'preset-checkbox': 'Select for bulk deletion (Shift+Click for range selection)',

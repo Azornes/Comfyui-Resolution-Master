@@ -1,14 +1,15 @@
-// JSONEditorDialog.js - JSON editor with syntax highlighting and Undo/Redo
+// JSONEditorDialog.js - JSON editor using JSONEditor library
 
 import { TooltipManager } from './TooltipManager.js';
 import { presetManagerTooltips } from '../ResolutionMasterConfig.js';
 
 /**
- * JSON Editor Dialog with advanced features
+ * JSON Editor Dialog with JSONEditor library
  */
 export class JSONEditorDialog {
     constructor(parentDialog) {
         this.parentDialog = parentDialog;
+        this.editor = null;
     }
 
     /**
@@ -37,7 +38,11 @@ export class JSONEditorDialog {
         
         // Header
         const header = this.createHeader(() => {
-            // Cleanup tooltips before closing
+            // Cleanup editor and tooltips before closing
+            if (this.editor) {
+                this.editor.destroy();
+                this.editor = null;
+            }
             tooltipManager.destroy();
             document.body.removeChild(overlay);
             document.body.removeChild(dialog);
@@ -48,270 +53,91 @@ export class JSONEditorDialog {
         const infoDiv = this.createInfoMessage();
         dialog.appendChild(infoDiv);
         
-        // Content area with line numbers and code editor
+        // Content area with JSONEditor
         const content = document.createElement('div');
         content.className = 'json-editor-content';
         
-        // Load Prism CSS dynamically
-        if (!document.getElementById('prism-css-link')) {
-            const prismCSS = document.createElement('link');
-            prismCSS.id = 'prism-css-link';
-            prismCSS.rel = 'stylesheet';
-            prismCSS.href = new URL('../../lib/prism.css', import.meta.url).href;
-            document.head.appendChild(prismCSS);
+        // Load JSONEditor CSS dynamically
+        if (!document.getElementById('jsoneditor-css-link')) {
+            const jsoneditorCSS = document.createElement('link');
+            jsoneditorCSS.id = 'jsoneditor-css-link';
+            jsoneditorCSS.rel = 'stylesheet';
+            jsoneditorCSS.href = new URL('../../lib/jsoneditor.min.css', import.meta.url).href;
+            document.head.appendChild(jsoneditorCSS);
         }
         
-        // Editor container (line numbers + code editor)
+        // Load JSONEditor VS Dark+ Theme
+        if (!document.getElementById('jsoneditor-dark-theme-link')) {
+            const jsoneditorDarkTheme = document.createElement('link');
+            jsoneditorDarkTheme.id = 'jsoneditor-dark-theme-link';
+            jsoneditorDarkTheme.rel = 'stylesheet';
+            jsoneditorDarkTheme.href = new URL('../../lib/jsoneditor.theme_twilight.css', import.meta.url).href;
+            document.head.appendChild(jsoneditorDarkTheme);
+        }
+        
+        // Load JSONEditor JS dynamically
+        if (!window.JSONEditor) {
+            await this.loadJSONEditorScript();
+        }
+        
+        // Editor container
         const editorContainer = document.createElement('div');
+        editorContainer.id = 'json-editor-container';
         editorContainer.className = 'json-editor-container';
-        
-        // Line numbers container
-        const lineNumbers = document.createElement('div');
-        lineNumbers.className = 'json-editor-line-numbers';
-        
-        // Scrollable editor wrapper
-        const editorWrapper = document.createElement('div');
-        editorWrapper.className = 'json-editor-wrapper';
-        
-        // Code container (pre + code with contenteditable)
-        const pre = document.createElement('pre');
-        pre.className = 'json-editor-pre';
-        
-        const code = document.createElement('code');
-        code.className = 'language-json json-editor-code';
-        code.contentEditable = 'true';
-        code.spellcheck = false;
-        code.textContent = currentJSON;
-        
-        // Undo/Redo history management
-        let undoStack = [currentJSON];
-        let redoStack = [];
-        let isUndoRedoOperation = false;
-        
-        pre.appendChild(code);
-        editorWrapper.appendChild(pre);
-        
-        // Function to update line numbers
-        const updateLineNumbers = () => {
-            const lines = code.textContent.split('\n').length;
-            lineNumbers.innerHTML = '';
-            for (let i = 1; i <= lines; i++) {
-                const lineDiv = document.createElement('div');
-                lineDiv.textContent = i;
-                lineDiv.className = 'json-editor-line-number';
-                lineNumbers.appendChild(lineDiv);
-            }
-        };
-        
-        // Function to apply syntax highlighting
-        const applySyntaxHighlighting = () => {
-            // Save cursor position
-            const selection = window.getSelection();
-            const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-            const cursorOffset = range ? range.startOffset : 0;
-            const cursorNode = range ? range.startContainer : null;
-            
-            // Get text content
-            const text = code.textContent;
-            
-            // Apply Prism highlighting
-            if (window.Prism) {
-                code.innerHTML = window.Prism.highlight(text, window.Prism.languages.json, 'json');
-            }
-            
-            // Update line numbers
-            updateLineNumbers();
-            
-            // Restore cursor position (approximate)
-            try {
-                if (cursorNode && code.childNodes.length > 0) {
-                    const newRange = document.createRange();
-                    const newSelection = window.getSelection();
-                    
-                    // Try to restore cursor to similar position
-                    let textNode = code.firstChild;
-                    let currentOffset = 0;
-                    
-                    // Find the text node that contains our cursor position
-                    while (textNode) {
-                        if (textNode.nodeType === Node.TEXT_NODE) {
-                            if (currentOffset + textNode.length >= cursorOffset) {
-                                newRange.setStart(textNode, Math.min(cursorOffset - currentOffset, textNode.length));
-                                newRange.collapse(true);
-                                newSelection.removeAllRanges();
-                                newSelection.addRange(newRange);
-                                break;
-                            }
-                            currentOffset += textNode.length;
-                        }
-                        textNode = textNode.nextSibling;
-                    }
-                }
-            } catch (e) {
-                // Cursor restoration failed, that's okay
-                console.warn('Could not restore cursor position:', e);
-            }
-        };
+        // Height and width are controlled by CSS flex properties
         
         // Validation message
         const validationMsg = document.createElement('div');
         validationMsg.className = 'json-editor-validation';
+        validationMsg.style.color = '#5f5';
+        validationMsg.textContent = '✓ Valid JSON';
         
-        // Initial highlighting
-        applySyntaxHighlighting();
-        
-        // Handle input with debouncing for performance and live validation
-        let highlightTimeout;
-        code.addEventListener('input', () => {
-            // Save to undo history if not an undo/redo operation
-            if (!isUndoRedoOperation) {
-                const currentText = code.textContent;
-                // Add to undo stack if text changed
-                if (undoStack[undoStack.length - 1] !== currentText) {
-                    undoStack.push(currentText);
-                    redoStack = []; // Clear redo stack on new input
-                }
-            }
-            isUndoRedoOperation = false;
-            
-            clearTimeout(highlightTimeout);
-            highlightTimeout = setTimeout(() => {
-                applySyntaxHighlighting();
-                
-                // Live JSON validation
+        // Initialize JSONEditor with full functionality
+        const options = {
+            mode: 'code',
+            modes: ['code', 'tree', 'form', 'text', 'view', 'preview'], // All available modes
+            enableSort: true,
+            enableTransform: true,
+            onError: (err) => {
+                validationMsg.style.color = '#f55';
+                validationMsg.textContent = `❌ ${err.toString()}`;
+            },
+            onChangeText: (jsonText) => {
                 try {
-                    JSON.parse(code.textContent);
-                    // Valid JSON - clear error message and show success
+                    JSON.parse(jsonText);
                     validationMsg.style.color = '#5f5';
                     validationMsg.textContent = '✓ Valid JSON';
-                    editorContainer.style.borderColor = '#5f5';
-                } catch (error) {
-                    // Invalid JSON - show error message
+                } catch (e) {
                     validationMsg.style.color = '#f55';
-                    validationMsg.textContent = `❌ ${error.message}`;
-                    editorContainer.style.borderColor = '#f55';
+                    validationMsg.textContent = `❌ ${e.message}`;
                 }
-            }, 300); // Debounce 300ms
-        });
-        
-        // Handle Undo/Redo keyboard shortcuts
-        code.addEventListener('keydown', (e) => {
-            // Ctrl+Z or Cmd+Z - Undo
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                e.preventDefault();
-                if (undoStack.length > 1) {
-                    // Save current state to redo stack
-                    const currentText = code.textContent;
-                    redoStack.push(currentText);
-                    
-                    // Remove current state from undo stack
-                    undoStack.pop();
-                    
-                    // Restore previous state
-                    const previousText = undoStack[undoStack.length - 1];
-                    isUndoRedoOperation = true;
-                    code.textContent = previousText;
-                    applySyntaxHighlighting();
-                    
-                    // Try to validate
-                    try {
-                        JSON.parse(code.textContent);
-                        validationMsg.style.color = '#5f5';
-                        validationMsg.textContent = '✓ Valid JSON';
-                        editorContainer.style.borderColor = '#5f5';
-                    } catch (error) {
-                        validationMsg.style.color = '#f55';
-                        validationMsg.textContent = `❌ ${error.message}`;
-                        editorContainer.style.borderColor = '#f55';
-                    }
-                }
-                return;
             }
-            
-            // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z - Redo
-            if (((e.ctrlKey || e.metaKey) && e.key === 'y') || 
-                ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'z')) {
-                e.preventDefault();
-                if (redoStack.length > 0) {
-                    // Get state from redo stack
-                    const nextText = redoStack.pop();
-                    
-                    // Add current state to undo stack
-                    undoStack.push(nextText);
-                    
-                    // Restore next state
-                    isUndoRedoOperation = true;
-                    code.textContent = nextText;
-                    applySyntaxHighlighting();
-                    
-                    // Try to validate
-                    try {
-                        JSON.parse(code.textContent);
-                        validationMsg.style.color = '#5f5';
-                        validationMsg.textContent = '✓ Valid JSON';
-                        editorContainer.style.borderColor = '#5f5';
-                    } catch (error) {
-                        validationMsg.style.color = '#f55';
-                        validationMsg.textContent = `❌ ${error.message}`;
-                        editorContainer.style.borderColor = '#f55';
-                    }
-                }
-                return;
-            }
-            
-            // Handle Tab key
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                document.execCommand('insertText', false, '\t');
-            }
-        });
+        };
         
-        // Handle copy event - copy plain text instead of HTML
-        code.addEventListener('copy', (e) => {
-            e.preventDefault();
-            const selection = window.getSelection();
-            const selectedText = selection.toString();
-            if (selectedText) {
-                e.clipboardData.setData('text/plain', selectedText);
-            }
-        });
+        this.editor = new JSONEditor(editorContainer, options);
         
-        // Handle cut event - cut plain text instead of HTML
-        code.addEventListener('cut', (e) => {
-            e.preventDefault();
-            const selection = window.getSelection();
-            const selectedText = selection.toString();
-            if (selectedText) {
-                e.clipboardData.setData('text/plain', selectedText);
-                document.execCommand('delete');
-            }
-        });
+        // Set the initial JSON content
+        try {
+            this.editor.set(JSON.parse(currentJSON));
+        } catch (e) {
+            // If parsing fails, set as text
+            this.editor.setText(currentJSON);
+        }
         
-        // Synchronize scroll between code editor and line numbers
-        editorWrapper.addEventListener('scroll', () => {
-            lineNumbers.scrollTop = editorWrapper.scrollTop;
-        });
+        // Add drag-and-drop functionality for JSON files
+        this.setupDragAndDrop(editorContainer, validationMsg);
         
-        // Focus/blur border effects
-        code.addEventListener('focus', () => {
-            editorContainer.style.borderColor = '#5af';
-        });
-        
-        code.addEventListener('blur', () => {
-            editorContainer.style.borderColor = '#555';
-            // Apply final highlighting on blur
-            applySyntaxHighlighting();
-        });
-        
-        editorContainer.appendChild(lineNumbers);
-        editorContainer.appendChild(editorWrapper);
         content.appendChild(editorContainer);
         dialog.appendChild(content);
         dialog.appendChild(validationMsg);
         
         // Footer with buttons
-        const footer = this.createFooter(code, editorContainer, validationMsg, () => {
-            // Cleanup tooltips before closing
+        const footer = this.createFooter(validationMsg, () => {
+            // Cleanup editor and tooltips before closing
+            if (this.editor) {
+                this.editor.destroy();
+                this.editor = null;
+            }
             tooltipManager.destroy();
             document.body.removeChild(overlay);
             document.body.removeChild(dialog);
@@ -324,14 +150,98 @@ export class JSONEditorDialog {
         
         // Attach tooltips to buttons (after adding to DOM)
         const closeBtn = dialog.querySelector('#json-editor-close-btn');
-        const formatBtn = dialog.querySelector('#json-editor-format-btn');
         const cancelBtn = dialog.querySelector('#json-editor-cancel-btn');
         const applyBtn = dialog.querySelector('#json-editor-apply-btn');
         
         if (closeBtn) tooltipManager.attach(closeBtn);
-        if (formatBtn) tooltipManager.attach(formatBtn);
         if (cancelBtn) tooltipManager.attach(cancelBtn);
         if (applyBtn) tooltipManager.attach(applyBtn);
+    }
+
+    /**
+     * Loads the JSONEditor script dynamically
+     * @returns {Promise} Promise that resolves when script is loaded
+     */
+    loadJSONEditorScript() {
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = new URL('../../lib/jsoneditor.min.js', import.meta.url).href;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    /**
+     * Sets up drag-and-drop functionality for JSON files
+     * @param {HTMLElement} container - Container element to attach drag-and-drop
+     * @param {HTMLElement} validationMsg - Validation message element
+     */
+    setupDragAndDrop(container, validationMsg) {
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            container.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        // Highlight drop zone when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            container.addEventListener(eventName, () => {
+                container.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            container.addEventListener(eventName, () => {
+                container.classList.remove('drag-over');
+            }, false);
+        });
+
+        // Handle dropped files
+        container.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            
+            if (files.length === 0) {
+                return;
+            }
+
+            const file = files[0];
+            
+            // Check if it's a JSON file
+            if (!file.name.endsWith('.json')) {
+                validationMsg.style.color = '#f55';
+                validationMsg.textContent = '❌ Please drop a .json file';
+                return;
+            }
+
+            // Read the file
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                try {
+                    const jsonText = event.target.result;
+                    const jsonObject = JSON.parse(jsonText);
+                    
+                    // Update editor with the new JSON
+                    this.editor.set(jsonObject);
+                    
+                    validationMsg.style.color = '#5f5';
+                    validationMsg.textContent = `✓ Loaded: ${file.name}`;
+                } catch (error) {
+                    validationMsg.style.color = '#f55';
+                    validationMsg.textContent = `❌ Invalid JSON in ${file.name}: ${error.message}`;
+                }
+            };
+            
+            reader.onerror = () => {
+                validationMsg.style.color = '#f55';
+                validationMsg.textContent = `❌ Error reading file: ${file.name}`;
+            };
+            
+            reader.readAsText(file);
+        }, false);
     }
 
     /**
@@ -369,6 +279,7 @@ export class JSONEditorDialog {
         infoDiv.innerHTML = `
             💡 <strong>Direct JSON editing</strong><br>
             Edit the JSON below to modify custom presets and hidden built-in presets.<br>
+            You can also drag & drop a .json file onto the editor to load it.<br>
             Changes will replace current configuration when you click "Apply Changes".
         `;
         
@@ -377,22 +288,13 @@ export class JSONEditorDialog {
 
     /**
      * Creates the footer with action buttons
-     * @param {HTMLElement} code - Code element
-     * @param {HTMLElement} editorContainer - Editor container
      * @param {HTMLElement} validationMsg - Validation message element
      * @param {Function} onClose - Close callback
      * @returns {HTMLElement} Footer element
      */
-    createFooter(code, editorContainer, validationMsg, onClose) {
+    createFooter(validationMsg, onClose) {
         const footer = document.createElement('div');
         footer.className = 'json-editor-footer';
-        
-        const leftBtns = document.createElement('div');
-        leftBtns.className = 'json-editor-footer-left';
-        
-        // Format button
-        const formatBtn = this.createFormatButton(code, validationMsg, editorContainer);
-        leftBtns.appendChild(formatBtn);
         
         const rightBtns = document.createElement('div');
         rightBtns.className = 'json-editor-footer-right';
@@ -402,52 +304,12 @@ export class JSONEditorDialog {
         rightBtns.appendChild(cancelBtn);
         
         // Apply button
-        const applyBtn = this.createApplyButton(code, validationMsg, onClose);
+        const applyBtn = this.createApplyButton(validationMsg, onClose);
         rightBtns.appendChild(applyBtn);
         
-        footer.appendChild(leftBtns);
         footer.appendChild(rightBtns);
         
         return footer;
-    }
-
-    /**
-     * Creates the format JSON button
-     * @param {HTMLElement} code - Code element
-     * @param {HTMLElement} validationMsg - Validation message element
-     * @param {HTMLElement} editorContainer - Editor container
-     * @returns {HTMLElement} Format button
-     */
-    createFormatButton(code, validationMsg, editorContainer) {
-        const formatBtn = document.createElement('button');
-        formatBtn.id = 'json-editor-format-btn';
-        formatBtn.className = 'json-editor-format-btn';
-        formatBtn.textContent = '{ } Format JSON';
-        formatBtn.addEventListener('click', () => {
-            try {
-                const parsed = JSON.parse(code.textContent);
-                code.textContent = JSON.stringify(parsed, null, 2);
-                
-                // Reapply syntax highlighting
-                if (window.Prism) {
-                    code.innerHTML = window.Prism.highlight(code.textContent, window.Prism.languages.json, 'json');
-                }
-                
-                validationMsg.textContent = '';
-                validationMsg.style.color = '#5f5';
-                validationMsg.textContent = '✓ JSON formatted successfully';
-                editorContainer.style.borderColor = '#5f5';
-                setTimeout(() => {
-                    validationMsg.textContent = '';
-                }, 2000);
-            } catch (error) {
-                validationMsg.style.color = '#f55';
-                validationMsg.textContent = `❌ Invalid JSON: ${error.message}`;
-                editorContainer.style.borderColor = '#f55';
-            }
-        });
-        
-        return formatBtn;
     }
 
     /**
@@ -467,34 +329,31 @@ export class JSONEditorDialog {
 
     /**
      * Creates the apply changes button
-     * @param {HTMLElement} code - Code element
      * @param {HTMLElement} validationMsg - Validation message element
      * @param {Function} onClose - Close callback
      * @returns {HTMLElement} Apply button
      */
-    createApplyButton(code, validationMsg, onClose) {
+    createApplyButton(validationMsg, onClose) {
         const applyBtn = document.createElement('button');
         applyBtn.id = 'json-editor-apply-btn';
         applyBtn.className = 'json-editor-apply-btn';
         applyBtn.textContent = 'Apply Changes';
         applyBtn.addEventListener('click', () => {
             try {
-                // Validate and parse JSON
-                const parsed = JSON.parse(code.textContent);
+                // Get JSON from editor
+                const jsonObject = this.editor.get();
+                const jsonString = JSON.stringify(jsonObject, null, 2);
                 
                 // Import with replace mode
-                const success = this.parentDialog.manager.importFromJSON(code.textContent, false);
+                const success = this.parentDialog.manager.importFromJSON(jsonString, false);
                 
                 if (success) {
                     validationMsg.style.color = '#5f5';
                     validationMsg.textContent = '✓ Changes applied successfully!';
                     
-                    // Close dialog after short delay
-                    setTimeout(() => {
-                        onClose();
-                        // Refresh main dialog
-                        this.parentDialog.renderDialog();
-                    }, 1000);
+                    // Close dialog immediately and refresh main dialog
+                    onClose();
+                    this.parentDialog.renderDialog();
                 } else {
                     validationMsg.style.color = '#f55';
                     validationMsg.textContent = '❌ Failed to apply changes. Check console for details.';

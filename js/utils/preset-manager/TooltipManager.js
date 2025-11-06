@@ -165,19 +165,56 @@ export class TooltipManager {
         
         // Try registered tooltips by ID
         if (element.id && this.tooltips[element.id]) {
-            return this.tooltips[element.id];
+            const tooltip = this.tooltips[element.id];
+            // Check if it's a nested object (for action-specific tooltips)
+            if (typeof tooltip === 'object' && tooltip !== null && !Array.isArray(tooltip)) {
+                return this.resolveNestedTooltip(element, tooltip);
+            }
+            return tooltip;
         }
         
-        // Try registered tooltips by class
-        if (element.className && this.tooltips[element.className]) {
-            return this.tooltips[element.className];
+        // Try registered tooltips by individual classes
+        if (element.classList && element.classList.length > 0) {
+            for (const cls of element.classList) {
+                if (this.tooltips[cls]) {
+                    const tooltip = this.tooltips[cls];
+                    // Check if it's a nested object (for action-specific tooltips)
+                    if (typeof tooltip === 'object' && tooltip !== null && !Array.isArray(tooltip)) {
+                        return this.resolveNestedTooltip(element, tooltip);
+                    }
+                    return tooltip;
+                }
+            }
         }
         
         // Try data-tooltip-id attribute
         if (element.dataset.tooltipId && this.tooltips[element.dataset.tooltipId]) {
-            return this.tooltips[element.dataset.tooltipId];
+            const tooltip = this.tooltips[element.dataset.tooltipId];
+            // Check if it's a nested object (for action-specific tooltips)
+            if (typeof tooltip === 'object' && tooltip !== null && !Array.isArray(tooltip)) {
+                return this.resolveNestedTooltip(element, tooltip);
+            }
+            return tooltip;
         }
         
+        return null;
+    }
+    
+    /**
+     * Resolves a nested tooltip object by checking element classes
+     * @param {HTMLElement} element - Element to check
+     * @param {Object} tooltipObj - Nested tooltip object
+     * @returns {string|null} Resolved tooltip text
+     */
+    resolveNestedTooltip(element, tooltipObj) {
+        // Check other classes for action type (delete, hide, unhide, etc.)
+        if (element.classList && element.classList.length > 0) {
+            for (const actionCls of element.classList) {
+                if (tooltipObj[actionCls]) {
+                    return tooltipObj[actionCls];
+                }
+            }
+        }
         return null;
     }
 

@@ -1,0 +1,598 @@
+/*
+   jsoneditor.twilight.css
+   JSONEditor Dark Theme – Prism Twilight Palette
+   Based on: jsoneditor.vs-dark-plus-pro.css
+*/
+
+/* 1. ROOT VARIABLES (Twilight Color Palette) */
+:root {
+  --vsc-bg: #141414;
+  --vsc-panel-bg: #1a1a1a;
+  --vsc-editor-bg: #141414;
+  --vsc-gutter-bg: #1a1a1a;
+  --vsc-border: #545454;
+  --vsc-foreground: #ffffff;
+  --vsc-muted: #777777;
+  --vsc-blue: #7385a5;
+  --vsc-selection: #27292a;
+  --vsc-active-line-bg: rgba(255, 255, 255, 0.05);
+  --vsc-button-bg: #222222;
+  --vsc-button-hover-bg: #333333;
+
+  /* Syntax Highlighting Colors (mapped from Twilight) */
+  --vsc-key: #f9ed99;
+  --vsc-string: #909e6a;
+  --vsc-number: #ce6849;
+  --vsc-boolean-null: #ce6849;
+  --vsc-comment: #777777;
+  --vsc-punctuation: rgba(255,255,255,0.7);
+  --vsc-error: #e8c062;
+}
+
+/* 2. MAIN CONTAINER & LAYOUT */
+.jsoneditor, .jsoneditor-outer {
+  background: var(--vsc-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  box-shadow: 1px 1px .5em #000 inset !important;
+  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 3. UI ELEMENTS: MENU, STATUS BAR, NAV */
+.jsoneditor-menu {
+  height: 36px;
+  line-height: 36px;
+  background: var(--vsc-panel-bg) !important;
+  border-bottom: 1px solid var(--vsc-border) !important;
+  padding: 4px 6px;
+}
+
+.jsoneditor-menu > button,
+.jsoneditor-menu > .jsoneditor-modes,
+.jsoneditor-menu > a {
+  color: var(--vsc-foreground) !important;
+  background-color: var(--vsc-button-bg) !important;
+  border: 1px solid var(--vsc-border) !important;
+  height: 28px;
+  padding: 0 8px;
+  margin: 2px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.jsoneditor-menu > button:hover,
+.jsoneditor-menu > .jsoneditor-modes:hover,
+.jsoneditor-menu > a:hover {
+  background-color: var(--vsc-button-hover-bg) !important;
+  border-color: var(--vsc-blue) !important;
+}
+
+.jsoneditor-navigation-bar,
+.jsoneditor-statusbar {
+  background: var(--vsc-panel-bg) !important;
+  color: var(--vsc-muted) !important;
+  border-top: 1px solid var(--vsc-border) !important;
+  padding: 0 10px;
+}
+.jsoneditor-statusbar { height: 22px; line-height: 22px; }
+
+/* 4. TREE VIEW */
+.jsoneditor-tree {
+  background: var(--vsc-editor-bg) !important;
+}
+.jsoneditor-tree tr.jsoneditor-selected {
+  background: var(--vsc-selection) !important;
+  color: #ffffff !important;
+}
+
+/* Tree view syntax highlighting */
+.jsoneditor-field { color: var(--vsc-key) !important; font-weight: normal; }
+.jsoneditor-value.jsoneditor-string { color: var(--vsc-string) !important; }
+.jsoneditor-value.jsoneditor-number { color: var(--vsc-number) !important; }
+.jsoneditor-value.jsoneditor-boolean,
+.jsoneditor-value.jsoneditor-null { color: var(--vsc-boolean-null) !important; }
+
+/* 5. CODE VIEW (ACE EDITOR) */
+.ace_editor, 
+.ace_content,
+.ace_scroller,
+textarea.jsoneditor-text {
+  background: var(--vsc-editor-bg) !important;
+  color: var(--vsc-foreground) !important;
+}
+
+.ace_editor {
+  font-family: Consolas, "Courier New", monospace !important;
+}
+
+/* Gutter */
+.ace_gutter {
+  background: var(--vsc-gutter-bg) !important;
+  color: var(--vsc-muted) !important;
+}
+
+/* Cursor, Selection, Active Line */
+.ace_cursor { color: #e8c062 !important; }
+.ace_marker-layer .ace_selection { background: var(--vsc-selection) !important; }
+.ace_marker-layer .ace_active-line { background: var(--vsc-active-line-bg) !important; }
+.ace_gutter-active-line { background-color: transparent !important; }
+
+/* --- ACE SYNTAX HIGHLIGHTING TOKENS --- */
+.ace_punctuation { color: var(--vsc-punctuation) !important; }
+.ace_string { color: var(--vsc-string) !important; }
+.ace_constant.ace_numeric { color: var(--vsc-number) !important; }
+.ace_constant.ace_language { color: var(--vsc-boolean-null) !important; }
+.ace_comment { color: var(--vsc-comment) !important; font-style: italic !important; }
+
+/* JSON Keys */
+.ace_variable, 
+.ace_identifier,
+.ace_string.ace_variable {
+  color: var(--vsc-key) !important;
+}
+
+/* 6. MODALS, INPUTS & FORMS */
+.jsoneditor-modal {
+  background: var(--vsc-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+}
+.jsoneditor input,
+.jsoneditor select,
+.jsoneditor textarea {
+  background: #1a1a1a !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  padding: 6px !important;
+  border-radius: 3px !important;
+}
+.jsoneditor input:focus,
+.jsoneditor select:focus,
+.jsoneditor textarea:focus {
+  border-color: var(--vsc-blue) !important;
+  outline: 2px solid rgba(115,133,165,0.4) !important;
+  outline-offset: 0px !important;
+}
+
+/* 7. SCROLLBARS */
+.jsoneditor-outer ::-webkit-scrollbar, .ace_editor ::-webkit-scrollbar {
+  width: 12px !important; height: 12px !important;
+}
+.jsoneditor-outer ::-webkit-scrollbar-track, .ace_editor ::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.jsoneditor-outer ::-webkit-scrollbar-thumb, .ace_editor ::-webkit-scrollbar-thumb {
+  background-color: rgba(121, 121, 121, 0.4) !important;
+  border-radius: 6px !important;
+}
+.jsoneditor-outer ::-webkit-scrollbar-thumb:hover, .ace_editor ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(160, 160, 160, 0.5) !important;
+}
+
+/* 8. CONTEXT MENU & POPOVERS */
+.jsoneditor-contextmenu .jsoneditor-menu {
+  background: var(--vsc-panel-bg) !important;
+  border: 1px solid var(--vsc-border) !important;
+}
+.jsoneditor-contextmenu .jsoneditor-menu button:hover {
+  background-color: var(--vsc-button-hover-bg) !important;
+}
+
+.jsoneditor-menu a.jsoneditor-poweredBy {
+  font-size: 8px !important;
+  opacity: 0.25 !important;
+  position: absolute !important;
+  right: 6px !important;
+  top: 4px !important;
+  padding: 2px 4px !important;
+  color: var(--vsc-muted) !important;
+  text-decoration: none !important;
+  transition: opacity 0.2s ease;
+}
+
+/* JSONEditor Transform Preview (dark mode fix) */
+.jsoneditor-modal .jsoneditor-transform-preview {
+  background: var(--vsc-editor-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  height: 200px !important;
+  font-family: Consolas, "Courier New", monospace !important;
+  padding: 8px !important;
+  overflow: auto !important;
+}
+
+pre.jsoneditor-preview {
+  font-family: Consolas, Menlo, Monaco, "Ubuntu Mono", Source-Code-Pro, monospace !important;
+  font-size: 14px !important;
+  color: var(--vsc-foreground) !important; /* 💡 jasny tekst z palety Twilight */
+  background: transparent !important;
+}
+
+/* === JSONEditor Search Bar (Twilight Final Style) === */
+.jsoneditor-search {
+  font-family: Arial, sans-serif !important;
+  position: absolute !important;
+  right: 6px !important;
+  top: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  background: var(--vsc-panel-bg) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 6px !important;
+  padding: 2px 6px !important;
+  box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Input field */
+.jsoneditor-search input {
+  background: var(--vsc-editor-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  outline: none !important;
+  border-radius: 4px !important;
+  width: 120px !important;
+  margin: 0 4px !important;
+  padding: 4px 6px !important;
+  line-height: 18px !important;
+  font-family: Consolas, monospace !important;
+  font-size: 13px !important;
+  box-shadow: none !important;
+}
+
+.jsoneditor-search input:focus {
+  border-color: var(--vsc-blue) !important;
+  box-shadow: 0 0 4px rgba(115,133,165,0.5) !important;
+}
+
+.jsoneditor-search input::placeholder {
+  color: var(--vsc-muted) !important;
+}
+
+/* Wynik "no results" / status */
+.jsoneditor-search div {
+  color: var(--vsc-foreground) !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 12px !important;
+  opacity: 0.8 !important;
+  margin-right: 4px !important;
+}
+
+/* Przyciski wyszukiwania */
+.jsoneditor-search button {
+  width: 18px !important;
+  height: 24px !important;
+  border: none !important;
+  background-color: transparent !important;
+  background-image: url(./img/jsoneditor-icons.svg) !important;
+  background-repeat: no-repeat !important;
+  cursor: pointer !important;
+  filter: invert(85%) brightness(90%) !important;
+  opacity: 0.7 !important;
+  transition: opacity 0.2s ease;
+}
+
+.jsoneditor-search button:hover {
+  opacity: 1 !important;
+}
+
+/* Ikony */
+.jsoneditor-search button.jsoneditor-refresh {
+  background-position: -99px -73px !important;
+}
+.jsoneditor-search button.jsoneditor-next {
+  background-position: -124px -73px !important;
+}
+.jsoneditor-search button.jsoneditor-next:hover {
+  background-position: -124px -49px !important;
+}
+.jsoneditor-search button.jsoneditor-previous {
+  background-position: -148px -73px !important;
+  margin-right: 2px !important;
+}
+.jsoneditor-search button.jsoneditor-previous:hover {
+  background-position: -148px -49px !important;
+}
+
+/* === Walidacja / błędy JSONEditor (Twilight dark theme fix) === */
+.jsoneditor-validation-errors-container {
+  background: var(--vsc-panel-bg) !important;
+  border-top: 1px solid var(--vsc-border) !important;
+  color: var(--vsc-foreground) !important;
+  font-family: Consolas, Menlo, Monaco, "Ubuntu Mono", monospace !important;
+  font-size: 13px !important;
+}
+
+/* Każdy wiersz błędu */
+.jsoneditor-validation-errors tr {
+  background: rgba(255, 0, 0, 0.05) !important; /* delikatne czerwone tło */
+  color: var(--vsc-foreground) !important;
+}
+
+/* Wyróżnienie konkretnego błędu (parse error) */
+.jsoneditor-validation-errors tr.parse-error {
+  background: rgba(255, 60, 60, 0.12) !important;
+  border-left: 3px solid #f44747 !important; /* akcent VSCode error red */
+}
+
+/* Tekst błędu */
+.jsoneditor-validation-errors pre {
+  color: #f88 !important; /* jasny czerwony, dobrze widoczny */
+  background: transparent !important;
+  font-family: Consolas, Menlo, Monaco, monospace !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+}
+
+/* Numer linii błędu */
+.jsoneditor-validation-errors td {
+  color: #ffbaba !important; /* lekko różowy akcent */
+  padding: 4px 6px !important;
+}
+
+/* Przycisk po lewej (czerwony “dot”) */
+button.jsoneditor-schema-error {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: #f44747 !important;
+  margin-right: 6px !important;
+  cursor: pointer !important;
+  box-shadow: 0 0 4px rgba(244, 71, 71, 0.6);
+}
+
+/* "Scroll for more ▿" pasek */
+.jsoneditor-additional-errors {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--vsc-muted) !important;
+  border-top: 1px solid var(--vsc-border) !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  text-align: center !important;
+}
+
+/* === JSONEditor Transform Modal (Dark Twilight Theme) === */
+.jsoneditor-modal.jsoneditor-modal-transform,
+.pico-content.jsoneditor-modal-transform {
+  background: var(--vsc-panel-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Nagłówek okna */
+.jsoneditor-modal-transform .pico-modal-header {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  color: var(--vsc-blue) !important;
+  margin-bottom: 10px !important;
+  text-transform: uppercase !important;
+}
+
+/* Opis / linki JMESPath */
+.jsoneditor-modal-transform p,
+.jsoneditor-modal-transform a {
+  color: var(--vsc-foreground) !important;
+  font-size: 13px !important;
+}
+.jsoneditor-modal-transform a:hover {
+  color: var(--vsc-blue) !important;
+}
+
+/* Etykiety (Wizard, Query, Preview) */
+.jsoneditor-jmespath-label {
+  color: var(--vsc-muted) !important;
+  margin-top: 10px !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
+}
+
+/* Pola tekstowe (Query, Preview) */
+.jsoneditor-modal-transform textarea {
+  background: var(--vsc-editor-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 6px !important;
+  padding: 8px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  resize: vertical !important;
+  font-family: Consolas, Menlo, Monaco, "Ubuntu Mono", monospace !important;
+  font-size: 13px !important;
+}
+.jsoneditor-modal-transform textarea:focus {
+  border-color: var(--vsc-blue) !important;
+  outline: none !important;
+}
+
+/* Preview textarea (readonly) */
+.jsoneditor-modal-transform .jsoneditor-transform-preview {
+  background: #1a1a1a !important;
+  color: #fff !important;
+}
+
+/* Przycisk OK */
+.jsoneditor-modal-transform input[type="submit"],
+.jsoneditor-modal-transform button#ok {
+  background: var(--vsc-button-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 6px !important;
+  padding: 6px 16px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+}
+.jsoneditor-modal-transform input[type="submit"]:hover,
+.jsoneditor-modal-transform button#ok:hover {
+  background: var(--vsc-button-hover-bg) !important;
+  border-color: var(--vsc-blue) !important;
+}
+
+/* Przycisk zamknięcia (X) */
+.jsoneditor-modal-transform .pico-close {
+  background: var(--vsc-button-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 4px !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 14px !important;
+  text-align: center !important;
+  line-height: 18px !important;
+  top: 6px !important;
+  right: 6px !important;
+  position: absolute !important;
+  transition: background 0.2s ease-in-out;
+}
+.jsoneditor-modal-transform .pico-close:hover {
+  background: var(--vsc-button-hover-bg) !important;
+  color: var(--vsc-blue) !important;
+}
+
+/* === Fix: pico-modal-header (usuń niebieskie tło) === */
+.jsoneditor-modal-transform .pico-modal-header {
+  background: transparent !important; /* usuwa niebieskie tło */
+  color: var(--vsc-blue) !important; /* dopasowany akcent Twilight */
+  border-bottom: 1px solid var(--vsc-border) !important; /* subtelny separator */
+  padding-bottom: 6px !important;
+  margin-bottom: 10px !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-shadow: none !important;
+  text-transform: uppercase !important;
+}
+
+/* === JSONEditor Sort Modal (Dark Twilight Theme) === */
+.jsoneditor-modal.jsoneditor-modal-sort,
+.pico-content.jsoneditor-modal-sort {
+  background: var(--vsc-panel-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 8px !important;
+  padding: 20px !important;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Nagłówek */
+.jsoneditor-modal-sort .pico-modal-header {
+  background: transparent !important;
+  color: var(--vsc-blue) !important;
+  border-bottom: 1px solid var(--vsc-border) !important;
+  padding-bottom: 6px !important;
+  margin-bottom: 12px !important;
+  font-weight: 600 !important;
+  font-size: 15px !important;
+  text-transform: uppercase !important;
+}
+
+/* Teksty, etykiety */
+.jsoneditor-modal-sort td {
+  color: var(--vsc-foreground) !important;
+  font-size: 13px !important;
+  padding: 6px 8px !important;
+}
+
+/* Select (Field) */
+.jsoneditor-modal-sort select {
+  background: var(--vsc-editor-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 4px !important;
+  padding: 4px 6px !important;
+  font-size: 13px !important;
+}
+.jsoneditor-modal-sort select:focus {
+  border-color: var(--vsc-blue) !important;
+  outline: none !important;
+}
+
+/* Kierunek sortowania (Asc / Desc) */
+.jsoneditor-modal-sort .jsoneditor-button-group input[type="button"] {
+  background: var(--vsc-button-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 4px !important;
+  padding: 4px 10px !important;
+  margin: 0 2px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.jsoneditor-modal-sort .jsoneditor-button-group input[type="button"]:hover {
+  background: var(--vsc-button-hover-bg) !important;
+  border-color: var(--vsc-blue) !important;
+}
+
+/* Aktywny przycisk (aktualny kierunek sortowania) */
+.jsoneditor-modal-sort .jsoneditor-button-group-value-asc .jsoneditor-button-asc,
+.jsoneditor-modal-sort .jsoneditor-button-group-value-desc .jsoneditor-button-desc {
+  background: var(--vsc-blue) !important;
+  color: #fff !important;
+  border-color: var(--vsc-blue) !important;
+}
+
+/* Przycisk OK */
+.jsoneditor-modal-sort input[type="submit"],
+.jsoneditor-modal-sort button#ok {
+  background: var(--vsc-button-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 6px !important;
+  padding: 6px 16px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+}
+.jsoneditor-modal-sort input[type="submit"]:hover,
+.jsoneditor-modal-sort button#ok:hover {
+  background: var(--vsc-button-hover-bg) !important;
+  border-color: var(--vsc-blue) !important;
+}
+
+/* Przycisk zamknięcia (X) */
+.jsoneditor-modal-sort .pico-close {
+  background: var(--vsc-button-bg) !important;
+  color: var(--vsc-foreground) !important;
+  border: 1px solid var(--vsc-border) !important;
+  border-radius: 4px !important;
+  width: 20px !important;
+  height: 20px !important;
+  font-size: 14px !important;
+  text-align: center !important;
+  line-height: 18px !important;
+  top: 6px !important;
+  right: 6px !important;
+  position: absolute !important;
+  transition: background 0.2s ease-in-out;
+}
+.jsoneditor-modal-sort .pico-close:hover {
+  background: var(--vsc-button-hover-bg) !important;
+  color: var(--vsc-blue) !important;
+}
+
+/* === Fix: pozycjonowanie selecta w modal-sort === */
+.jsoneditor-modal-sort .jsoneditor-select-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  margin-top: 8px !important; /* 🔹 odstęp od nagłówka */
+  margin-bottom: 8px !important;
+  width: 100% !important;
+}
+
+/* Select sam w sobie */
+.jsoneditor-modal-sort select {
+  width: 100% !important; /* dopasowany do szerokości okna */
+  max-width: 240px !important; /* niech nie będzie zbyt szeroki */
+  box-sizing: border-box !important;
+}
+
+/* Dodatkowo poprawienie układu w tabeli (wyrównanie w pionie) */
+.jsoneditor-modal-sort table td {
+  vertical-align: middle !important;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
