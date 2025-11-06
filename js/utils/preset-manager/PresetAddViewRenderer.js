@@ -706,6 +706,7 @@ export class PresetAddViewRenderer {
             if (confirm(`Delete custom preset "${preset.name}"?`)) {
                 this.parentDialog.manager.deletePreset(this.parentDialog.selectedCategory, preset.name);
                 this.parentDialog.updatePresetPreview();
+                this.parentDialog.attachTooltips(); // Re-attach tooltips to new DOM elements
             }
         });
         
@@ -732,6 +733,7 @@ export class PresetAddViewRenderer {
             e.stopPropagation();
             this.parentDialog.manager.toggleBuiltInPresetVisibility(this.parentDialog.selectedCategory, preset.name);
             this.parentDialog.updatePresetPreview();
+            this.parentDialog.attachTooltips(); // Re-attach tooltips to new DOM elements
         });
         
         return toggleBtn;

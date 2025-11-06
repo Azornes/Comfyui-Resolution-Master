@@ -54,6 +54,7 @@ export class PresetManagerDialog {
         this.presetsGrid = null;
         this.presetPreviewContainer = null;
         this.presetPreviewResizeHandler = null;
+        this.horizontalScrollState = { indicator: null }; // Persistent state for horizontal scroll indicator
         
         // SearchableDropdown instance
         this.searchableDropdown = new SearchableDropdown();
@@ -560,12 +561,11 @@ export class PresetManagerDialog {
             // Update column scroll indicators
             AspectRatioUtils.updateColumnScrollIndicators(columns);
             
-            // Add horizontal scroll indicator
-            const horizontalScrollState = { indicator: null };
+            // Add horizontal scroll indicator using persistent state
             const updateHorizontalScrollIndicator = AspectRatioUtils.createHorizontalScrollManager(
                 presetsGrid,
                 this.presetPreviewContainer,
-                horizontalScrollState
+                this.horizontalScrollState  // Use persistent state to avoid duplicates
             );
             updateHorizontalScrollIndicator();
 
@@ -784,6 +784,14 @@ export class PresetManagerDialog {
         if (this.presetPreviewResizeHandler) {
             window.removeEventListener('resize', this.presetPreviewResizeHandler);
             this.presetPreviewResizeHandler = null;
+        }
+
+        // Clean up horizontal scroll indicator
+        if (this.horizontalScrollState && this.horizontalScrollState.indicator) {
+            if (this.horizontalScrollState.indicator.parentNode) {
+                this.horizontalScrollState.indicator.parentNode.removeChild(this.horizontalScrollState.indicator);
+            }
+            this.horizontalScrollState.indicator = null;
         }
 
         // Close SearchableDropdown if it's open

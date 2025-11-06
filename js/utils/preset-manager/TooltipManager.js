@@ -20,6 +20,7 @@ export class TooltipManager {
         this.handleMouseEnter = this.handleMouseEnter.bind(this);
         this.handleMouseLeave = this.handleMouseLeave.bind(this);
         this.handleMouseMove = this.handleMouseMove.bind(this);
+        this.handleClick = this.handleClick.bind(this);
     }
 
     /**
@@ -88,6 +89,7 @@ export class TooltipManager {
         element.addEventListener('mouseenter', this.handleMouseEnter);
         element.addEventListener('mouseleave', this.handleMouseLeave);
         element.addEventListener('mousemove', this.handleMouseMove);
+        element.addEventListener('click', this.handleClick); // Hide tooltip on click without clearing state
     }
 
     /**
@@ -100,6 +102,7 @@ export class TooltipManager {
         element.removeEventListener('mouseenter', this.handleMouseEnter);
         element.removeEventListener('mouseleave', this.handleMouseLeave);
         element.removeEventListener('mousemove', this.handleMouseMove);
+        element.removeEventListener('click', this.handleClick);
     }
 
     /**
@@ -150,6 +153,22 @@ export class TooltipManager {
         if (this.tooltipElement.style.opacity === '1') {
             this.positionTooltip(e);
         }
+    }
+
+    /**
+     * Handles click event - hides tooltip without clearing currentTarget
+     * @param {MouseEvent} e - Mouse event
+     */
+    handleClick(e) {
+        // Clear timer
+        if (this.tooltipTimer) {
+            clearTimeout(this.tooltipTimer);
+            this.tooltipTimer = null;
+        }
+        
+        // Hide tooltip but don't clear currentTarget
+        // This allows tooltips to work on subsequent elements
+        this.hideTooltip();
     }
 
     /**
