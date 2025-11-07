@@ -1955,16 +1955,25 @@ class ResolutionMasterCanvas {
         
         if (dropdownName === 'categoryDropdown') {
             const allPresets = this.getAllPresets();
-            const categoryNames = Object.keys(allPresets);
             
-            // Create category items with custom flag
-            items = categoryNames.map(categoryName => {
-                const isCustomCategory = this.customPresetsManager.categoryExists(categoryName);
-                return {
-                    text: categoryName,
-                    isCustom: isCustomCategory
-                };
-            });
+            // Create category items with custom flag, filtering out categories with no visible presets
+            items = Object.keys(allPresets)
+                .filter(categoryName => {
+                    // Get all presets in this category
+                    const categoryPresets = allPresets[categoryName];
+                    
+                    // Check if there's at least one visible preset (not hidden)
+                    const hasVisiblePresets = Object.values(categoryPresets).some(preset => !preset.isHidden);
+                    
+                    return hasVisiblePresets;
+                })
+                .map(categoryName => {
+                    const isCustomCategory = this.customPresetsManager.categoryExists(categoryName);
+                    return {
+                        text: categoryName,
+                        isCustom: isCustomCategory
+                    };
+                });
             
             title = 'Select Category';
             propertyKey = 'dropdown_category_expanded';
