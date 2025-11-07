@@ -1,7 +1,8 @@
 # ComfyUI - azToolkit - Azornes 2025
 
-import math
 import time
+import torch
+import comfy.model_management
 
 
 class AnyType(str):
@@ -18,6 +19,9 @@ class ResolutionMaster:
     # Class variable to store image dimensions for auto-detection
     _image_dimensions_cache = {}
     
+    def __init__(self):
+        self.device = comfy.model_management.intermediate_device()
+    
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -30,6 +34,7 @@ class ResolutionMaster:
                 "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual"}),
                 "rescale_mode": ("STRING", {"default": "resolution"}),
                 "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."}),
             },
             "optional": {
                 "input_image": ("IMAGE",),
@@ -39,15 +44,15 @@ class ResolutionMaster:
             },
         }
 
-    RETURN_TYPES = ("INT", "INT", "FLOAT")
-    RETURN_NAMES = ("", "", "")
+    RETURN_TYPES = ("INT", "INT", "FLOAT", "LATENT")
+    RETURN_NAMES = ("width", "height", "rescale_factor", "latent")
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 
-    def main(self, mode, width, height, auto_detect, rescale_mode, rescale_value, input_image=None, unique_id=None):
+    def main(self, mode, width, height, auto_detect, rescale_mode, rescale_value, batch_size=1, input_image=None, unique_id=None):
         detected_width = width
         detected_height = height
-        
+
         # If auto_detect is enabled and we have an input image
         if auto_detect and input_image is not None:
             try:
@@ -58,7 +63,7 @@ class ResolutionMaster:
                 elif input_image.dim() == 3:  # [height, width, channels]
                     detected_height = int(input_image.shape[0])
                     detected_width = int(input_image.shape[1])
-                
+
                 # Store dimensions in cache for frontend access
                 if unique_id:
                     ResolutionMaster._image_dimensions_cache[str(unique_id)] = {
@@ -66,7 +71,7 @@ class ResolutionMaster:
                         'height': detected_height,
                         'timestamp': time.time()
                     }
-                
+
                 # Only override with detected dimensions if the widget values match the detected values
                 # This allows manually set values (like from auto-fit) to take precedence
                 if width == detected_width and height == detected_height:
@@ -77,12 +82,15 @@ class ResolutionMaster:
                 else:
                     # Widget values differ from detected values, use widget values (manually set)
                     print(f"[ResolutionMaster] Using manual dimensions: {width}x{height} (detected: {detected_width}x{detected_height})")
-                
+
             except Exception as e:
                 print(f"[ResolutionMaster] Error detecting dimensions: {str(e)}")
                 # Fall back to manual dimensions
-        
+
         # The rescale_factor is calculated on the frontend and passed here
         rescale_factor = rescale_value
-        
-        return (width, height, rescale_factor)
+
+        # Generate latent tensor
+        latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
+
+        return (width, height, rescale_factor, {"samples": latent})

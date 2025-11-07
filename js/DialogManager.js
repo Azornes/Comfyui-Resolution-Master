@@ -23,7 +23,7 @@ export class DialogManager {
         log.debug(`Clicked on value area: ${valueAreaKey}`);
         
         // Determine the type and current value based on the control key
-        let valueType, currentValue, propertyName, minValue = 0.01;
+        let valueType, currentValue, propertyName, minValue = 0.01, integerOnly = false;
         
         if (valueAreaKey === 'scaleValueArea') {
             valueType = 'Scale Factor';
@@ -42,23 +42,32 @@ export class DialogManager {
             currentValue = this.rm.node.properties.snapValue;
             propertyName = 'snapValue';
             minValue = 1;
+            integerOnly = true;
         } else if (valueAreaKey === 'widthValueArea') {
             valueType = 'Width';
             currentValue = this.rm.widthWidget ? this.rm.widthWidget.value : this.rm.node.properties.valueX;
             propertyName = 'width';
             minValue = 64;
+            integerOnly = true;
         } else if (valueAreaKey === 'heightValueArea') {
             valueType = 'Height';
             currentValue = this.rm.heightWidget ? this.rm.heightWidget.value : this.rm.node.properties.valueY;
             propertyName = 'height';
             minValue = 64;
+            integerOnly = true;
+        } else if (valueAreaKey === 'batchSizeValueArea') {
+            valueType = 'Batch Size';
+            currentValue = this.rm.batchSizeWidget ? this.rm.batchSizeWidget.value : 1;
+            propertyName = 'batch_size';
+            minValue = 1;
+            integerOnly = true;
         } else {
             log.debug(`Unknown value area key: ${valueAreaKey}`);
             return;
         }
         
         log.debug(`Opening dialog for ${valueType} with current value: ${currentValue}`);
-        this.createCustomInputDialog(valueType, currentValue, propertyName, minValue, e);
+        this.createCustomInputDialog(valueType, currentValue, propertyName, minValue, integerOnly, e);
     }
     
     /**
@@ -67,9 +76,10 @@ export class DialogManager {
      * @param {number} currentValue - The current value
      * @param {string} propertyName - The property name to update
      * @param {number} minValue - Minimum allowed value
+     * @param {boolean} integerOnly - Whether to allow only integer values
      * @param {Event} e - The mouse event for positioning
      */
-    createCustomInputDialog(valueType, currentValue, propertyName, minValue, e) {
+    createCustomInputDialog(valueType, currentValue, propertyName, minValue, integerOnly, e) {
         this.inputDialogActive = true;
         log.debug(`Creating dialog for ${valueType}, current: ${currentValue}`);
         
@@ -103,11 +113,12 @@ export class DialogManager {
         dialog.style.top = `${Math.max(10, Math.min(y, window.innerHeight - 200))}px`;
         
         // Create dialog content
+        const inputStep = integerOnly ? '1' : '0.01';
         dialog.innerHTML = `
             <div style="color: #fff; font-size: 16px; font-weight: bold; margin-bottom: 15px; text-align: center;">Set Custom ${valueType}</div>
             <div style="margin-bottom: 10px;">
                 <label style="color: #ccc; font-size: 12px; display: block; margin-bottom: 5px;">Current: ${this.formatValueForDisplay(currentValue, valueType)}</label>
-            <input type="${valueType === 'Scale Factor' ? 'text' : 'number'}" id="customValueInput" value="${currentValue}" step="${valueType === 'Width' || valueType === 'Height' ? '1' : '0.01'}" min="${minValue}"
+            <input type="${valueType === 'Scale Factor' ? 'text' : 'number'}" id="customValueInput" value="${currentValue}" step="${inputStep}" min="${minValue}"
                        style="width: 100%; padding: 8px; border: 1px solid #555; border-radius: 4px; background: #333; color: #fff; font-size: 14px; box-sizing: border-box;">
             </div>
             <div id="validationMessage" style="color: #f55; font-size: 11px; margin-bottom: 5px; min-height: 15px;"></div>
@@ -131,6 +142,37 @@ export class DialogManager {
             infoMsg.textContent = 'Tip: Use /2 for 0.5x, /4 for 0.25x, etc.';
         }
         
+        // Block decimal characters for integer-only inputs
+        if (integerOnly) {
+            input.addEventListener('keydown', (e) => {
+                // Allow: backspace, delete, tab, escape, enter, arrows, home, end
+                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'];
+                
+                // Block: decimal point, comma, e, E, +, - (except for navigation)
+                const blockedChars = ['.', ',', 'e', 'E', '+', '-'];
+                
+                if (allowedKeys.includes(e.key)) {
+                    return; // Allow these keys
+                }
+                
+                // Allow Ctrl/Cmd combinations (copy, paste, select all, etc.)
+                if (e.ctrlKey || e.metaKey) {
+                    return;
+                }
+                
+                // Block decimal and scientific notation characters
+                if (blockedChars.includes(e.key)) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Allow only digits 0-9
+                if (!/^\d$/.test(e.key)) {
+                    e.preventDefault();
+                }
+            });
+        }
+        
         // Focus and select input
         setTimeout(() => { input.focus(); input.select(); }, 50);
         
@@ -144,6 +186,10 @@ export class DialogManager {
                     if (isNaN(divisor) || divisor === 0) errorMsg = 'Invalid divisor after /';
                 }
                 validationMsg.textContent = errorMsg;
+                applyBtn.disabled = true; applyBtn.style.opacity = '0.5';
+                return false;
+            } else if (integerOnly && !Number.isInteger(value)) {
+                validationMsg.textContent = 'Value must be a whole number';
                 applyBtn.disabled = true; applyBtn.style.opacity = '0.5';
                 return false;
             } else {
@@ -243,6 +289,12 @@ export class DialogManager {
             const newHeight = Math.round(value);
             const currentWidth = this.rm.widthWidget ? this.rm.widthWidget.value : props.valueX;
             this.rm.setDimensions(currentWidth, newHeight);
+        } else if (propertyName === 'batch_size') {
+            const newBatchSize = Math.max(1, Math.min(4096, Math.round(value)));
+            props.batch_size = newBatchSize;
+            if (this.rm.batchSizeWidget) {
+                this.rm.batchSizeWidget.value = newBatchSize;
+            }
         }
         
         this.closeCustomInputDialog();
@@ -266,6 +318,8 @@ export class DialogManager {
             return value.toFixed(1) + 'MP';
         } else if (valueType === 'Width' || valueType === 'Height') {
             return value.toString() + 'px';
+        } else if (valueType === 'Batch Size') {
+            return value.toString();
         } else {
             return value.toString();
         }

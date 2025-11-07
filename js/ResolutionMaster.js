@@ -132,6 +132,7 @@ class ResolutionMasterCanvas {
             mode: "Manual",
             valueX: 512,
             valueY: 512,
+            batch_size: 1,
             canvas_min_x: 0,
             canvas_max_x: 2048,
             canvas_step_x: 64,
@@ -213,6 +214,7 @@ class ResolutionMasterCanvas {
         const autoDetectWidget = node.widgets?.find(w => w.name === 'auto_detect');
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
+        const batchSizeWidget = node.widgets?.find(w => w.name === 'batch_size');
         
         // Initialize rescale widgets with proper values
         if (rescaleModeWidget) {
@@ -221,9 +223,8 @@ class ResolutionMasterCanvas {
         if (rescaleValueWidget) {
             rescaleValueWidget.value = node.properties.rescaleValue;
         }
-    
         
-        // Initialize values from widgets
+        // Initialize values from widgets (widget is source of truth for backend parameters)
         if (widthWidget && heightWidget) {
             node.properties.valueX = widthWidget.value;
             node.properties.valueY = heightWidget.value;
@@ -233,12 +234,18 @@ class ResolutionMasterCanvas {
             node.intpos.y = (heightWidget.value - node.properties.canvas_min_y) / (node.properties.canvas_max_y - node.properties.canvas_min_y);
         }
         
+        // Initialize batch_size from widget to property (same as width/height)
+        if (batchSizeWidget) {
+            node.properties.batch_size = batchSizeWidget.value;
+        }
+        
         
         // Store widget references
         this.widthWidget = widthWidget;
         this.heightWidget = heightWidget;
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
+        this.batchSizeWidget = batchSizeWidget;
         
         
         // Override onDrawForeground
@@ -319,7 +326,7 @@ class ResolutionMasterCanvas {
         };
 
                 // Hide all backend widgets
-        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget].forEach(widget => {
+        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
             if (widget) {
                 widget.hidden = true;
                 widget.type = "hidden";
@@ -468,16 +475,19 @@ class ResolutionMasterCanvas {
         ctx.textAlign = "right";
         ctx.textBaseline = "middle";
         
-        if (this.widthWidget && this.heightWidget) {
+        if (this.widthWidget && this.heightWidget && this.batchSizeWidget) {
             // Shift values up slightly to better match visual center of slots
             const y_offset_1 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 0.5);
             const y_offset_2 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 1.5);
             const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
+            const y_offset_4 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 3.5);
 
             // Calculate clickable area dimensions
             const valueAreaWidth = 60; // Wider area for better clicking
+            const batchSizeAreaWidth = 35; // Smaller area for batch size (small numbers)
             const valueAreaHeight = 20;
             const valueAreaX = node.size[0] - valueAreaWidth - 5;
+            const batchSizeAreaX = node.size[0] - batchSizeAreaWidth - 5;
 
             // Width value area
             this.controls.widthValueArea = {
@@ -523,8 +533,31 @@ class ResolutionMasterCanvas {
             ctx.fillStyle = this.hoverElement === 'heightValueArea' ? "#F89" : "#F89";
             ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
             
+            // Rescale value (non-clickable)
             ctx.fillStyle = "#9F8";
             ctx.fillText(props.rescaleValue.toFixed(2), node.size[0] - 20, y_offset_3);
+            
+            // Batch size value area
+            this.controls.batchSizeValueArea = {
+                x: batchSizeAreaX,
+                y: y_offset_4 - valueAreaHeight/2,
+                w: batchSizeAreaWidth,
+                h: valueAreaHeight
+            };
+            
+            // Draw background for batch size value area if hovered
+            if (this.hoverElement === 'batchSizeValueArea') {
+                ctx.fillStyle = "rgba(255, 136, 187, 0.2)";
+                ctx.strokeStyle = "rgba(255, 136, 187, 0.5)";
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.roundRect(batchSizeAreaX, y_offset_4 - valueAreaHeight/2, batchSizeAreaWidth, valueAreaHeight, 4);
+                ctx.fill();
+                ctx.stroke();
+            }
+            
+            ctx.fillStyle = this.hoverElement === 'batchSizeValueArea' ? "#FAB" : "#F8B";
+            ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
         }
     }
     
