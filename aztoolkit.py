@@ -44,8 +44,8 @@ class ResolutionMaster:
             },
         }
 
-    RETURN_TYPES = ("INT", "INT", "FLOAT", "LATENT")
-    RETURN_NAMES = ("width", "height", "rescale_factor", "latent")
+    RETURN_TYPES = ("INT", "INT", "FLOAT", "INT", "LATENT")
+    RETURN_NAMES = ("width", "height", "rescale_factor", "batch_size", "latent")
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 
@@ -93,4 +93,4 @@ class ResolutionMaster:
         # Generate latent tensor
         latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
 
-        return (width, height, rescale_factor, {"samples": latent})
+        return (width, height, rescale_factor, batch_size, {"samples": latent})

@@ -533,7 +533,7 @@ class ResolutionMasterCanvas {
             ctx.fillStyle = this.hoverElement === 'heightValueArea' ? "#F89" : "#F89";
             ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
             
-            // Rescale value (non-clickable)
+            // Rescale value (non-clickable, green text)
             ctx.fillStyle = "#9F8";
             ctx.fillText(props.rescaleValue.toFixed(2), node.size[0] - 20, y_offset_3);
             
@@ -558,6 +558,14 @@ class ResolutionMasterCanvas {
             
             ctx.fillStyle = this.hoverElement === 'batchSizeValueArea' ? "#FAB" : "#F8B";
             ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
+            
+            // Latent output label - pink "lat" text only (non-clickable, read-only)
+            const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
+            
+            ctx.fillStyle = "#F8B"; // Pink text color (same as batch_size)
+            ctx.font = "bold 12px Arial";
+            ctx.textAlign = "right";
+            ctx.fillText("LAT", node.size[0] - 20, y_offset_5);
         }
     }
     
