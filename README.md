@@ -435,6 +435,15 @@ The node provides three scaling methods that work together:
   - This value is used when you want to upscale/downscale your image using external nodes
   - Changes based on selected scaling mode (manual scale, resolution target, or megapixels target)
   - Connect this output to upscaling nodes in your workflow for resolution-independent scaling
+- **batch_size** (INT): Number of latent images in the batch
+  - Configurable via the batch_size input parameter (default: 1, range: 1-4096)
+  - Use this when you need to generate multiple images with the same resolution settings
+  - Connect to nodes that support batch processing
+- **latent** (LATENT): Generated empty latent tensor ready for sampling
+  - Automatically created based on width, height, and batch_size
+  - Dimensions: [batch_size, 4, height÷8, width÷8]
+  - Connect directly to KSampler or other sampling nodes
+  - Eliminates the need for a separate "Empty Latent Image" node
 
 Values are shown directly at output slots for quick reference.
 
