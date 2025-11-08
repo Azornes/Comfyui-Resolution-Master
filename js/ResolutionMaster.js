@@ -497,16 +497,7 @@ class ResolutionMasterCanvas {
                 h: valueAreaHeight
             };
             
-            // Draw background for width value area if hovered
-            if (this.hoverElement === 'widthValueArea') {
-                ctx.fillStyle = "rgba(136, 153, 255, 0.2)";
-                ctx.strokeStyle = "rgba(136, 153, 255, 0.5)";
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.roundRect(valueAreaX, y_offset_1 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, 4);
-                ctx.fill();
-                ctx.stroke();
-            }
+            this.drawValueAreaHoverBackground(ctx, 'widthValueArea', valueAreaX, y_offset_1 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, [136, 153, 255]);
 
             ctx.fillStyle = this.hoverElement === 'widthValueArea' ? "#89F" : "#89F";
             ctx.fillText(this.widthWidget.value.toString(), node.size[0] - 20, y_offset_1);
@@ -519,16 +510,7 @@ class ResolutionMasterCanvas {
                 h: valueAreaHeight
             };
             
-            // Draw background for height value area if hovered
-            if (this.hoverElement === 'heightValueArea') {
-                ctx.fillStyle = "rgba(248, 136, 153, 0.2)";
-                ctx.strokeStyle = "rgba(248, 136, 153, 0.5)";
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.roundRect(valueAreaX, y_offset_2 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, 4);
-                ctx.fill();
-                ctx.stroke();
-            }
+            this.drawValueAreaHoverBackground(ctx, 'heightValueArea', valueAreaX, y_offset_2 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, [248, 136, 153]);
             
             ctx.fillStyle = this.hoverElement === 'heightValueArea' ? "#F89" : "#F89";
             ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
@@ -545,16 +527,7 @@ class ResolutionMasterCanvas {
                 h: valueAreaHeight
             };
             
-            // Draw background for batch size value area if hovered
-            if (this.hoverElement === 'batchSizeValueArea') {
-                ctx.fillStyle = "rgba(255, 136, 187, 0.2)";
-                ctx.strokeStyle = "rgba(255, 136, 187, 0.5)";
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.roundRect(batchSizeAreaX, y_offset_4 - valueAreaHeight/2, batchSizeAreaWidth, valueAreaHeight, 4);
-                ctx.fill();
-                ctx.stroke();
-            }
+            this.drawValueAreaHoverBackground(ctx, 'batchSizeValueArea', batchSizeAreaX, y_offset_4 - valueAreaHeight/2, batchSizeAreaWidth, valueAreaHeight, [255, 136, 187]);
             
             ctx.fillStyle = this.hoverElement === 'batchSizeValueArea' ? "#FAB" : "#F8B";
             ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
@@ -596,22 +569,13 @@ class ResolutionMasterCanvas {
         const snapValueX = sliderX + sliderWidth + gap;
         this.controls.snapValueArea = { x: snapValueX, y, w: valueWidth, h: 28 };
         
-        // Draw background for snap value area if hovered
-        if (this.hoverElement === 'snapValueArea') {
-            ctx.fillStyle = "rgba(100, 150, 255, 0.2)";
-            ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(snapValueX, y, valueWidth, 28, 4);
-            ctx.fill();
-            ctx.stroke();
-        }
+        this.drawValueAreaHoverBackground(ctx, 'snapValueArea', snapValueX, y, valueWidth, 28, [100, 150, 255]);
 
         ctx.fillStyle = this.hoverElement === 'snapValueArea' ? "#5af" : "#ccc";
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(props.snapValue.toString(), snapValueX, y + 14);
+        ctx.fillText(props.snapValue.toString(), snapValueX + 10, y + 14);
     }
     
     draw2DCanvas(ctx, x, y, w, h) {
@@ -877,16 +841,7 @@ class ResolutionMasterCanvas {
             // Definiuj obszar klikalny dla napisu "Detected" (wycentrowany pod switchem)
             this.controls.detectedInfo = { x: textX - 5, y: currentY + 2, w: textWidth + 10, h: 24 };
             
-            // Rysuj tło jeśli hover
-            if (this.hoverElement === 'detectedInfo') {
-                ctx.fillStyle = "rgba(95, 255, 95, 0.2)";
-                ctx.strokeStyle = "rgba(95, 255, 95, 0.5)";
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.roundRect(textX - 5, currentY + 2, textWidth + 10, 20, 4);
-                ctx.fill();
-                ctx.stroke();
-            }
+            this.drawValueAreaHoverBackground(ctx, 'detectedInfo', textX - 5, currentY + 2, textWidth + 10, 20, [95, 255, 95]);
             
             ctx.fillStyle = this.hoverElement === 'detectedInfo' ? "#7f7" : "#5f5";
             ctx.textAlign = "left";
@@ -1146,7 +1101,8 @@ class ResolutionMasterCanvas {
         ctx.roundRect(x, y + h / 2 - 3, w, 6, 3);
         ctx.fill();
         
-        const pos = (value - min) / (max - min);
+        // Clamp position to [0, 1] range to prevent marker from going outside UI bounds
+        const pos = Math.max(0, Math.min(1, (value - min) / (max - min)));
         const knobX = x + w * pos;
         const knobY = y + h / 2;
 
@@ -1252,6 +1208,18 @@ class ResolutionMasterCanvas {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+    }
+    
+    drawValueAreaHoverBackground(ctx, controlName, x, y, w, h, color, borderRadius = 4) {
+        if (this.hoverElement === controlName) {
+            ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.2)`;
+            ctx.strokeStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, borderRadius);
+            ctx.fill();
+            ctx.stroke();
+        }
     }
     
     drawTooltip(ctx) {
@@ -1742,16 +1710,7 @@ class ResolutionMasterCanvas {
         const valueAreaControl = config.buttonControl.replace('Btn', 'ValueArea');
         this.controls[valueAreaControl] = { x: currentX, y, w: layout.valueWidth, h: 28 };
         
-        // Draw background for value area if hovered
-        if (this.hoverElement === valueAreaControl) {
-            ctx.fillStyle = "rgba(100, 150, 255, 0.2)";
-            ctx.strokeStyle = "rgba(100, 150, 255, 0.5)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(currentX, y, layout.valueWidth, 28, 4);
-            ctx.fill();
-            ctx.stroke();
-        }
+        this.drawValueAreaHoverBackground(ctx, valueAreaControl, currentX, y, layout.valueWidth, 28, [100, 150, 255]);
         
         // Draw value text
         this.setCanvasTextStyle(ctx, {
