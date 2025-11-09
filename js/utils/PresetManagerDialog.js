@@ -59,8 +59,14 @@ export class PresetManagerDialog {
         // Icons container
         const iconContainer = {};
         
-        // Load icons into container
-        loadIcons(iconContainer, "#ffffffff");
+        // Ikony, które chcemy nadpisać kolor
+        const iconColors = {
+            add_plus: "#000000" // czarny kolor dla ikony 'add_plus'
+        };
+
+        // Wczytanie ikon z nadpisanym kolorem dla add_plus
+        loadIcons(iconContainer, "#ffffffff", iconColors);
+
         
         // Assign icons to properties with correct names
         this.deleteIcon = iconContainer.delete;
@@ -69,6 +75,8 @@ export class PresetManagerDialog {
         this.editIcon = iconContainer.edit;
         this.customPresetIcon = iconContainer.customPreset;
         this.dragAndDuplicateIcon = iconContainer.dragAndDuplicate;
+        this.addPlusIcon = iconContainer.add_plus;
+        this.settingsIcon = iconContainer.settings;
         
         // Initialize helper modules
         this.uiComponents = new PresetUIComponents(this);
@@ -166,7 +174,8 @@ export class PresetManagerDialog {
 
         const title = document.createElement('div');
         title.className = 'preset-manager-title';
-        title.textContent = '⚙ Custom Presets Manager';
+        const settingsIconHtml = getIconHtml(this.settingsIcon, '⚙', 24, 'vertical-align: middle; margin-right: 6px;');
+        title.innerHTML = settingsIconHtml + ' Custom Presets Manager';
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'preset-manager-close-btn';
@@ -208,7 +217,8 @@ export class PresetManagerDialog {
         leftButtons.className = 'preset-manager-footer-left';
 
         if (this.currentView === 'list') {
-            const addBtn = PresetUIComponents.createFooterButton('➕ Add Preset', 'primary', () => {
+            const addPlusIconHtml = getIconHtml(this.addPlusIcon, '➕', 18, 'vertical-align: middle; margin-right: 4px;');
+            const addBtn = PresetUIComponents.createFooterButton(addPlusIconHtml + ' Add Preset', 'primary', () => {
                 this.currentView = 'add';
                 this.editingPreset = null;
                 this.renderDialog();

@@ -551,11 +551,11 @@ class ResolutionMasterCanvas {
         let x = margin;
 
         this.controls.swapBtn = { x, y, w: buttonWidth, h: 28 };
-        this.drawButton(ctx, x, y, buttonWidth, 28, "⇄ Swap", this.hoverElement === 'swapBtn');
+        this.drawButton(ctx, x, y, buttonWidth, 28, this.icons.swap, this.hoverElement === 'swapBtn', false, "Swap", true);
         x += buttonWidth + gap;
 
         this.controls.snapBtn = { x, y, w: buttonWidth, h: 28 };
-        this.drawButton(ctx, x, y, buttonWidth, 28, "⊞ Snap", this.hoverElement === 'snapBtn');
+        this.drawButton(ctx, x, y, buttonWidth, 28, this.icons.snap, this.hoverElement === 'snapBtn', false, "Snap", true);
         x += buttonWidth + gap;
 
         const sliderX = x;
@@ -1028,7 +1028,7 @@ class ResolutionMasterCanvas {
     }
     
     // Drawing primitives
-    drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null) {
+    drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null, centerIconAndText = false) {
         const grad = ctx.createLinearGradient(x, y, x, y + h);
         if (disabled) {
             grad.addColorStop(0, "#4a4a4a");
@@ -1058,13 +1058,25 @@ class ResolutionMasterCanvas {
         } else if (content instanceof Image) {
             const iconSize = Math.min(w, h) - 12;
             
-            // If text is provided, align icon to left; otherwise center it
+            // If text is provided, handle icon placement based on centerIconAndText flag
             let iconX, iconY;
             if (text) {
-                // Icon aligned to left edge with small padding (for Auto-Detect buttons)
-                const iconPadding = 4;
-                iconX = x + iconPadding;
-                iconY = y + (h - iconSize) / 2;
+                if (centerIconAndText) {
+                    // Center icon and text together as a group
+                    ctx.font = "12px Arial";
+                    const textWidth = ctx.measureText(text).width;
+                    const gap = 4; // Gap between icon and text
+                    const totalWidth = iconSize + gap + textWidth;
+                    const startX = x + (w - totalWidth) / 2;
+                    
+                    iconX = startX;
+                    iconY = y + (h - iconSize) / 2;
+                } else {
+                    // Icon aligned to left edge with small padding (for Auto-Detect buttons)
+                    const iconPadding = 4;
+                    iconX = x + iconPadding;
+                    iconY = y + (h - iconSize) / 2;
+                }
             } else {
                 // Icon centered (for other buttons like Scaling section)
                 iconX = x + (w - iconSize) / 2;
@@ -1084,13 +1096,26 @@ class ResolutionMasterCanvas {
                 }
             }
             
-            // Draw text if provided (centered)
+            // Draw text if provided
             if (text) {
                 ctx.fillStyle = disabled ? "#888" : "#ddd";
                 ctx.font = "12px Arial";
-                ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+                
+                if (centerIconAndText) {
+                    // Position text next to centered icon
+                    ctx.textAlign = "left";
+                    const textWidth = ctx.measureText(text).width;
+                    const gap = 4;
+                    const totalWidth = iconSize + gap + textWidth;
+                    const startX = x + (w - totalWidth) / 2;
+                    const textX = startX + iconSize + gap;
+                    ctx.fillText(text, textX, y + h / 2 + 1);
+                } else {
+                    // Text centered (for Auto-Detect buttons)
+                    ctx.textAlign = "center";
+                    ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+                }
             }
         }
     }
