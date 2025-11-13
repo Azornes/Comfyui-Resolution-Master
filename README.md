@@ -633,6 +633,7 @@ You can either apply this tweak manually or report it to the mixlab authors so i
 
 </details>
 
+---
 
 #### ○ ‎ Incompatibility with Modern Node Design (Vue Nodes)
 > This node is **not compatible** with the new Vue Nodes display system.  
