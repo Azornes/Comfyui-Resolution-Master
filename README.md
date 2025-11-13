@@ -19,6 +19,12 @@
   <img alt="JavaScript" src="https://img.shields.io/badge/-JavaScript-000000?logo=javascript&logoColor=F7DF1E&style=for-the-badge&logoWidth=20">
 </p>
 
+<p align="center">
+  <strong>🔹 <a href="https://github.com/Azornes/Comfyui-Resolution-Master/blob/main/README.md#-installation">Quick Start</a></strong>
+  &nbsp; | &nbsp;
+  <strong>⚠️ <a href="https://github.com/Azornes/Comfyui-Resolution-Master/blob/main/README.md#-installation">Known Issues</a></strong>
+</p>
+
 
 https://github.com/user-attachments/assets/f9b51c0f-677c-410e-8980-3f75bb4f8032
 
@@ -93,10 +99,11 @@ Extensive preset library organized by use case:
 ## 🚀 Installation
 
 ### Install via ComfyUI-Manager
-* Search `Comfyui-Resolution-Master` in ComfyUI-Manager and click `Install` button.
+1. Search `Comfyui-Resolution-Master` in ComfyUI-Manager and click `Install` button.
+2. Restart ComfyUI.
 
 ### Manual Install
-1. Install [ComfyUi](https://github.com/comfyanonymous/ComfyUI).
+1. Install [ComfyUi](https://github.com/comfyanonymous/ComfyUI). I use [portable](https://docs.comfy.org/installation/comfyui_portable_windows) version.
 2. Clone this repo into `custom_modules`:
     ```bash
     cd ComfyUI/custom_nodes/
@@ -105,10 +112,6 @@ Extensive preset library organized by use case:
 3. Start up ComfyUI.
 
 ---
-
-
-
-3. Restart ComfyUI or reload custom nodes
 
 ## Usage
 
@@ -142,6 +145,8 @@ For new image generation:
 1. Connect Resolution Master's `width`/`height` to your sampler/checkpoint nodes.
 2. Use `rescale_factor` with upscaling nodes if needed.
 3. Enable Auto-Detect if using an input image as reference.
+
+---
 
 ## 🎮 Understanding the Controls
 
@@ -186,6 +191,8 @@ For new image generation:
 ### Presets Section
 - **Category Dropdown**: Select preset category (Standard, SDXL, Flux, etc.)
 - **Preset Dropdown**: Choose specific preset from selected category
+
+---
 
 ## 🔧 Node Properties Configuration
 
@@ -237,6 +244,8 @@ You can customize various parameters by accessing the node's Properties panel in
    - Activates model-specific constraints
    - Automatically adjusts dimensions to model requirements
 4. **Apply**: Dimensions are automatically updated
+
+---
 
 ## 🎯 Advanced Preset Management
 
@@ -427,6 +436,8 @@ The node provides three scaling methods that work together:
   - Located next to Auto-Fit button
   - Only active when category is selected and image detected
 
+---
+
 ## Output Values
 
 - **width** (INT): Selected width in pixels
@@ -460,6 +471,8 @@ Each scaling row shows:
 - Calculated scale factor
 - Preview of resulting dimensions
 - Radio button to set as active rescale mode
+
+---
 
 ## 🔧 Understanding rescale_factor Behavior
 
@@ -523,6 +536,8 @@ When dragging the canvas with different modifiers:
 
 The rescale_factor **always reflects your active scaling mode**, not the drag operation itself.
 
+---
+
 ## Examples
 
 ### Example 1: Understanding Snap Button vs Canvas Grid
@@ -554,6 +569,8 @@ The rescale_factor **always reflects your active scaling mode**, not the drag op
 3. Choose any preset - dimensions auto-adjust to Flux requirements
 4. Node enforces 32px increments and 4MP limit
 
+---
+
 ## Tips & Best Practices
 
 1. **Start with Presets**: Use category presets as starting points, then fine-tune
@@ -579,24 +596,24 @@ The node now supports outputs up to 32K resolution. When working with very high 
 - **canvas_step_x/y**: Step values for grid snapping
 - **canvas_decimals_x/y**: Decimal precision settings
 - **Visual options**: dots, frame, snap toggles
+
+---
+
 ## ⚠️ Known Issues / Compatibility
 
-- **Conflict with comfyui-mixlab-nodes**  
-  Some users have reported that the *Resolution Master* node appears completely blank when added to the canvas.  
-  This issue is caused by a conflict with **comfyui-mixlab-nodes**.  
+#### ○ ‎ Conflict with comfyui-mixlab-nodes
+>  Some users have reported that the *Resolution Master* node appears completely blank when added to the canvas.  
+>  This issue is caused by a conflict with **comfyui-mixlab-nodes**.  
 
-  ✅ Temporary Fix: Disable or uninstall `comfyui-mixlab-nodes` – the node will then display and work correctly.  
-  ❌ Unfortunately, I cannot reproduce this bug on my end, since with my setup both node packs work fine together.  
-  👉 Until a proper fix is implemented in `comfyui-mixlab-nodes`, the only workaround is disabling `comfyui-mixlab-nodes` or manual patch (see below).  
+>  ✅ Temporary Fix: Disable or uninstall `comfyui-mixlab-nodes` – the node will then display and work correctly.
+>  👉 Until a proper fix is implemented in `comfyui-mixlab-nodes`, the only workaround is disabling `comfyui-mixlab-nodes` or manual patch (see below).  
 
 <details>
-<summary>🔧 Advanced explanation and manual patch (click to expand)</summary>
+<summary><strong>🔧 Advanced explanation and manual patch (click to expand)</strong></summary>
 
-If you *really* want or need to use comfyui-mixlab-nodes despite this, here’s the deal:  
+- If you *really* want or need to use comfyui-mixlab-nodes despite this, here’s the deal:
+  The problem occurs because **mixlab overrides the `onDrawForeground` method of other nodes**, which breaks their display. This behavior is, frankly, unacceptable since it hijacks a method other nodes legitimately rely on. The good news is that mixlab only uses this override if the method is defined in the prototype, which means we can adjust it safely.  
 
-The problem occurs because **mixlab overrides the `onDrawForeground` method of other nodes**, which breaks their display. This behavior is, frankly, unacceptable since it hijacks a method other nodes legitimately rely on. The good news is that mixlab only uses this override if the method is defined in the prototype, which means we can adjust it safely.  
-
-### ✅ Patch  
 In `ui_mixlab.js` (see [source line here](https://github.com/shadowcz007/comfyui-mixlab-nodes/blob/67c974c96e6472316cb4bf4326281d9f86a25ae6/web/javascript/ui_mixlab.js#L2186C11-L2186C55)), replace this part:  
 
 ```js
@@ -612,22 +629,27 @@ const orig = node.onDrawForeground ?? node.__proto__.onDrawForeground;
 With this modification, the Resolution Master node (and potentially other affected nodes) will render correctly again.  
 You can either apply this tweak manually or report it to the mixlab authors so it can be properly integrated upstream.  
 
-📌 Full discussion and context are available here:  
-[github.com/Smirnov75/ComfyUI-mxToolkit/issues/28#issuecomment-2603091317](https://github.com/Smirnov75/ComfyUI-mxToolkit/issues/28#issuecomment-2603091317)
+📌 *Full discussion and context are available [here](https://github.com/Smirnov75/ComfyUI-mxToolkit/issues/28#issuecomment-2603091317)*
 
 </details>
 
 
-- **Incompatibility with Modern Node Design (Vue Nodes)**  
-  This node is not compatible with the new Vue Nodes display system.  
-  To use this node, you must revert the settings: Settings → (search) Vue Nodes → Disable "Modern Node Design (Vue Nodes)".
+#### ○ ‎ Incompatibility with Modern Node Design (Vue Nodes)
+> This node is **not compatible** with the new Vue Nodes display system.  
+>  
+> 🔧 **How to fix:**  
+> Go to **Settings → (search) "Vue Nodes" → Disable "Modern Node Design (Vue Nodes)"**.
 
+---
 
-## Contributing
+## 📜 License
 
-Contributions are welcome! Please feel free to submit issues and pull requests.
+This project is licensed under the MIT License. Feel free to use, modify, and distribute.
+
+---
 
 ## 💖 Support / Sponsorship
-
-If you’d like to support my work:  
+• ⭐ Give a star — it means a lot to me!  
+• 🐛 Report a bug or suggest a feature  
+• 💖 If you’d like to support my work:  
 👉 [GitHub Sponsors](https://github.com/sponsors/Azornes)
