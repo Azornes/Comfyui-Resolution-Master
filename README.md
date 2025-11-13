@@ -20,9 +20,9 @@
 </p>
 
 <p align="center">
-  <strong>🔹 <a href="https://github.com/Azornes/Comfyui-Resolution-Master/blob/main/README.md#-installation">Quick Start</a></strong>
+  <strong>🔹 <a href="https://github.com/Azornes/Comfyui-Resolution-Master/tree/main?tab=readme-ov-file#-installation">Quick Start</a></strong>
   &nbsp; | &nbsp;
-  <strong>⚠️ <a href="https://github.com/Azornes/Comfyui-Resolution-Master/blob/main/README.md#-installation">Known Issues</a></strong>
+  <strong>⚠️ <a href="https://github.com/Azornes/Comfyui-Resolution-Master/tree/main?tab=readme-ov-file#%EF%B8%8F-known-issues--compatibility">Known Issues</a></strong>
 </p>
 
 
