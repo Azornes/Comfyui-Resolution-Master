@@ -5,27 +5,6 @@
  * Note: Variables are defined in css-variables.css
  */
 
-/* ========================================
-   GLOBAL STYLES
-   ======================================== */
-
-/* Global box-sizing for consistency */
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
-/* Accessibility: Respect user's motion preferences */
-@media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-    }
-}
 
 /* ========================================
    DIALOG OVERLAYS
