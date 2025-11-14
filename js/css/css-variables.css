@@ -4,8 +4,7 @@
  */
 
 .resolution-master-container,
-[class*="resolution-master-"],
-[class*="json-editor-"] {
+[class*="resolution-master-"]{
     /* ===== KOLORY - PRIMARY ===== */
     --color-primary: #5af;              /* Główny niebieski */
     --color-primary-light: #7cf;        /* Jaśniejszy niebieski (hover) */

@@ -21,11 +21,11 @@ export class JSONEditorDialog {
         
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.className = 'json-editor-overlay';
+        overlay.className = 'resolution-master-json-editor-overlay';
         
         // Create dialog container
         const dialog = document.createElement('div');
-        dialog.className = 'json-editor-dialog';
+        dialog.className = 'resolution-master-json-editor-dialog';
         
         // Create tooltip manager
         const tooltipManager = new TooltipManager({
@@ -55,7 +55,7 @@ export class JSONEditorDialog {
         
         // Content area with JSONEditor
         const content = document.createElement('div');
-        content.className = 'json-editor-content';
+        content.className = 'resolution-master-json-editor-content';
         
         // Load JSONEditor CSS dynamically
         if (!document.getElementById('jsoneditor-css-link')) {
@@ -83,12 +83,12 @@ export class JSONEditorDialog {
         // Editor container
         const editorContainer = document.createElement('div');
         editorContainer.id = 'json-editor-container';
-        editorContainer.className = 'json-editor-container';
+        editorContainer.className = 'resolution-master-json-editor-container';
         // Height and width are controlled by CSS flex properties
         
         // Validation message
         const validationMsg = document.createElement('div');
-        validationMsg.className = 'json-editor-validation';
+        validationMsg.className = 'resolution-master-json-editor-validation';
         validationMsg.style.color = '#5f5';
         validationMsg.textContent = '✓ Valid JSON';
         
@@ -251,15 +251,15 @@ export class JSONEditorDialog {
      */
     createHeader(onClose) {
         const header = document.createElement('div');
-        header.className = 'json-editor-header';
+        header.className = 'resolution-master-json-editor-header';
         
         const title = document.createElement('div');
-        title.className = 'json-editor-title';
+        title.className = 'resolution-master-json-editor-title';
         title.textContent = '{ } JSON Editor';
         
         const closeBtn = document.createElement('button');
         closeBtn.id = 'json-editor-close-btn';
-        closeBtn.className = 'json-editor-close-btn';
+        closeBtn.className = 'resolution-master-json-editor-close-btn';
         closeBtn.textContent = '✕';
         closeBtn.addEventListener('click', onClose);
         
@@ -275,7 +275,7 @@ export class JSONEditorDialog {
      */
     createInfoMessage() {
         const infoDiv = document.createElement('div');
-        infoDiv.className = 'json-editor-info';
+        infoDiv.className = 'resolution-master-json-editor-info';
         infoDiv.innerHTML = `
             💡 <strong>Direct JSON editing</strong><br>
             Edit the JSON below to modify custom presets and hidden built-in presets.<br>
@@ -294,10 +294,10 @@ export class JSONEditorDialog {
      */
     createFooter(validationMsg, onClose) {
         const footer = document.createElement('div');
-        footer.className = 'json-editor-footer';
+        footer.className = 'resolution-master-json-editor-footer';
         
         const rightBtns = document.createElement('div');
-        rightBtns.className = 'json-editor-footer-right';
+        rightBtns.className = 'resolution-master-json-editor-footer-right';
         
         // Cancel button
         const cancelBtn = this.createCancelButton(onClose);
@@ -320,7 +320,7 @@ export class JSONEditorDialog {
     createCancelButton(onClose) {
         const cancelBtn = document.createElement('button');
         cancelBtn.id = 'json-editor-cancel-btn';
-        cancelBtn.className = 'json-editor-cancel-btn';
+        cancelBtn.className = 'resolution-master-json-editor-cancel-btn';
         cancelBtn.textContent = 'Cancel';
         cancelBtn.addEventListener('click', onClose);
         
@@ -336,7 +336,7 @@ export class JSONEditorDialog {
     createApplyButton(validationMsg, onClose) {
         const applyBtn = document.createElement('button');
         applyBtn.id = 'json-editor-apply-btn';
-        applyBtn.className = 'json-editor-apply-btn';
+        applyBtn.className = 'resolution-master-json-editor-apply-btn';
         applyBtn.textContent = 'Apply Changes';
         applyBtn.addEventListener('click', () => {
             try {

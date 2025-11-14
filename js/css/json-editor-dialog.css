@@ -6,7 +6,7 @@
  */
 
 /* Dialog Container - Component-specific sizing */
-.json-editor-dialog {
+.resolution-master-json-editor-dialog {
     width: 90vw;
     height: 90vh;
     display: flex;
@@ -15,12 +15,12 @@
 }
 
 /* Overlay - Component-specific z-index */
-.json-editor-overlay {
+.resolution-master-json-editor-overlay {
     z-index: var(--z-rename-dialog);
 }
 
 /* Info Message */
-.json-editor-info {
+.resolution-master-json-editor-info {
     padding: var(--spacing-12) var(--spacing-20);
     background: var(--bg-primary-10);
     border-bottom: 1px solid var(--bg-primary-30);
@@ -30,7 +30,7 @@
 }
 
 /* Content Area */
-.json-editor-content {
+.resolution-master-json-editor-content {
     flex: 1;
     padding: var(--spacing-20);
     overflow: hidden;
@@ -39,7 +39,7 @@
 }
 
 /* Editor Container */
-.json-editor-container {
+.resolution-master-json-editor-container {
     flex: 1;
     display: flex;
     border: 1px solid var(--color-gray-700);
@@ -49,19 +49,19 @@
     transition: all 0.2s ease;
 }
 
-.json-editor-container:focus-within {
+.resolution-master-json-editor-container:focus-within {
     border-color: var(--color-primary);
 }
 
 /* Drag and Drop States */
-.json-editor-container.drag-over {
+.resolution-master-json-editor-container.drag-over {
     border-color: var(--color-primary);
     border-width: 2px;
     background: rgba(var(--color-primary-rgb, 88, 166, 255), 0.05);
     box-shadow: 0 0 20px rgba(var(--color-primary-rgb, 88, 166, 255), 0.3);
 }
 
-.json-editor-container.drag-over::before {
+.resolution-master-json-editor-container.drag-over::before {
     content: '📄 Drop JSON file here';
     position: absolute;
     top: 50%;
@@ -78,7 +78,7 @@
 }
 
 /* Line Numbers */
-.json-editor-line-numbers {
+.resolution-master-json-editor-line-numbers {
     padding: var(--spacing-12) var(--spacing-8) var(--spacing-12) var(--spacing-4);
     background: var(--color-bg-dark-4);
     color: var(--color-gray-600);
@@ -92,19 +92,19 @@
     min-width: 50px;
 }
 
-.json-editor-line-number {
+.resolution-master-json-editor-line-number {
     height: var(--line-height-editor);
 }
 
 /* Editor Wrapper */
-.json-editor-wrapper {
+.resolution-master-json-editor-wrapper {
     flex: 1;
     overflow: auto;
     position: relative;
 }
 
 /* Code Editor */
-.json-editor-pre {
+.resolution-master-json-editor-pre {
     margin: 0;
     padding: var(--spacing-12);
     background: transparent;
@@ -114,7 +114,7 @@
     overflow: visible;
 }
 
-.json-editor-code {
+.resolution-master-json-editor-code {
     outline: none;
     display: block;
     white-space: pre;
@@ -122,18 +122,18 @@
 }
 
 /* Validation States - border colors for container */
-.json-editor-container.valid {
+.resolution-master-json-editor-container.valid {
     color: var(--color-success);
     border-color: var(--color-success);
 }
 
-.json-editor-container.invalid {
+.resolution-master-json-editor-container.invalid {
     border-color: var(--color-error-light);
 }
 
 /* Footer Sections */
-.json-editor-footer-left,
-.json-editor-footer-right {
+.resolution-master-json-editor-footer-left,
+.resolution-master-json-editor-footer-right {
     display: flex;
     gap: var(--spacing-12);
 }

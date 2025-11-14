@@ -12,7 +12,7 @@
 
 /* All dialog overlays share the same pattern */
 .resolution-master-preset-manager-overlay,
-.json-editor-overlay,
+.resolution-master-json-editor-overlay,
 .resolution-master-rename-dialog-overlay,
 .resolution-master-searchable-dropdown-overlay {
     position: fixed;
@@ -25,7 +25,7 @@
 
 /* Specific overlay backgrounds */
 .resolution-master-preset-manager-overlay,
-.json-editor-overlay {
+.resolution-master-json-editor-overlay {
     background: var(--overlay-dark-70);
 }
 
@@ -43,7 +43,7 @@
 
 /* Base dialog structure - applies to all dialogs */
 .resolution-master-preset-manager-dialog,
-.json-editor-dialog,
+.resolution-master-json-editor-dialog,
 .resolution-master-rename-dialog,
 .resolution-master-searchable-dropdown {
     position: fixed;
@@ -57,7 +57,7 @@
 
 /* Centered dialogs */
 .resolution-master-preset-manager-dialog,
-.json-editor-dialog,
+.resolution-master-json-editor-dialog,
 .resolution-master-rename-dialog {
     top: 50%;
     left: 50%;
@@ -70,7 +70,7 @@
 
 /* All dialog headers share the same layout */
 .resolution-master-preset-manager-header,
-.json-editor-header,
+.resolution-master-json-editor-header,
 .resolution-master-searchable-dropdown-title-container {
     padding: var(--spacing-16) var(--spacing-20);
     border-bottom: 2px solid var(--color-gray-800);
@@ -90,7 +90,7 @@
    ======================================== */
 
 .resolution-master-preset-manager-title,
-.json-editor-title {
+.resolution-master-json-editor-title {
     color: var(--color-white);
     font-size: var(--font-2xl);
     font-weight: bold;
@@ -116,7 +116,7 @@
 
 /* All close buttons share identical styles */
 .resolution-master-preset-manager-close-btn,
-.json-editor-close-btn,
+.resolution-master-json-editor-close-btn,
 .resolution-master-searchable-dropdown-close-btn {
     background: transparent;
     border: none;
@@ -128,7 +128,7 @@
 
 /* Keyboard focus accessibility - visible focus indicator */
 .resolution-master-preset-manager-close-btn:focus-visible,
-.json-editor-close-btn:focus-visible,
+.resolution-master-json-editor-close-btn:focus-visible,
 .resolution-master-searchable-dropdown-close-btn:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
@@ -136,7 +136,7 @@
 
 /* Large close buttons (dialogs) */
 .resolution-master-preset-manager-close-btn,
-.json-editor-close-btn {
+.resolution-master-json-editor-close-btn {
     font-size: var(--font-4xl);
     width: var(--spacing-32);
     height: var(--spacing-32);
@@ -158,7 +158,7 @@
 
 /* Close button hover states */
 .resolution-master-preset-manager-close-btn:hover,
-.json-editor-close-btn:hover {
+.resolution-master-json-editor-close-btn:hover {
     background: var(--overlay-light-10);
     color: var(--color-white);
 }
@@ -173,7 +173,7 @@
 
 /* All dialog footers share the same layout */
 .resolution-master-preset-manager-footer,
-.json-editor-footer {
+.resolution-master-json-editor-footer {
     padding: var(--spacing-16) var(--spacing-20);
     border-top: 2px solid var(--color-gray-800);
     display: flex;
@@ -187,7 +187,7 @@
 
 /* All footer buttons share base styles */
 .resolution-master-preset-manager-footer button,
-.json-editor-footer button,
+.resolution-master-json-editor-footer button,
 .resolution-master-rename-dialog-buttons button {
     padding: var(--spacing-10) var(--spacing-20);
     border: none;
@@ -209,14 +209,14 @@
    ======================================== */
 
 /* Primary buttons (Apply, Save, etc.) */
-.json-editor-apply-btn,
+.resolution-master-json-editor-apply-btn,
 .resolution-master-rename-dialog-apply-btn,
 .resolution-master-preset-ui-footer-btn-primary {
     background: var(--color-primary);
     color: var(--color-black);
 }
 
-.json-editor-apply-btn:hover:not(:disabled),
+.resolution-master-json-editor-apply-btn:hover:not(:disabled),
 .resolution-master-rename-dialog-apply-btn:hover:not(:disabled),
 .resolution-master-preset-ui-footer-btn-primary:hover {
     background: var(--color-primary-light);
@@ -232,8 +232,8 @@
    ======================================== */
 
 /* Secondary buttons (Cancel, Format, etc.) */
-.json-editor-format-btn,
-.json-editor-cancel-btn,
+.resolution-master-json-editor-format-btn,
+.resolution-master-json-editor-cancel-btn,
 .resolution-master-rename-dialog-cancel-btn,
 .resolution-master-preset-ui-footer-btn-secondary {
     background: var(--overlay-light-10);
@@ -241,8 +241,8 @@
     color: var(--color-gray-100);
 }
 
-.json-editor-format-btn:hover,
-.json-editor-cancel-btn:hover,
+.resolution-master-json-editor-format-btn:hover,
+.resolution-master-json-editor-cancel-btn:hover,
 .resolution-master-rename-dialog-cancel-btn:hover,
 .resolution-master-preset-ui-footer-btn-secondary:hover {
     background: var(--overlay-light-15);
@@ -353,7 +353,7 @@
 .resolution-master-preset-add-form-error,
 .resolution-master-preset-add-validation,
 .resolution-master-rename-dialog-validation,
-.json-editor-validation {
+.resolution-master-json-editor-validation {
     color: var(--color-error-light);
     font-size: var(--font-sm);
 }
@@ -375,7 +375,7 @@
     min-height: 15px;
 }
 
-.json-editor-validation {
+.resolution-master-json-editor-validation {
     padding: 0 var(--spacing-20) var(--spacing-10) var(--spacing-20);
     font-size: var(--font-md);
     min-height: 18px;
@@ -384,7 +384,7 @@
 }
 
 /* Valid state for JSON editor */
-.json-editor-validation.valid {
+.resolution-master-json-editor-validation.valid {
     color: var(--color-success);
 }
 
