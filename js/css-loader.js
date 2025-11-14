@@ -41,5 +41,10 @@ export function loadAllStyles() {
     }
 }
 
-// Auto-load styles when this module is imported
-loadAllStyles();
+/**
+ * Call this function when the ResolutionMaster node is actually created/used
+ * to load styles only when needed, preventing global UI interference
+ */
+export function loadStylesWhenNeeded() {
+    loadAllStyles();
+}

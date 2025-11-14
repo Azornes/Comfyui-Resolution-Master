@@ -73,6 +73,14 @@ class ResolutionMasterCanvas {
         this.presetCategories = presetCategories;
         
         this.setupNode();
+        
+        // Load CSS only when this specific node instance is created
+        // This prevents global CSS loading that affects entire ComfyUI
+        import('./css-loader.js').then(module => {
+            module.loadStylesWhenNeeded();
+        }).catch(error => {
+            log.error('Failed to load CSS:', error);
+        });
     }
     
     ensureMinimumSize() {
@@ -401,8 +409,9 @@ class ResolutionMasterCanvas {
         }
         
         const neededHeight = currentY + 20;
-        // Always adjust height to match content, allowing shrinking when sections are collapsed
-        if (node.size[1] !== neededHeight) {
+        // Only adjust height if difference is significant (avoid micro-adjustments causing redraws)
+        const heightDiff = Math.abs(node.size[1] - neededHeight);
+        if (heightDiff > 1) {
             node.size[1] = Math.max(neededHeight, node.min_size[1]);
         }
         
@@ -1495,14 +1504,10 @@ class ResolutionMasterCanvas {
             }
         }
         
-        // Always update mouse position for tooltips
+        // Update mouse position for tooltips
         this.tooltipMousePos = { x: e.canvasX, y: e.canvasY };
         
-        // If tooltip is showing, update canvas to follow mouse
-        if (this.showTooltip && this.tooltipElement) {
-            app.graph.setDirtyCanvas(true);
-        }
-        
+        // Only trigger redraw if hover element changed
         if (newHover !== this.hoverElement) {
             this.hoverElement = newHover;
             this.handleTooltipHover(newHover, e);
