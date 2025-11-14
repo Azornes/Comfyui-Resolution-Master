@@ -110,21 +110,21 @@ export class PresetManagerDialog {
     attachTooltips() {
         // List of selectors for elements that should have tooltips
         const selectors = [
-            '.preset-manager-footer button[id]',
-            '.preset-list-edit-btn',
-            '.preset-add-rename-category-btn',
-            '.preset-list-delete-btn',
-            '.aspect-ratio-preset-action-btn.delete',
-            '.aspect-ratio-preset-action-btn.hide',
-            '.aspect-ratio-preset-action-btn.unhide',
-            '.preset-list-category-header',
-            '.preset-list-category-name',
-            '.preset-list-edit-category-btn',
-            '.preset-list-name',
-            '.preset-list-checkbox',
+            '.resolution-master-preset-manager-footer button[id]',
+            '.resolution-master-preset-list-edit-btn',
+            '.resolution-master-preset-add-rename-category-btn',
+            '.resolution-master-preset-list-delete-btn',
+            '.resolution-master-aspect-ratio-preset-action-btn.delete',
+            '.resolution-master-aspect-ratio-preset-action-btn.hide',
+            '.resolution-master-aspect-ratio-preset-action-btn.unhide',
+            '.resolution-master-preset-list-category-header',
+            '.resolution-master-preset-list-category-name',
+            '.resolution-master-preset-list-edit-category-btn',
+            '.resolution-master-preset-list-name',
+            '.resolution-master-preset-list-checkbox',
             '#category-select-btn',
             '#quick-add-button',
-            '.preset-list-clone-handle'
+            '.resolution-master-preset-list-clone-handle'
         ];
         
         // Attach tooltips to all matching elements

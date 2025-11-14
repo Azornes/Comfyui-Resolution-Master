@@ -95,7 +95,7 @@ export class PresetUIComponents {
      */
     static createFooterButton(text, style, onClick) {
         const btn = document.createElement('button');
-        btn.className = `preset-ui-footer-btn preset-ui-footer-btn-${style}`;
+        btn.className = `resolution-master-preset-ui-footer-btn resolution-master-preset-ui-footer-btn-${style}`;
         
         // Support both text and HTML (for SVG icons)
         if (text.includes('<img')) {

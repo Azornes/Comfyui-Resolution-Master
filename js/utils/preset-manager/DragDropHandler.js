@@ -13,7 +13,7 @@ export class DragDropHandler {
         if (!element) return;
         
         // Remove all indicator classes first
-        element.classList.remove('resolution-master-drag-drop-indicator-top', 'drag-drop-indicator-top-move', 'drag-drop-indicator-top-error', 'drag-drop-indicator-top-clone');
+        element.classList.remove('resolution-master-drag-drop-indicator-top', 'resolution-master-drag-drop-indicator-top-move', 'resolution-master-drag-drop-indicator-top-error', 'resolution-master-drag-drop-indicator-top-clone');
         
         // Add appropriate class based on color
         if (color === '#fa0') {
@@ -36,7 +36,7 @@ export class DragDropHandler {
         if (!element) return;
         
         // Remove all indicator classes first
-        element.classList.remove('resolution-master-drag-drop-indicator-bottom', 'drag-drop-indicator-bottom-move', 'drag-drop-indicator-bottom-error', 'drag-drop-indicator-bottom-clone');
+        element.classList.remove('resolution-master-drag-drop-indicator-bottom', 'resolution-master-drag-drop-indicator-bottom-move', 'resolution-master-drag-drop-indicator-bottom-error', 'resolution-master-drag-drop-indicator-bottom-clone');
         
         // Add appropriate class based on color
         if (color === '#fa0') {
@@ -59,14 +59,14 @@ export class DragDropHandler {
         
         // Remove all indicator classes
         element.classList.remove(
-            'drag-drop-indicator-top',
-            'drag-drop-indicator-top-move',
-            'drag-drop-indicator-top-error',
-            'drag-drop-indicator-top-clone',
-            'drag-drop-indicator-bottom',
-            'drag-drop-indicator-bottom-move',
-            'drag-drop-indicator-bottom-error',
-            'drag-drop-indicator-bottom-clone'
+            'resolution-master-drag-drop-indicator-top',
+            'resolution-master-drag-drop-indicator-top-move',
+            'resolution-master-drag-drop-indicator-top-error',
+            'resolution-master-drag-drop-indicator-top-clone',
+            'resolution-master-drag-drop-indicator-bottom',
+            'resolution-master-drag-drop-indicator-bottom-move',
+            'resolution-master-drag-drop-indicator-bottom-error',
+            'resolution-master-drag-drop-indicator-bottom-clone'
         );
     }
 

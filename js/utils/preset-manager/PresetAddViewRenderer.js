@@ -638,7 +638,7 @@ export class PresetAddViewRenderer {
      */
     createPresetItemForColumn(preset) {
         const presetItem = document.createElement('div');
-        presetItem.className = 'resolution-master-aspect-ratio-preset-item resolution-master-aspect-ratio-preset-item-column' + (preset.isHidden ? ' preset-is-hidden' : '');
+        presetItem.className = 'resolution-master-aspect-ratio-preset-item resolution-master-aspect-ratio-preset-item-column' + (preset.isHidden ? ' resolution-master-preset-is-hidden' : '');
         // Preset name with custom icon if applicable
         const nameDiv = document.createElement('div');
         nameDiv.className = 'resolution-master-aspect-ratio-preset-item-name';

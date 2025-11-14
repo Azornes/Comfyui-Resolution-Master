@@ -285,7 +285,7 @@ export class PresetListRenderer {
         
         // Create clickable name element (like preset names)
         const nameElement = document.createElement('strong');
-        nameElement.className = 'preset-list-category-name';
+        nameElement.className = 'resolution-master-preset-list-category-name';
         nameElement.textContent = category;
         nameElement.style.cursor = 'pointer';
         
@@ -522,7 +522,7 @@ export class PresetListRenderer {
             this.parentDialog.draggedPresetDims = dims;
             
             // Visual feedback
-            const item = cloneHandle.closest('.preset-list-item');
+            const item = cloneHandle.closest('.resolution-master-preset-list-item');
             if (item) {
                 item.style.opacity = '0.5';
             }
@@ -537,7 +537,7 @@ export class PresetListRenderer {
             this.parentDialog.isDuplicateMode = false;
             
             // Reset visual feedback
-            const item = cloneHandle.closest('.preset-list-item');
+            const item = cloneHandle.closest('.resolution-master-preset-list-item');
             if (item) {
                 item.style.opacity = '1';
             }
@@ -646,7 +646,7 @@ export class PresetListRenderer {
         const editBtn = PresetUIComponents.createActionButton(editIconHtml, 'Edit', () => {
             this.parentDialog.editPreset(category, name, dims);
         });
-        editBtn.classList.add('preset-list-edit-btn');
+        editBtn.classList.add('resolution-master-preset-list-edit-btn');
         actions.appendChild(editBtn);
 
         // Delete button
@@ -654,7 +654,7 @@ export class PresetListRenderer {
         const deleteBtn = PresetUIComponents.createActionButton(deleteIcon, 'Delete', () => {
             this.parentDialog.deletePreset(category, name);
         });
-        deleteBtn.classList.add('preset-list-delete-btn');
+        deleteBtn.classList.add('resolution-master-preset-list-delete-btn');
         actions.appendChild(deleteBtn);
 
         return actions;
