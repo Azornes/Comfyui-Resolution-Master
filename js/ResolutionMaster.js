@@ -1837,8 +1837,10 @@ class ResolutionMasterCanvas {
         newX = Math.round(rnX * newX) / rnX;
         newY = Math.round(rnY * newY) / rnY;
         
-        this.setDimensions(newX, newY);
-        app.graph.setDirtyCanvas(true);
+        // Only update if values changed
+        if (props.valueX !== newX || props.valueY !== newY) {
+            this.setDimensions(newX, newY);
+        }
     }
     
     updateCanvasValueWidth(x, w, ctrlKey) {
