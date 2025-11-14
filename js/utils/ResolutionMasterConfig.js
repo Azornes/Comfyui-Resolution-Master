@@ -60,30 +60,25 @@ export const presetManagerTooltips = {
     
     // Add/Edit view
     'category-select-btn': 'Select or create a category for your presets',
-    'rename-category-btn': 'Rename this category',
+    'resolution-master-preset-add-rename-category-btn': 'Rename this category',
     'quick-add-button': 'Add or save this preset to the selected category',
     
     // List view
     'manage-presets-btn': 'Open the preset manager to add, edit, or delete custom presets',
-    'preset-edit-btn': 'Edit this item',
-    'preset-list-edit-btn': 'Edit this item',
-    'preset-delete-btn': 'Delete this custom preset',
-    'preset-list-delete-btn': 'Delete this custom preset',
-    'preset-toggle-btn': 'Toggle visibility of this built-in preset',
-    'preset-list-edit-category-btn': 'Edit this category',
-    'preset-list-category-header': 'Drag to reorder categories',
-    'preset-list-category-name': 'Double-click to rename',
-    'preset-list-name': 'Double-click to rename this preset',
-    'preset-list-checkbox': 'Select for bulk deletion (use Shift+Click to select a range)',
-    'preset-list-clone-handle': 'Drag to duplicate this preset',
-    'aspect-ratio-preset-action-btn': {
+    'resolution-master-preset-list-edit-btn': 'Edit this item',
+    'resolution-master-preset-list-delete-btn': 'Delete this custom preset',
+    'resolution-master-preset-toggle-btn': 'Toggle visibility of this built-in preset',
+    'resolution-master-preset-list-edit-category-btn': 'Edit this category',
+    'resolution-master-preset-list-category-header': 'Drag to reorder categories',
+    'resolution-master-preset-list-category-name': 'Double-click to rename',
+    'resolution-master-preset-list-name': 'Double-click to rename this preset',
+    'resolution-master-preset-list-checkbox': 'Select for bulk deletion (use Shift+Click to select a range)',
+    'resolution-master-preset-list-clone-handle': 'Drag to duplicate this preset',
+    'resolution-master-aspect-ratio-preset-action-btn': {
         'delete': 'Delete this custom preset',
         'hide': 'Hide this built-in preset from the main selector',
         'unhide': 'Show this hidden preset in the main selector'
     },
-    'category-header': 'Double-click to rename, drag to reorder categories',
-    'preset-item-name': 'Double-click to rename this preset',
-    'preset-checkbox': 'Select for bulk deletion (Shift+Click for range selection)',
     
     // JSON Editor Dialog
     'json-editor-close-btn': 'Close JSON editor without saving changes',

@@ -6,8 +6,8 @@
 
 /* ===== BASE STYLES - Using attribute selector for automatic inheritance ===== */
 /* All drag-drop-indicator classes automatically get no transition */
-[class^="drag-drop-indicator-"],
-[class*=" drag-drop-indicator-"] {
+[class^="resolution-master-drag-drop-indicator-"],
+[class*=" resolution-master-drag-drop-indicator-"] {
     transition: none;
 }
 
