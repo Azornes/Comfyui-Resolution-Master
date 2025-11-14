@@ -148,7 +148,7 @@ export class PresetManagerDialog {
 
         // Create overlay
         this.overlay = document.createElement('div');
-        this.overlay.className = 'preset-manager-overlay';
+        this.overlay.className = 'resolution-master-preset-manager-overlay';
         this.overlay.addEventListener('mousedown', (e) => {
             if (e.target === this.overlay) this.hide();
         });
@@ -156,7 +156,7 @@ export class PresetManagerDialog {
 
         // Create container
         this.container = document.createElement('div');
-        this.container.className = 'preset-manager-dialog';
+        this.container.className = 'resolution-master-preset-manager-dialog';
         document.body.appendChild(this.container);
 
         this.renderDialog();
@@ -170,15 +170,15 @@ export class PresetManagerDialog {
 
         // Header
         const header = document.createElement('div');
-        header.className = 'preset-manager-header';
+        header.className = 'resolution-master-preset-manager-header';
 
         const title = document.createElement('div');
-        title.className = 'preset-manager-title';
+        title.className = 'resolution-master-preset-manager-title';
         const settingsIconHtml = getIconHtml(this.settingsIcon, '⚙', 24, 'vertical-align: middle; margin-right: 6px;');
         title.innerHTML = settingsIconHtml + ' Custom Presets Manager';
 
         const closeBtn = document.createElement('button');
-        closeBtn.className = 'preset-manager-close-btn';
+        closeBtn.className = 'resolution-master-preset-manager-close-btn';
         closeBtn.textContent = '✕';
         closeBtn.addEventListener('click', () => this.hide());
 
@@ -188,7 +188,7 @@ export class PresetManagerDialog {
 
         // Content area
         const content = document.createElement('div');
-        content.className = 'preset-manager-content';
+        content.className = 'resolution-master-preset-manager-content';
 
         if (this.currentView === 'list') {
             this.listRenderer.render(content);
@@ -210,11 +210,11 @@ export class PresetManagerDialog {
      */
     renderFooter() {
         const footer = document.createElement('div');
-        footer.className = 'preset-manager-footer';
+        footer.className = 'resolution-master-preset-manager-footer';
 
         // Left side buttons
         const leftButtons = document.createElement('div');
-        leftButtons.className = 'preset-manager-footer-left';
+        leftButtons.className = 'resolution-master-preset-manager-footer-left';
 
         if (this.currentView === 'list') {
             const addPlusIconHtml = getIconHtml(this.addPlusIcon, '➕', 18, 'vertical-align: middle; margin-right: 4px;');
@@ -492,10 +492,10 @@ export class PresetManagerDialog {
         const gridScrollLeft = presetsGrid.scrollLeft;
         
         // Save each column's vertical scroll position
-        const existingColumns = presetsGrid.querySelectorAll('.aspect-ratio-column');
+        const existingColumns = presetsGrid.querySelectorAll('.resolution-master-aspect-ratio-column');
         existingColumns.forEach(column => {
-            const ratioText = column.querySelector('.aspect-ratio-column-title')?.textContent;
-            const ratioList = column.querySelector('.aspect-ratio-column-list');
+            const ratioText = column.querySelector('.resolution-master-aspect-ratio-column-title')?.textContent;
+            const ratioList = column.querySelector('.resolution-master-aspect-ratio-column-list');
             if (ratioText && ratioList) {
                 scrollPositions.set(ratioText, ratioList.scrollTop);
             }
@@ -587,8 +587,8 @@ export class PresetManagerDialog {
             
             // Restore vertical scroll of each column
             columns.forEach(column => {
-                const ratioText = column.querySelector('.aspect-ratio-column-title')?.textContent;
-                const ratioList = column.querySelector('.aspect-ratio-column-list');
+                const ratioText = column.querySelector('.resolution-master-aspect-ratio-column-title')?.textContent;
+                const ratioList = column.querySelector('.resolution-master-aspect-ratio-column-list');
                 if (ratioText && ratioList && scrollPositions.has(ratioText)) {
                     ratioList.scrollTop = scrollPositions.get(ratioText);
                 }

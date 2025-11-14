@@ -11,10 +11,10 @@
    ======================================== */
 
 /* All dialog overlays share the same pattern */
-.preset-manager-overlay,
+.resolution-master-preset-manager-overlay,
 .json-editor-overlay,
-.rename-dialog-overlay,
-.searchable-dropdown-overlay {
+.resolution-master-rename-dialog-overlay,
+.resolution-master-searchable-dropdown-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -24,16 +24,16 @@
 }
 
 /* Specific overlay backgrounds */
-.preset-manager-overlay,
+.resolution-master-preset-manager-overlay,
 .json-editor-overlay {
     background: var(--overlay-dark-70);
 }
 
-.rename-dialog-overlay {
+.resolution-master-rename-dialog-overlay {
     background: var(--overlay-dark-50);
 }
 
-.searchable-dropdown-overlay {
+.resolution-master-searchable-dropdown-overlay {
     background: transparent;
 }
 
@@ -42,10 +42,10 @@
    ======================================== */
 
 /* Base dialog structure - applies to all dialogs */
-.preset-manager-dialog,
+.resolution-master-preset-manager-dialog,
 .json-editor-dialog,
-.rename-dialog,
-.searchable-dropdown {
+.resolution-master-rename-dialog,
+.resolution-master-searchable-dropdown {
     position: fixed;
     background: var(--gradient-dark);
     border: 2px solid var(--color-gray-700);
@@ -56,9 +56,9 @@
 }
 
 /* Centered dialogs */
-.preset-manager-dialog,
+.resolution-master-preset-manager-dialog,
 .json-editor-dialog,
-.rename-dialog {
+.resolution-master-rename-dialog {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -69,9 +69,9 @@
    ======================================== */
 
 /* All dialog headers share the same layout */
-.preset-manager-header,
+.resolution-master-preset-manager-header,
 .json-editor-header,
-.searchable-dropdown-title-container {
+.resolution-master-searchable-dropdown-title-container {
     padding: var(--spacing-16) var(--spacing-20);
     border-bottom: 2px solid var(--color-gray-800);
     display: flex;
@@ -80,7 +80,7 @@
 }
 
 /* Searchable dropdown has smaller padding */
-.searchable-dropdown-title-container {
+.resolution-master-searchable-dropdown-title-container {
     padding: var(--spacing-8) var(--spacing-12) var(--spacing-6) var(--spacing-12);
     border-bottom: 1px solid var(--color-gray-800);
 }
@@ -89,14 +89,14 @@
    DIALOG TITLES
    ======================================== */
 
-.preset-manager-title,
+.resolution-master-preset-manager-title,
 .json-editor-title {
     color: var(--color-white);
     font-size: var(--font-2xl);
     font-weight: bold;
 }
 
-.rename-dialog-title {
+.resolution-master-rename-dialog-title {
     color: var(--color-white);
     font-size: var(--font-xl);
     font-weight: bold;
@@ -104,7 +104,7 @@
     text-align: center;
 }
 
-.searchable-dropdown-title {
+.resolution-master-searchable-dropdown-title {
     color: var(--color-white);
     font-size: var(--font-base);
     font-weight: bold;
@@ -115,9 +115,9 @@
    ======================================== */
 
 /* All close buttons share identical styles */
-.preset-manager-close-btn,
+.resolution-master-preset-manager-close-btn,
 .json-editor-close-btn,
-.searchable-dropdown-close-btn {
+.resolution-master-searchable-dropdown-close-btn {
     background: transparent;
     border: none;
     color: var(--color-gray-300);
@@ -127,15 +127,15 @@
 }
 
 /* Keyboard focus accessibility - visible focus indicator */
-.preset-manager-close-btn:focus-visible,
+.resolution-master-preset-manager-close-btn:focus-visible,
 .json-editor-close-btn:focus-visible,
-.searchable-dropdown-close-btn:focus-visible {
+.resolution-master-searchable-dropdown-close-btn:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
 /* Large close buttons (dialogs) */
-.preset-manager-close-btn,
+.resolution-master-preset-manager-close-btn,
 .json-editor-close-btn {
     font-size: var(--font-4xl);
     width: var(--spacing-32);
@@ -146,7 +146,7 @@
 }
 
 /* Small close button (dropdown) */
-.searchable-dropdown-close-btn {
+.resolution-master-searchable-dropdown-close-btn {
     font-size: var(--font-3xl);
     font-weight: bold;
     width: var(--spacing-20);
@@ -157,13 +157,13 @@
 }
 
 /* Close button hover states */
-.preset-manager-close-btn:hover,
+.resolution-master-preset-manager-close-btn:hover,
 .json-editor-close-btn:hover {
     background: var(--overlay-light-10);
     color: var(--color-white);
 }
 
-.searchable-dropdown-close-btn:hover {
+.resolution-master-searchable-dropdown-close-btn:hover {
     color: var(--color-white);
 }
 
@@ -172,7 +172,7 @@
    ======================================== */
 
 /* All dialog footers share the same layout */
-.preset-manager-footer,
+.resolution-master-preset-manager-footer,
 .json-editor-footer {
     padding: var(--spacing-16) var(--spacing-20);
     border-top: 2px solid var(--color-gray-800);
@@ -186,9 +186,9 @@
    ======================================== */
 
 /* All footer buttons share base styles */
-.preset-manager-footer button,
+.resolution-master-preset-manager-footer button,
 .json-editor-footer button,
-.rename-dialog-buttons button {
+.resolution-master-rename-dialog-buttons button {
     padding: var(--spacing-10) var(--spacing-20);
     border: none;
     border-radius: var(--radius-lg);
@@ -199,7 +199,7 @@
 }
 
 /* Smaller buttons */
-.rename-dialog-buttons button {
+.resolution-master-rename-dialog-buttons button {
     padding: var(--spacing-8) var(--spacing-16);
     font-size: var(--font-md);
 }
@@ -210,19 +210,19 @@
 
 /* Primary buttons (Apply, Save, etc.) */
 .json-editor-apply-btn,
-.rename-dialog-apply-btn,
-.preset-ui-footer-btn-primary {
+.resolution-master-rename-dialog-apply-btn,
+.resolution-master-preset-ui-footer-btn-primary {
     background: var(--color-primary);
     color: var(--color-black);
 }
 
 .json-editor-apply-btn:hover:not(:disabled),
-.rename-dialog-apply-btn:hover:not(:disabled),
-.preset-ui-footer-btn-primary:hover {
+.resolution-master-rename-dialog-apply-btn:hover:not(:disabled),
+.resolution-master-preset-ui-footer-btn-primary:hover {
     background: var(--color-primary-light);
 }
 
-.rename-dialog-apply-btn:disabled {
+.resolution-master-rename-dialog-apply-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
@@ -234,8 +234,8 @@
 /* Secondary buttons (Cancel, Format, etc.) */
 .json-editor-format-btn,
 .json-editor-cancel-btn,
-.rename-dialog-cancel-btn,
-.preset-ui-footer-btn-secondary {
+.resolution-master-rename-dialog-cancel-btn,
+.resolution-master-preset-ui-footer-btn-secondary {
     background: var(--overlay-light-10);
     border: 1px solid var(--color-gray-600);
     color: var(--color-gray-100);
@@ -243,19 +243,19 @@
 
 .json-editor-format-btn:hover,
 .json-editor-cancel-btn:hover,
-.rename-dialog-cancel-btn:hover,
-.preset-ui-footer-btn-secondary:hover {
+.resolution-master-rename-dialog-cancel-btn:hover,
+.resolution-master-preset-ui-footer-btn-secondary:hover {
     background: var(--overlay-light-15);
 }
 
 /* Specific secondary button variants */
-.rename-dialog-cancel-btn {
+.resolution-master-rename-dialog-cancel-btn {
     border-color: var(--color-gray-700);
     background: var(--color-gray-800);
     color: var(--color-gray-200);
 }
 
-.rename-dialog-cancel-btn:hover {
+.resolution-master-rename-dialog-cancel-btn:hover {
     background: var(--color-gray-700);
 }
 
@@ -264,10 +264,10 @@
    ======================================== */
 
 /* All text inputs share common styles */
-.preset-add-form-input,
-.preset-ui-form-input,
-.rename-dialog-input,
-.searchable-dropdown-search {
+.resolution-master-preset-add-form-input,
+.resolution-master-preset-ui-form-input,
+.resolution-master-rename-dialog-input,
+.resolution-master-searchable-dropdown-search {
     padding: var(--spacing-8) var(--spacing-12);
     border: 1px solid var(--color-gray-700);
     border-radius: var(--radius-md);
@@ -277,44 +277,44 @@
 }
 
 /* Keyboard focus accessibility for inputs */
-.preset-add-form-input:focus-visible,
-.preset-ui-form-input:focus-visible,
-.rename-dialog-input:focus-visible,
-.searchable-dropdown-search:focus-visible {
+.resolution-master-preset-add-form-input:focus-visible,
+.resolution-master-preset-ui-form-input:focus-visible,
+.resolution-master-rename-dialog-input:focus-visible,
+.resolution-master-searchable-dropdown-search:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 1px;
     border-color: var(--color-primary);
 }
 
 /* Specific input sizes */
-.preset-add-form-input {
+.resolution-master-preset-add-form-input {
     padding: var(--spacing-6);
 }
 
-.preset-ui-form-input {
+.resolution-master-preset-ui-form-input {
     padding: var(--spacing-10) var(--spacing-12);
     border-radius: var(--radius-lg);
     font-size: var(--font-lg);
 }
 
-.rename-dialog-input {
+.resolution-master-rename-dialog-input {
     width: 100%;
     font-size: var(--font-lg);
 }
 
-.searchable-dropdown-search {
+.resolution-master-searchable-dropdown-search {
     width: 100%;
     border: none;
     border-bottom: 1px solid var(--color-gray-800);
 }
 
 /* Input focus states */
-.preset-ui-form-input:focus {
+.resolution-master-preset-ui-form-input:focus {
     border-color: var(--color-primary);
 }
 
 /* Input error state */
-.preset-add-form-input.error {
+.resolution-master-preset-add-form-input.error {
     border-color: var(--color-error-light);
 }
 
@@ -323,23 +323,23 @@
    ======================================== */
 
 /* All form labels share common styles */
-.preset-add-form-label,
-.preset-ui-form-label,
-.rename-dialog-label {
+.resolution-master-preset-add-form-label,
+.resolution-master-preset-ui-form-label,
+.resolution-master-rename-dialog-label {
     color: var(--color-gray-200);
     font-weight: bold;
 }
 
-.preset-add-form-label {
+.resolution-master-preset-add-form-label {
     font-size: var(--font-sm);
 }
 
-.preset-ui-form-label,
-.preset-add-category-label {
+.resolution-master-preset-ui-form-label,
+.resolution-master-preset-add-category-label {
     font-size: var(--font-base);
 }
 
-.rename-dialog-label {
+.resolution-master-rename-dialog-label {
     font-size: var(--font-md);
     display: block;
     margin-bottom: var(--spacing-5);
@@ -350,27 +350,27 @@
    ======================================== */
 
 /* All validation/error messages share common styles */
-.preset-add-form-error,
-.preset-add-validation,
-.rename-dialog-validation,
+.resolution-master-preset-add-form-error,
+.resolution-master-preset-add-validation,
+.resolution-master-rename-dialog-validation,
 .json-editor-validation {
     color: var(--color-error-light);
     font-size: var(--font-sm);
 }
 
-.preset-add-form-error {
+.resolution-master-preset-add-form-error {
     margin-top: var(--spacing-2);
     min-height: 14px;
 }
 
-.preset-add-validation {
+.resolution-master-preset-add-validation {
     font-size: var(--font-md);
     margin-top: var(--spacing-4);
     margin-bottom: var(--spacing-8);
     min-height: 14px;
 }
 
-.rename-dialog-validation {
+.resolution-master-rename-dialog-validation {
     margin-bottom: var(--spacing-10);
     min-height: 15px;
 }
@@ -393,8 +393,8 @@
    ======================================== */
 
 /* Small action buttons (edit, delete, etc.) */
-.preset-list-edit-category-btn,
-.preset-ui-action-btn {
+.resolution-master-preset-list-edit-category-btn,
+.resolution-master-preset-ui-action-btn {
     background: var(--bg-primary-10);
     border: 1px solid var(--bg-primary-30);
     border-radius: var(--radius-md);
@@ -405,14 +405,14 @@
     transition: var(--transition-all);
 }
 
-.preset-list-edit-category-btn:hover,
-.preset-ui-action-btn:hover {
+.resolution-master-preset-list-edit-category-btn:hover,
+.resolution-master-preset-ui-action-btn:hover {
     background: var(--bg-primary-20);
     border-color: var(--bg-primary-50);
 }
 
 /* More generic action button variant */
-.preset-ui-action-btn {
+.resolution-master-preset-ui-action-btn {
     background: var(--overlay-light-10);
     border-color: var(--color-gray-600);
     border-radius: var(--radius-sm);
@@ -422,18 +422,18 @@
     transition: all 0.2s ease;
 }
 
-.preset-ui-action-btn:hover {
+.resolution-master-preset-ui-action-btn:hover {
     background: var(--overlay-light-20);
     border-color: var(--color-gray-500);
     transform: scale(1.1);
 }
 
-.preset-ui-action-btn:active {
+.resolution-master-preset-ui-action-btn:active {
     transform: scale(0.95);
 }
 
 /* Square action buttons in preset list (Edit, Delete) - match clone handle size */
-.preset-list-actions .preset-ui-action-btn {
+.resolution-master-preset-list-actions .resolution-master-preset-ui-action-btn {
     width: 24px;
     height: 24px;
     padding: 0;
@@ -447,8 +447,8 @@
    ======================================== */
 
 /* Preset cards and items */
-.preset-list-item,
-.preset-ui-card {
+.resolution-master-preset-list-item,
+.resolution-master-preset-ui-card {
     background: var(--overlay-light-05);
     border: 1px solid var(--color-gray-800);
     border-radius: var(--radius-md);
@@ -457,14 +457,14 @@
     cursor: pointer;
 }
 
-.preset-list-item:hover,
-.preset-ui-card:hover {
+.resolution-master-preset-list-item:hover,
+.resolution-master-preset-ui-card:hover {
     background: var(--overlay-light-08);
     border-color: var(--color-gray-600);
 }
 
 /* Specific styling for preset list items */
-.preset-list-item {
+.resolution-master-preset-list-item {
     padding: var(--spacing-4) var(--spacing-8);
     margin-bottom: var(--spacing-2);
     display: flex;
@@ -473,7 +473,7 @@
     cursor: move;
 }
 
-.preset-ui-card:hover {
+.resolution-master-preset-ui-card:hover {
     background: var(--overlay-light-10);
 }
 
@@ -482,8 +482,8 @@
    ======================================== */
 
 /* Inline rename inputs share common styles */
-.rename-inline-category-input,
-.rename-inline-preset-input {
+.resolution-master-rename-inline-category-input,
+.resolution-master-rename-inline-preset-input {
     background: var(--color-gray-900);
     border: 2px solid var(--color-primary);
     border-radius: var(--radius-md);
@@ -492,19 +492,19 @@
 }
 
 /* Keyboard focus accessibility for inline inputs */
-.rename-inline-category-input:focus-visible,
-.rename-inline-preset-input:focus-visible {
+.resolution-master-rename-inline-category-input:focus-visible,
+.resolution-master-rename-inline-preset-input:focus-visible {
     outline: 2px solid var(--color-primary-light);
     outline-offset: 2px;
 }
 
-.rename-inline-category-input {
+.resolution-master-rename-inline-category-input {
     color: var(--color-primary);
     font-size: var(--font-lg);
     width: var(--width-input-inline-md);
 }
 
-.rename-inline-preset-input {
+.resolution-master-rename-inline-preset-input {
     color: var(--color-white);
     font-size: var(--font-base);
     width: var(--width-input-inline-sm);

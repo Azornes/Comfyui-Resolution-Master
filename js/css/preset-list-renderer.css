@@ -6,7 +6,7 @@
  */
 
 /* Stats Header */
-.preset-list-stats {
+.resolution-master-preset-list-stats {
     background: var(--bg-primary-10);
     border: 1px solid var(--bg-primary-30);
     border-radius: var(--radius-lg);
@@ -17,33 +17,33 @@
 }
 
 /* Empty State */
-.preset-list-empty {
+.resolution-master-preset-list-empty {
     text-align: center;
     padding: 40px var(--spacing-20);
     color: var(--color-gray-500);
 }
 
-.preset-list-empty-icon {
+.resolution-master-preset-list-empty-icon {
     font-size: 48px;
     margin-bottom: var(--spacing-16);
 }
 
-.preset-list-empty-title {
+.resolution-master-preset-list-empty-title {
     font-size: var(--font-xl);
     margin-bottom: var(--spacing-8);
 }
 
-.preset-list-empty-subtitle {
+.resolution-master-preset-list-empty-subtitle {
     font-size: var(--font-base);
 }
 
 /* Category Section */
-.preset-list-category-section {
+.resolution-master-preset-list-category-section {
     padding-bottom: var(--spacing-24);
 }
 
 /* Category Header */
-.preset-list-category-header {
+.resolution-master-preset-list-category-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -54,12 +54,12 @@
     transition: var(--transition-all);
 }
 
-.preset-list-category-header.dragging {
+.resolution-master-preset-list-category-header.dragging {
     opacity: 0.5;
 }
 
 /* Category Title */
-.preset-list-category-title {
+.resolution-master-preset-list-category-title {
     display: flex;
     align-items: center;
     flex-wrap: nowrap;
@@ -70,18 +70,18 @@
     flex: 1;
 }
 
-.preset-list-category-icon {
+.resolution-master-preset-list-category-icon {
     margin-left: var(--spacing-6);
     vertical-align: middle;
 }
 
 /* Preset Item - Dragging State */
-.preset-list-item.dragging {
+.resolution-master-preset-list-item.dragging {
     opacity: 0.5;
 }
 
 /* Bulk Delete Checkbox */
-.preset-list-checkbox {
+.resolution-master-preset-list-checkbox {
     width: var(--spacing-16);
     height: var(--spacing-16);
     cursor: pointer;
@@ -89,36 +89,36 @@
 }
 
 /* Keyboard focus accessibility for checkbox */
-.preset-list-checkbox:focus-visible {
+.resolution-master-preset-list-checkbox:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
 /* Preset Info */
-.preset-list-info {
+.resolution-master-preset-list-info {
     flex: 1;
     display: flex;
     align-items: center;
     gap: var(--spacing-6);
 }
 
-.preset-list-name-container {
+.resolution-master-preset-list-name-container {
     color: var(--color-white);
     font-size: var(--font-base);
 }
 
-.preset-list-name {
+.resolution-master-preset-list-name {
     cursor: pointer;
     user-select: none;
 }
 
-.preset-list-dims {
+.resolution-master-preset-list-dims {
     color: var(--color-gray-500);
     font-size: var(--font-md);
 }
 
 /* Clone Handle */
-.preset-list-clone-handle {
+.resolution-master-preset-list-clone-handle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -136,25 +136,25 @@
     flex-shrink: 0;
 }
 
-.preset-list-clone-handle:hover {
+.resolution-master-preset-list-clone-handle:hover {
     background: var(--overlay-light-20);
     border-color: var(--color-gray-500);
     transform: scale(1.1);
 }
 
-.preset-list-clone-handle:active {
+.resolution-master-preset-list-clone-handle:active {
     cursor: grabbing;
     transform: scale(0.95);
 }
 
 /* Action Buttons */
-.preset-list-actions {
+.resolution-master-preset-list-actions {
     display: flex;
     gap: var(--spacing-3);
 }
 
 /* Keyboard focus accessibility for action buttons */
-.preset-list-actions button:focus-visible {
+.resolution-master-preset-list-actions button:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }

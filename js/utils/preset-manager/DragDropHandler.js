@@ -13,17 +13,17 @@ export class DragDropHandler {
         if (!element) return;
         
         // Remove all indicator classes first
-        element.classList.remove('drag-drop-indicator-top', 'drag-drop-indicator-top-move', 'drag-drop-indicator-top-error', 'drag-drop-indicator-top-clone');
+        element.classList.remove('resolution-master-drag-drop-indicator-top', 'drag-drop-indicator-top-move', 'drag-drop-indicator-top-error', 'drag-drop-indicator-top-clone');
         
         // Add appropriate class based on color
         if (color === '#fa0') {
-            element.classList.add('drag-drop-indicator-top-move');
+            element.classList.add('resolution-master-drag-drop-indicator-top-move');
         } else if (color === '#f00') {
-            element.classList.add('drag-drop-indicator-top-error');
+            element.classList.add('resolution-master-drag-drop-indicator-top-error');
         } else if (color === '#0f0') {
-            element.classList.add('drag-drop-indicator-top-clone');
+            element.classList.add('resolution-master-drag-drop-indicator-top-clone');
         } else {
-            element.classList.add('drag-drop-indicator-top');
+            element.classList.add('resolution-master-drag-drop-indicator-top');
         }
     }
 
@@ -36,17 +36,17 @@ export class DragDropHandler {
         if (!element) return;
         
         // Remove all indicator classes first
-        element.classList.remove('drag-drop-indicator-bottom', 'drag-drop-indicator-bottom-move', 'drag-drop-indicator-bottom-error', 'drag-drop-indicator-bottom-clone');
+        element.classList.remove('resolution-master-drag-drop-indicator-bottom', 'drag-drop-indicator-bottom-move', 'drag-drop-indicator-bottom-error', 'drag-drop-indicator-bottom-clone');
         
         // Add appropriate class based on color
         if (color === '#fa0') {
-            element.classList.add('drag-drop-indicator-bottom-move');
+            element.classList.add('resolution-master-drag-drop-indicator-bottom-move');
         } else if (color === '#f00') {
-            element.classList.add('drag-drop-indicator-bottom-error');
+            element.classList.add('resolution-master-drag-drop-indicator-bottom-error');
         } else if (color === '#0f0') {
-            element.classList.add('drag-drop-indicator-bottom-clone');
+            element.classList.add('resolution-master-drag-drop-indicator-bottom-clone');
         } else {
-            element.classList.add('drag-drop-indicator-bottom');
+            element.classList.add('resolution-master-drag-drop-indicator-bottom');
         }
     }
 

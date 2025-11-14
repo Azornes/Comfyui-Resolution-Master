@@ -17,7 +17,7 @@ export class RenameDialogManager {
     showRenameCategoryDialog(currentCategoryName) {
         // Create overlay
         const overlay = document.createElement('div');
-        overlay.className = 'rename-dialog-overlay';
+        overlay.className = 'resolution-master-rename-dialog-overlay';
         overlay.addEventListener('mousedown', () => {
             document.body.removeChild(overlay);
             document.body.removeChild(dialog);
@@ -26,20 +26,20 @@ export class RenameDialogManager {
 
         // Create dialog container
         const dialog = document.createElement('div');
-        dialog.className = 'rename-dialog';
+        dialog.className = 'resolution-master-rename-dialog';
         dialog.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent clicks inside from closing
         
         // Create dialog content
         dialog.innerHTML = `
-            <div class="rename-dialog-title">Rename Category</div>
-            <div class="rename-dialog-input-group">
-                <label class="rename-dialog-label">Current: ${currentCategoryName}</label>
-                <input type="text" id="renameCategoryInput" value="${currentCategoryName}" class="rename-dialog-input">
+            <div class="resolution-master-rename-dialog-title">Rename Category</div>
+            <div class="resolution-master-rename-dialog-input-group">
+                <label class="resolution-master-rename-dialog-label">Current: ${currentCategoryName}</label>
+                <input type="text" id="renameCategoryInput" value="${currentCategoryName}" class="resolution-master-rename-dialog-input">
             </div>
-            <div id="renameValidationMessage" class="rename-dialog-validation"></div>
-            <div class="rename-dialog-buttons">
-                <button id="renameCancelBtn" class="rename-dialog-cancel-btn">Cancel</button>
-                <button id="renameApplyBtn" class="rename-dialog-apply-btn">Apply</button>
+            <div id="renameValidationMessage" class="resolution-master-rename-dialog-validation"></div>
+            <div class="resolution-master-rename-dialog-buttons">
+                <button id="renameCancelBtn" class="resolution-master-rename-dialog-cancel-btn">Cancel</button>
+                <button id="renameApplyBtn" class="resolution-master-rename-dialog-apply-btn">Apply</button>
             </div>
         `;
         
@@ -150,7 +150,7 @@ export class RenameDialogManager {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = categoryNameOnly;
-        input.className = 'rename-inline-category-input';
+        input.className = 'resolution-master-rename-inline-category-input';
         
         // Replace title with input
         titleElement.replaceWith(input);
@@ -240,7 +240,7 @@ export class RenameDialogManager {
      */
     recreateCategoryTitleElement(text, categoryName) {
         const newTitle = document.createElement('div');
-        newTitle.className = 'rename-category-title';
+        newTitle.className = 'resolution-master-rename-category-title';
         newTitle.textContent = text;
         // Tooltip handled by TooltipManager
         newTitle.addEventListener('dblclick', () => {
@@ -263,7 +263,7 @@ export class RenameDialogManager {
         const input = document.createElement('input');
         input.type = 'text';
         input.value = presetName;
-        input.className = 'rename-inline-preset-input';
+        input.className = 'resolution-master-rename-inline-preset-input';
         
         // Replace name with input
         nameElement.replaceWith(input);
@@ -355,7 +355,7 @@ export class RenameDialogManager {
      */
     recreatePresetNameElement(text, category, presetName, dims) {
         const newNameElement = document.createElement('strong');
-        newNameElement.className = 'rename-preset-name';
+        newNameElement.className = 'resolution-master-rename-preset-name';
         newNameElement.textContent = text;
         // Tooltip handled by TooltipManager
         newNameElement.addEventListener('dblclick', (e) => {

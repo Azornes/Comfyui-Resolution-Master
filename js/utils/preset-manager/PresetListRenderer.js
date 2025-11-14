@@ -47,7 +47,7 @@ export class PresetListRenderer {
      */
     createStatsHeader(stats, container) {
         const statsDiv = document.createElement('div');
-        statsDiv.className = 'preset-list-stats';
+        statsDiv.className = 'resolution-master-preset-list-stats';
         statsDiv.innerHTML = `
             📊 <strong>${stats.categories}</strong> categories, 
             <strong>${stats.presets}</strong> custom presets total
@@ -95,11 +95,11 @@ export class PresetListRenderer {
      */
     createEmptyState() {
         const emptyState = document.createElement('div');
-        emptyState.className = 'preset-list-empty';
+        emptyState.className = 'resolution-master-preset-list-empty';
         emptyState.innerHTML = `
-            <div class="preset-list-empty-icon">📦</div>
-            <div class="preset-list-empty-title">No custom presets yet</div>
-            <div class="preset-list-empty-subtitle">Click "Add Preset" to create your first custom preset</div>
+            <div class="resolution-master-preset-list-empty-icon">📦</div>
+            <div class="resolution-master-preset-list-empty-title">No custom presets yet</div>
+            <div class="resolution-master-preset-list-empty-subtitle">Click "Add Preset" to create your first custom preset</div>
         `;
         return emptyState;
     }
@@ -114,7 +114,7 @@ export class PresetListRenderer {
      */
     createCategorySection(category, presets, categoryIndex, container) {
         const categorySection = document.createElement('div');
-        categorySection.className = 'preset-list-category-section';
+        categorySection.className = 'resolution-master-preset-list-category-section';
         categorySection.dataset.categoryName = category;
         categorySection.dataset.categoryIndex = categoryIndex;
 
@@ -143,7 +143,7 @@ export class PresetListRenderer {
     createCategoryHeader(category, presets, categoryIndex, container, categorySection) {
         const categoryHeader = document.createElement('div');
         categoryHeader.draggable = true;
-        categoryHeader.className = 'preset-list-category-header';
+        categoryHeader.className = 'resolution-master-preset-list-category-header';
         
         // Drag & drop handlers for category reordering
         this.attachCategoryDragHandlers(categoryHeader, category, categoryIndex, container, categorySection);
@@ -281,7 +281,7 @@ export class PresetListRenderer {
      */
     createCategoryTitle(category, presets) {
         const categoryTitle = document.createElement('div');
-        categoryTitle.className = 'preset-list-category-title';
+        categoryTitle.className = 'resolution-master-preset-list-category-title';
         
         // Create clickable name element (like preset names)
         const nameElement = document.createElement('strong');
@@ -322,7 +322,7 @@ export class PresetListRenderer {
      */
     createEditCategoryButton(category) {
         const editCategoryBtn = document.createElement('button');
-        editCategoryBtn.className = 'preset-list-edit-category-btn';
+        editCategoryBtn.className = 'resolution-master-preset-list-edit-category-btn';
         editCategoryBtn.innerHTML = getIconHtml(this.parentDialog.editIcon, '✏️');
         // Tooltip handled by TooltipManager
         
@@ -349,7 +349,7 @@ export class PresetListRenderer {
     createPresetItem(category, name, dims, presetIndex) {
         const item = document.createElement('div');
         item.draggable = true;
-        item.className = 'preset-list-item';
+        item.className = 'resolution-master-preset-list-item';
         item.dataset.presetName = name;
         item.dataset.presetIndex = presetIndex;
         item.dataset.category = category;
@@ -505,7 +505,7 @@ export class PresetListRenderer {
      */
     createCloneHandle(category, name, dims, presetIndex) {
         const cloneHandle = document.createElement('div');
-        cloneHandle.className = 'preset-list-clone-handle';
+        cloneHandle.className = 'resolution-master-preset-list-clone-handle';
         cloneHandle.draggable = true;
         cloneHandle.innerHTML = getIconHtml(this.parentDialog.dragAndDuplicateIcon, '⊕', 16);
         
@@ -568,7 +568,7 @@ export class PresetListRenderer {
     createBulkDeleteCheckbox(category, name) {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.className = 'preset-list-checkbox';
+        checkbox.className = 'resolution-master-preset-list-checkbox';
         const presetKey = `${category}|${name}`;
         checkbox.dataset.presetKey = presetKey;
         checkbox.checked = this.parentDialog.selectedPresetsForDeletion.has(presetKey);
@@ -596,13 +596,13 @@ export class PresetListRenderer {
      */
     createPresetInfo(category, name, dims) {
         const info = document.createElement('div');
-        info.className = 'preset-list-info';
+        info.className = 'resolution-master-preset-list-info';
 
         const nameContainer = document.createElement('span');
-        nameContainer.className = 'preset-list-name-container';
+        nameContainer.className = 'resolution-master-preset-list-name-container';
 
         const nameElement = document.createElement('strong');
-        nameElement.className = 'preset-list-name';
+        nameElement.className = 'resolution-master-preset-list-name';
         nameElement.textContent = name;
         // Tooltip handled by TooltipManager
 
@@ -621,7 +621,7 @@ export class PresetListRenderer {
         }
 
         const dimsSpan = document.createElement('span');
-        dimsSpan.className = 'preset-list-dims';
+        dimsSpan.className = 'resolution-master-preset-list-dims';
         dimsSpan.textContent = `(${dims.width}×${dims.height})`;
 
         info.appendChild(nameContainer);
@@ -635,7 +635,7 @@ export class PresetListRenderer {
      */
     createActionButtons(category, name, dims, presetIndex) {
         const actions = document.createElement('div');
-        actions.className = 'preset-list-actions';
+        actions.className = 'resolution-master-preset-list-actions';
 
         // Clone handle (first button)
         const cloneHandle = this.createCloneHandle(category, name, dims, presetIndex);

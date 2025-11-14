@@ -137,24 +137,24 @@ export class AspectRatioUtils {
      */
     static createPresetColumn(ratio, presetList, options = {}) {
         const column = document.createElement('div');
-        column.className = 'aspect-ratio-column';
+        column.className = 'resolution-master-aspect-ratio-column';
 
         // Icon at the top
         const firstPreset = presetList[0];
         const iconContainer = document.createElement('div');
-        iconContainer.className = 'aspect-ratio-column-icon';
+        iconContainer.className = 'resolution-master-aspect-ratio-column-icon';
         iconContainer.innerHTML = this.getAspectRatioIcon(firstPreset.width, firstPreset.height);
         column.appendChild(iconContainer);
 
         // Ratio text below icon
         const ratioText = document.createElement('div');
-        ratioText.className = 'aspect-ratio-column-title';
+        ratioText.className = 'resolution-master-aspect-ratio-column-title';
         ratioText.textContent = ratio;
         column.appendChild(ratioText);
 
         // Preset list (vertical scrollable)
         const presetListContainer = document.createElement('div');
-        presetListContainer.className = 'aspect-ratio-column-list';
+        presetListContainer.className = 'resolution-master-aspect-ratio-column-list';
 
         // Render each preset using provided function
         presetList.forEach(preset => {
@@ -179,21 +179,21 @@ export class AspectRatioUtils {
         const isSelected = selectedPreset === preset.name;
         
         const presetItem = document.createElement('div');
-        presetItem.className = 'aspect-ratio-preset-item' + (isSelected ? ' selected' : '');
+        presetItem.className = 'resolution-master-aspect-ratio-preset-item' + (isSelected ? ' selected' : '');
         presetItem.setAttribute('data-preset-item', 'true');
         presetItem.setAttribute('data-preset-name', preset.name);
         presetItem.setAttribute('data-preset-dimensions', `${preset.width}×${preset.height}`);
 
         // Preset name with custom icon if applicable
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'aspect-ratio-preset-item-name';
+        nameDiv.className = 'resolution-master-aspect-ratio-preset-item-name';
         const customIcon = preset.isCustom && customPresetIcon ? 
-            `<img src="${customPresetIcon.src}" class="aspect-ratio-preset-custom-icon">` : '';
+            `<img src="${customPresetIcon.src}" class="resolution-master-aspect-ratio-preset-custom-icon">` : '';
         nameDiv.innerHTML = `${preset.name}${customIcon}`;
         
         // Dimensions below name
         const dimensionsDiv = document.createElement('div');
-        dimensionsDiv.className = 'aspect-ratio-preset-item-dims';
+        dimensionsDiv.className = 'resolution-master-aspect-ratio-preset-item-dims';
         dimensionsDiv.textContent = `${preset.width}×${preset.height}`;
 
         presetItem.appendChild(nameDiv);
@@ -222,7 +222,7 @@ export class AspectRatioUtils {
             
             if (needsIndicator && !scrollIndicator) {
                 scrollIndicator = document.createElement('div');
-                scrollIndicator.className = 'aspect-ratio-column-scroll-indicator';
+                scrollIndicator.className = 'resolution-master-aspect-ratio-column-scroll-indicator';
                 scrollIndicator.textContent = '↓ Scroll for more';
                 column.appendChild(scrollIndicator);
             } else if (!needsIndicator && scrollIndicator) {
@@ -245,7 +245,7 @@ export class AspectRatioUtils {
             if (needsIndicator && !state.indicator) {
                 // Create and add indicator
                 state.indicator = document.createElement('div');
-                state.indicator.className = 'aspect-ratio-horizontal-scroll-indicator';
+                state.indicator.className = 'resolution-master-aspect-ratio-horizontal-scroll-indicator';
                 state.indicator.textContent = '→ Scroll right for more';
                 
                 // Enable horizontal scrolling with mouse wheel over the indicator

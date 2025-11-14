@@ -9,7 +9,7 @@
    COLUMN CONTAINER
    ======================================== */
 
-.aspect-ratio-column {
+.resolution-master-aspect-ratio-column {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -24,12 +24,12 @@
    COLUMN HEADER
    ======================================== */
 
-.aspect-ratio-column-icon {
+.resolution-master-aspect-ratio-column-icon {
     color: var(--color-primary);
     margin-bottom: var(--spacing-2);
 }
 
-.aspect-ratio-column-title {
+.resolution-master-aspect-ratio-column-title {
     color: var(--color-primary);
     font-size: var(--font-base);
     font-weight: bold;
@@ -44,7 +44,7 @@
    PRESET LIST (Scrollable)
    ======================================== */
 
-.aspect-ratio-column-list {
+.resolution-master-aspect-ratio-column-list {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-2);
@@ -59,7 +59,7 @@
    PRESET ITEMS
    ======================================== */
 
-.aspect-ratio-preset-item {
+.resolution-master-aspect-ratio-preset-item {
     padding: var(--spacing-3) var(--spacing-4);
     background: var(--overlay-light-05);
     border: 1px solid var(--color-gray-800);
@@ -71,39 +71,39 @@
     flex-direction: column;
 }
 
-.aspect-ratio-preset-item:hover {
+.resolution-master-aspect-ratio-preset-item:hover {
     background: var(--overlay-light-15);
     border-color: var(--color-gray-600);
 }
 
 /* Selected state */
-.aspect-ratio-preset-item.selected {
+.resolution-master-aspect-ratio-preset-item.selected {
     background: var(--bg-primary-30);
     border-color: var(--color-primary);
 }
 
-.aspect-ratio-preset-item.selected:hover {
+.resolution-master-aspect-ratio-preset-item.selected:hover {
     background: var(--bg-primary-30);
     border-color: var(--color-primary);
 }
 
 /* Hidden built-in preset - only red border, nothing else changes */
-/* Using .preset-is-hidden instead of .hidden to avoid conflicts with global CSS */
-.aspect-ratio-preset-item.preset-is-hidden {
+/* Using .resolution-master-preset-is-hidden instead of .hidden to avoid conflicts with global CSS */
+.resolution-master-aspect-ratio-preset-item.resolution-master-preset-is-hidden {
     border-color: var(--color-error) !important;
 }
 
-.aspect-ratio-preset-item.preset-is-hidden:hover {
+.resolution-master-aspect-ratio-preset-item.resolution-master-preset-is-hidden:hover {
     border-color: var(--color-error) !important;
 }
 
 /* Always show action button for hidden presets (so user can unhide them) */
-.aspect-ratio-preset-item.preset-is-hidden .aspect-ratio-preset-action-btn {
+.resolution-master-aspect-ratio-preset-item.resolution-master-preset-is-hidden .resolution-master-aspect-ratio-preset-action-btn {
     opacity: 1 !important;
 }
 
 /* Preset item for column view (flexible height) */
-.aspect-ratio-preset-item-column {
+.resolution-master-aspect-ratio-preset-item-column {
     position: relative;
     min-height: 38px;
     box-sizing: border-box;
@@ -114,7 +114,7 @@
    PRESET ITEM CONTENT
    ======================================== */
 
-.aspect-ratio-preset-item-name {
+.resolution-master-aspect-ratio-preset-item-name {
     color: var(--color-gray-100);
     font-size: var(--font-lg);
     font-weight: normal;
@@ -125,23 +125,23 @@
 }
 
 /* Selected state name */
-.aspect-ratio-preset-item.selected .aspect-ratio-preset-item-name {
+.resolution-master-aspect-ratio-preset-item.selected .resolution-master-aspect-ratio-preset-item-name {
     color: var(--color-white);
     font-weight: bold;
 }
 
-.aspect-ratio-preset-item-dims {
+.resolution-master-aspect-ratio-preset-item-dims {
     color: var(--color-gray-500);
     font-size: var(--font-base);
 }
 
 /* Selected state dimensions */
-.aspect-ratio-preset-item.selected .aspect-ratio-preset-item-dims {
+.resolution-master-aspect-ratio-preset-item.selected .resolution-master-aspect-ratio-preset-item-dims {
     color: var(--color-primary);
 }
 
 /* Custom preset icon */
-.aspect-ratio-preset-custom-icon {
+.resolution-master-aspect-ratio-preset-custom-icon {
     width: var(--spacing-12);
     height: var(--spacing-12);
     margin-left: var(--spacing-3);
@@ -152,7 +152,7 @@
    ACTION BUTTONS (Delete/Toggle)
    ======================================== */
 
-.aspect-ratio-preset-action-btn {
+.resolution-master-aspect-ratio-preset-action-btn {
     position: absolute;
     top: var(--spacing-2);
     right: var(--spacing-2);
@@ -166,23 +166,23 @@
     transition: var(--transition-opacity), var(--transition-bg);
 }
 
-.aspect-ratio-preset-item:hover .aspect-ratio-preset-action-btn {
+.resolution-master-aspect-ratio-preset-item:hover .resolution-master-aspect-ratio-preset-action-btn {
     opacity: 1;
 }
 
-.aspect-ratio-preset-action-btn.delete {
+.resolution-master-aspect-ratio-preset-action-btn.delete {
     background: rgba(255, 80, 80, 0.8);
 }
 
-.aspect-ratio-preset-action-btn.hide {
+.resolution-master-aspect-ratio-preset-action-btn.hide {
     background: rgba(255, 200, 0, 0.8);
 }
 
-.aspect-ratio-preset-action-btn.unhide {
+.resolution-master-aspect-ratio-preset-action-btn.unhide {
     background: rgba(80, 255, 80, 0.8);
 }
 
-.aspect-ratio-preset-action-icon {
+.resolution-master-aspect-ratio-preset-action-icon {
     width: var(--spacing-12);
     height: var(--spacing-12);
     display: block;
@@ -193,7 +193,7 @@
    ======================================== */
 
 /* Vertical scroll indicator (↓ Scroll for more) */
-.aspect-ratio-column-scroll-indicator {
+.resolution-master-aspect-ratio-column-scroll-indicator {
     color: var(--color-gray-500);
     font-size: var(--font-xs);
     margin-top: var(--spacing-2);
@@ -202,7 +202,7 @@
 }
 
 /* Horizontal scroll indicator (→ Scroll right for more) */
-.aspect-ratio-horizontal-scroll-indicator {
+.resolution-master-aspect-ratio-horizontal-scroll-indicator {
     flex-shrink: 0;
     color: var(--color-gray-300);
     font-size: var(--font-xs);
@@ -216,22 +216,22 @@
    CUSTOM SCROLLBAR
    ======================================== */
 
-.aspect-ratio-scrollable::-webkit-scrollbar {
+.resolution-master-aspect-ratio-scrollable::-webkit-scrollbar {
     height: 12px;
     width: 12px;
 }
 
-.aspect-ratio-scrollable::-webkit-scrollbar-track {
+.resolution-master-aspect-ratio-scrollable::-webkit-scrollbar-track {
     background: var(--overlay-dark-20);
     border-radius: var(--radius-md);
 }
 
-.aspect-ratio-scrollable::-webkit-scrollbar-thumb {
+.resolution-master-aspect-ratio-scrollable::-webkit-scrollbar-thumb {
     background: var(--color-gray-600);
     border-radius: var(--radius-lg);
     border: 2px solid var(--overlay-dark-20);
 }
 
-.aspect-ratio-scrollable::-webkit-scrollbar-thumb:hover {
+.resolution-master-aspect-ratio-scrollable::-webkit-scrollbar-thumb:hover {
     background: var(--color-gray-500);
 }

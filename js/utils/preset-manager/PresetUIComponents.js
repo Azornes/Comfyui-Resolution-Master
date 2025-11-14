@@ -34,19 +34,19 @@ export class PresetUIComponents {
      */
     static createFormGroup(label, id, type, placeholder, value = '') {
         const group = document.createElement('div');
-        group.className = 'preset-ui-form-group';
+        group.className = 'resolution-master-preset-ui-form-group';
 
         const labelEl = document.createElement('label');
         labelEl.htmlFor = id;
         labelEl.textContent = label;
-        labelEl.className = 'preset-ui-form-label';
+        labelEl.className = 'resolution-master-preset-ui-form-label';
 
         const input = document.createElement('input');
         input.id = id;
         input.type = type;
         input.placeholder = placeholder;
         input.value = value;
-        input.className = 'preset-ui-form-input';
+        input.className = 'resolution-master-preset-ui-form-input';
         
         if (type === 'number') {
             input.min = '64';
@@ -68,7 +68,7 @@ export class PresetUIComponents {
      */
     static createActionButton(icon, tooltip, onClick) {
         const btn = document.createElement('button');
-        btn.className = 'preset-ui-action-btn';
+        btn.className = 'resolution-master-preset-ui-action-btn';
         
         // Support both text icons and HTML (for SVG icons)
         if (icon.includes('<img')) {
@@ -119,26 +119,26 @@ export class PresetUIComponents {
      */
     static createPresetCard(name, dims, deleteIcon, onDelete) {
         const card = document.createElement('div');
-        card.className = 'preset-ui-card';
+        card.className = 'resolution-master-preset-ui-card';
 
         // Preset name
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'preset-ui-card-name';
+        nameDiv.className = 'resolution-master-preset-ui-card-name';
         nameDiv.textContent = name;
         // Tooltip handled by TooltipManager
 
         // Dimensions
         const dimsDiv = document.createElement('div');
-        dimsDiv.className = 'preset-ui-card-dims';
+        dimsDiv.className = 'resolution-master-preset-ui-card-dims';
         dimsDiv.textContent = `${dims.width}×${dims.height}`;
 
         // Delete button
         const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'preset-ui-card-delete-btn';
+        deleteBtn.className = 'resolution-master-preset-ui-card-delete-btn';
         // Tooltip handled by TooltipManager
         
         if (deleteIcon) {
-            deleteBtn.innerHTML = `<img src="${deleteIcon.src}" class="preset-ui-card-delete-icon">`;
+            deleteBtn.innerHTML = `<img src="${deleteIcon.src}" class="resolution-master-preset-ui-card-delete-icon">`;
         } else {
             deleteBtn.textContent = '🗑️';
         }

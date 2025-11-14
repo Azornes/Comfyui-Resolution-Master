@@ -18,7 +18,7 @@ export class PresetAddViewRenderer {
     render(container) {
         // Title
         const titleDiv = document.createElement('div');
-        titleDiv.className = 'preset-add-title';
+        titleDiv.className = 'resolution-master-preset-add-title';
         titleDiv.textContent = 'Add Presets to Category';
         container.appendChild(titleDiv);
 
@@ -53,16 +53,16 @@ export class PresetAddViewRenderer {
      */
     createCategorySection() {
         const categorySection = document.createElement('div');
-        categorySection.className = 'preset-add-category-section';
+        categorySection.className = 'resolution-master-preset-add-category-section';
 
         const categoryLabel = document.createElement('div');
-        categoryLabel.className = 'preset-add-category-label';
+        categoryLabel.className = 'resolution-master-preset-add-category-label';
         categoryLabel.textContent = 'Category';
         categorySection.appendChild(categoryLabel);
 
         // Container for category button and rename button
         const categoryButtonContainer = document.createElement('div');
-        categoryButtonContainer.className = 'preset-add-category-btn-container';
+        categoryButtonContainer.className = 'resolution-master-preset-add-category-btn-container';
 
         const categoryButton = this.createCategoryButton();
         categoryButtonContainer.appendChild(categoryButton);
@@ -84,7 +84,7 @@ export class PresetAddViewRenderer {
     createCategoryButton() {
         const categoryButton = document.createElement('button');
         categoryButton.id = 'category-select-btn';
-        categoryButton.className = 'preset-add-category-btn';
+        categoryButton.className = 'resolution-master-preset-add-category-btn';
         if (!this.parentDialog.selectedCategory) {
             categoryButton.classList.add('placeholder');
         }
@@ -103,7 +103,7 @@ export class PresetAddViewRenderer {
      */
     createRenameCategoryButton() {
         const renameCategoryBtn = document.createElement('button');
-        renameCategoryBtn.className = 'preset-add-rename-category-btn';
+        renameCategoryBtn.className = 'resolution-master-preset-add-rename-category-btn';
         renameCategoryBtn.innerHTML = getIconHtml(this.parentDialog.editIcon, '✏️');
         // Tooltip handled by TooltipManager
 
@@ -638,17 +638,17 @@ export class PresetAddViewRenderer {
      */
     createPresetItemForColumn(preset) {
         const presetItem = document.createElement('div');
-        presetItem.className = 'aspect-ratio-preset-item aspect-ratio-preset-item-column' + (preset.isHidden ? ' preset-is-hidden' : '');
+        presetItem.className = 'resolution-master-aspect-ratio-preset-item resolution-master-aspect-ratio-preset-item-column' + (preset.isHidden ? ' preset-is-hidden' : '');
         // Preset name with custom icon if applicable
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'aspect-ratio-preset-item-name';
+        nameDiv.className = 'resolution-master-aspect-ratio-preset-item-name';
         const customIcon = preset.isCustom && this.parentDialog.customPresetIcon ? 
-            `<img src="${this.parentDialog.customPresetIcon.src}" class="aspect-ratio-preset-custom-icon">` : '';
+            `<img src="${this.parentDialog.customPresetIcon.src}" class="resolution-master-aspect-ratio-preset-custom-icon">` : '';
         nameDiv.innerHTML = `${preset.name}${customIcon}`;
         
         // Dimensions below name
         const dimensionsDiv = document.createElement('div');
-        dimensionsDiv.className = 'aspect-ratio-preset-item-dims';
+        dimensionsDiv.className = 'resolution-master-aspect-ratio-preset-item-dims';
         dimensionsDiv.textContent = `${preset.width}×${preset.height}`;
 
         // Action button
@@ -692,11 +692,11 @@ export class PresetAddViewRenderer {
      */
     createDeleteButton(preset) {
         const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'aspect-ratio-preset-action-btn delete';
+        deleteBtn.className = 'resolution-master-aspect-ratio-preset-action-btn delete';
         // Tooltip handled by TooltipManager
         
         if (this.parentDialog.deleteIcon) {
-            deleteBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="aspect-ratio-preset-action-icon">`;
+            deleteBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="resolution-master-aspect-ratio-preset-action-icon">`;
         } else {
             deleteBtn.textContent = '🗑️';
         }
@@ -720,11 +720,11 @@ export class PresetAddViewRenderer {
         const isHidden = this.parentDialog.manager.isBuiltInPresetHidden(this.parentDialog.selectedCategory, preset.name);
         
         const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'aspect-ratio-preset-action-btn' + (isHidden ? ' unhide' : ' hide');
+        toggleBtn.className = 'resolution-master-aspect-ratio-preset-action-btn' + (isHidden ? ' unhide' : ' hide');
         // Tooltip handled by TooltipManager
         
         if (this.parentDialog.deleteIcon) {
-            toggleBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="aspect-ratio-preset-action-icon">`;
+            toggleBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="resolution-master-aspect-ratio-preset-action-icon">`;
         } else {
             toggleBtn.textContent = '🗑️';
         }

@@ -57,13 +57,13 @@ export class SearchableDropdown {
 
         // Create overlay
         this.overlay = document.createElement('div');
-        this.overlay.className = 'searchable-dropdown-overlay';
+        this.overlay.className = 'resolution-master-searchable-dropdown-overlay';
         this.overlay.addEventListener('mousedown', () => this.hide());
         document.body.appendChild(this.overlay);
 
         // Create container
         this.container = document.createElement('div');
-        this.container.className = 'searchable-dropdown';
+        this.container.className = 'resolution-master-searchable-dropdown';
         this.container.addEventListener('mousedown', (e) => e.stopPropagation());
 
         // Position container
@@ -145,15 +145,15 @@ export class SearchableDropdown {
         // Create title if provided
         if (options.title) {
             const titleContainer = document.createElement('div');
-            titleContainer.className = 'searchable-dropdown-title-container';
+            titleContainer.className = 'resolution-master-searchable-dropdown-title-container';
             
             const title = document.createElement('div');
-            title.className = 'searchable-dropdown-title';
+            title.className = 'resolution-master-searchable-dropdown-title';
             title.textContent = options.title;
             
             // Add close button (X)
             const closeButton = document.createElement('button');
-            closeButton.className = 'searchable-dropdown-close-btn';
+            closeButton.className = 'resolution-master-searchable-dropdown-close-btn';
             closeButton.textContent = '×';
             closeButton.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -169,19 +169,19 @@ export class SearchableDropdown {
         this.searchInput = document.createElement('input');
         this.searchInput.type = 'text';
         this.searchInput.placeholder = 'Search...';
-        this.searchInput.className = 'searchable-dropdown-search';
+        this.searchInput.className = 'resolution-master-searchable-dropdown-search';
         this.searchInput.addEventListener('input', () => this.filterItems());
         this.searchInput.addEventListener('keydown', (e) => this.handleKeyDown(e));
         this.container.appendChild(this.searchInput);
 
         // Create items container
         this.itemsContainer = document.createElement('div');
-        this.itemsContainer.className = 'searchable-dropdown-items';
+        this.itemsContainer.className = 'resolution-master-searchable-dropdown-items';
         this.container.appendChild(this.itemsContainer);
 
         // Add expand button
         this.expandButton = document.createElement('button');
-        this.expandButton.className = 'searchable-dropdown-expand-btn';
+        this.expandButton.className = 'resolution-master-searchable-dropdown-expand-btn';
         this.expandButton.textContent = 'Show All';
         this.expandButton.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -191,7 +191,7 @@ export class SearchableDropdown {
 
         // Add items count indicator
         this.countIndicator = document.createElement('div');
-        this.countIndicator.className = 'searchable-dropdown-count';
+        this.countIndicator.className = 'resolution-master-searchable-dropdown-count';
         this.container.appendChild(this.countIndicator);
 
         document.body.appendChild(this.container);
@@ -222,7 +222,7 @@ export class SearchableDropdown {
 
         if (this.filteredItems.length === 0) {
             const noResults = document.createElement('div');
-            noResults.className = 'searchable-dropdown-no-results';
+            noResults.className = 'resolution-master-searchable-dropdown-no-results';
             
             // Show hint about custom values if allowed and search has text
             if (this.allowCustomValues && this.searchInput.value.trim()) {
@@ -233,7 +233,7 @@ export class SearchableDropdown {
                 
                 // Add button that acts like Enter key - ABOVE the hint text
                 const useCustomButton = document.createElement('button');
-                useCustomButton.className = 'searchable-dropdown-use-custom-btn';
+                useCustomButton.className = 'resolution-master-searchable-dropdown-use-custom-btn';
                 useCustomButton.textContent = 'Use Custom Value';
                 useCustomButton.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -243,7 +243,7 @@ export class SearchableDropdown {
                 
                 // Add hint text below the button
                 const hintText = document.createElement('div');
-                hintText.className = 'searchable-dropdown-hint';
+                hintText.className = 'resolution-master-searchable-dropdown-hint';
                 hintText.textContent = 'Press Enter to use custom value';
                 noResults.appendChild(hintText);
             } else {
@@ -263,7 +263,7 @@ export class SearchableDropdown {
             const isCustom = typeof item === 'object' && item.isCustom;
             
             const itemElement = document.createElement('div');
-            itemElement.className = 'searchable-dropdown-item';
+            itemElement.className = 'resolution-master-searchable-dropdown-item';
 
             // Add custom preset indicator (SVG icon) if this is a custom preset - on the RIGHT side
             const customIndicator = isCustom && this.customPresetIcon ? 
@@ -279,7 +279,7 @@ export class SearchableDropdown {
                     const match = itemText.substring(matchIndex, matchIndex + searchTerm.length);
                     const after = itemText.substring(matchIndex + searchTerm.length);
                     
-                    itemElement.innerHTML = `${this.escapeHtml(before)}<span class="searchable-dropdown-highlight">${this.escapeHtml(match)}</span>${this.escapeHtml(after)}${customIndicator}`;
+                    itemElement.innerHTML = `${this.escapeHtml(before)}<span class="resolution-master-searchable-dropdown-highlight">${this.escapeHtml(match)}</span>${this.escapeHtml(after)}${customIndicator}`;
                 } else {
                     itemElement.innerHTML = `${this.escapeHtml(itemText)}${customIndicator}`;
                 }
@@ -335,7 +335,7 @@ export class SearchableDropdown {
      * Updates visual selection highlighting
      */
     updateSelection() {
-        const items = this.itemsContainer.querySelectorAll('.searchable-dropdown-item');
+        const items = this.itemsContainer.querySelectorAll('.resolution-master-searchable-dropdown-item');
         items.forEach((item, index) => {
             if (index === this.selectedIndex) {
                 item.classList.add('selected');

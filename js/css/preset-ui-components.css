@@ -6,14 +6,14 @@
  */
 
 /* Form Group - Component-specific layout */
-.preset-ui-form-group {
+.resolution-master-preset-ui-form-group {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-6);
 }
 
 /* Preset Card Name - Component-specific styling */
-.preset-ui-card-name {
+.resolution-master-preset-ui-card-name {
     color: var(--color-white);
     font-size: var(--font-base);
     font-weight: bold;
@@ -24,14 +24,14 @@
 }
 
 /* Preset Card Dimensions - Component-specific styling */
-.preset-ui-card-dims {
+.resolution-master-preset-ui-card-dims {
     color: var(--color-gray-500);
     font-size: var(--font-md);
     margin-bottom: var(--spacing-6);
 }
 
 /* Preset Card Delete Button - Component-specific styling */
-.preset-ui-card-delete-btn {
+.resolution-master-preset-ui-card-delete-btn {
     width: 100%;
     padding: var(--spacing-4);
     border: 1px solid var(--color-gray-600);
@@ -43,11 +43,11 @@
     transition: var(--transition-all);
 }
 
-.preset-ui-card-delete-btn:hover {
+.resolution-master-preset-ui-card-delete-btn:hover {
     background: rgba(255, 0, 0, 0.2);
 }
 
-.preset-ui-card-delete-icon {
+.resolution-master-preset-ui-card-delete-icon {
     width: var(--spacing-12);
     height: var(--spacing-12);
     display: block;

@@ -5,7 +5,9 @@
 */
 
 /* 1. ROOT VARIABLES (Twilight Color Palette) */
-:root {
+
+.jsoneditor-container,
+[class*="json-editor-"] {
   --vsc-bg: #141414;
   --vsc-panel-bg: #1a1a1a;
   --vsc-editor-bg: #141414;

@@ -6,7 +6,7 @@
  */
 
 /* Title */
-.preset-add-title {
+.resolution-master-preset-add-title {
     color: var(--color-white);
     font-size: var(--font-xl);
     font-weight: bold;
@@ -14,19 +14,19 @@
 }
 
 /* Category Section */
-.preset-add-category-section {
+.resolution-master-preset-add-category-section {
     margin-bottom: var(--spacing-12);
 }
 
 /* Category Section - Using cascade for children */
-.preset-add-category-section .preset-add-category-btn-container {
+.resolution-master-preset-add-category-section .resolution-master-preset-add-category-btn-container {
     display: flex;
     gap: var(--spacing-6);
     align-items: center;
 }
 
 /* Category buttons - Base styles using cascade */
-.preset-add-category-section button {
+.resolution-master-preset-add-category-section button {
     padding: var(--spacing-8) var(--spacing-10);
     border: 1px solid var(--color-gray-700);
     border-radius: var(--radius-lg);
@@ -37,35 +37,35 @@
 }
 
 /* Keyboard focus accessibility */
-.preset-add-category-section button:focus-visible {
+.resolution-master-preset-add-category-section button:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
-.preset-add-category-section button:hover {
+.resolution-master-preset-add-category-section button:hover {
     border-color: var(--color-primary);
     background: var(--color-bg-hover);
 }
 
 /* Category select button - Component-specific */
-.preset-add-category-btn {
+.resolution-master-preset-add-category-btn {
     flex: 1;
     color: var(--color-gray-500);
     text-align: left;
 }
 
-.preset-add-category-btn.selected {
+.resolution-master-preset-add-category-btn.selected {
     color: var(--color-white);
 }
 
 /* Rename category button - Component-specific */
-.preset-add-rename-category-btn {
+.resolution-master-preset-add-rename-category-btn {
     padding: var(--spacing-8) var(--spacing-12);
     color: var(--color-primary);
 }
 
 /* Quick Add Section - Using cascade for form elements */
-.preset-add-quick-section {
+.resolution-master-preset-add-quick-section {
     margin-bottom: var(--spacing-12);
     padding: var(--spacing-10);
     border: 1px solid var(--bg-primary-30);
@@ -73,41 +73,41 @@
     background: var(--bg-primary-10);
 }
 
-.preset-add-quick-section.edit-mode {
+.resolution-master-preset-add-quick-section.edit-mode {
     border-color: var(--bg-success-50);
     background: var(--bg-success-10);
 }
 
 /* Quick section title - using cascade */
-.preset-add-quick-section .preset-add-quick-title {
+.resolution-master-preset-add-quick-section .resolution-master-preset-add-quick-title {
     font-size: var(--font-base);
     font-weight: bold;
     margin-bottom: var(--spacing-6);
     color: var(--color-primary);
 }
 
-.preset-add-quick-section.edit-mode .preset-add-quick-title {
+.resolution-master-preset-add-quick-section.edit-mode .resolution-master-preset-add-quick-title {
     color: var(--color-success);
 }
 
 /* Form layout - using cascade */
-.preset-add-quick-section .preset-add-quick-form {
+.resolution-master-preset-add-quick-section .resolution-master-preset-add-quick-form {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-4);
 }
 
-.preset-add-quick-section .preset-add-dimensions-row {
+.resolution-master-preset-add-quick-section .resolution-master-preset-add-dimensions-row {
     display: flex;
     gap: var(--spacing-6);
 }
 
-.preset-add-quick-section .preset-add-dimension-group {
+.resolution-master-preset-add-quick-section .resolution-master-preset-add-dimension-group {
     flex: 1;
 }
 
 /* Preview Container - Using cascade for children */
-.preset-add-preview-container {
+.resolution-master-preset-add-preview-container {
     margin-top: var(--spacing-6);
     padding: var(--spacing-8);
     background: var(--overlay-dark-20);
@@ -119,13 +119,13 @@
     gap: var(--spacing-6);
 }
 
-.preset-add-preview-container .preset-add-preview-label {
+.resolution-master-preset-add-preview-container .resolution-master-preset-add-preview-label {
     font-size: var(--font-sm);
     font-weight: bold;
     color: var(--color-primary);
 }
 
-.preset-add-preview-container .preset-add-preview-canvas {
+.resolution-master-preset-add-preview-container .resolution-master-preset-add-preview-canvas {
     width: 160px;
     height: 120px;
     display: flex;
@@ -134,7 +134,7 @@
     position: relative;
 }
 
-.preset-add-preview-container .preset-add-preview-shape {
+.resolution-master-preset-add-preview-container .resolution-master-preset-add-preview-shape {
     border: 2px solid var(--color-primary);
     background: var(--bg-primary-10);
     display: flex;
@@ -144,12 +144,12 @@
     transition: var(--transition-all);
 }
 
-.preset-add-preview-container .preset-add-preview-shape.edit-mode {
+.resolution-master-preset-add-preview-container .resolution-master-preset-add-preview-shape.edit-mode {
     border-color: var(--color-success);
     background: var(--bg-success-10);
 }
 
-.preset-add-preview-container .preset-add-preview-text {
+.resolution-master-preset-add-preview-container .resolution-master-preset-add-preview-text {
     font-size: var(--font-sm);
     font-weight: bold;
     text-align: center;
@@ -157,25 +157,25 @@
     color: var(--color-primary);
 }
 
-.preset-add-preview-container .preset-add-preview-ratio {
+.resolution-master-preset-add-preview-container .resolution-master-preset-add-preview-ratio {
     font-size: var(--font-xs);
     color: var(--color-gray-500);
 }
 
 /* Edit mode text color - using cascade */
-.preset-add-preview-container.edit-mode .preset-add-preview-label,
-.preset-add-preview-container.edit-mode .preset-add-preview-text {
+.resolution-master-preset-add-preview-container.edit-mode .resolution-master-preset-add-preview-label,
+.resolution-master-preset-add-preview-container.edit-mode .resolution-master-preset-add-preview-text {
     color: var(--color-success);
 }
 
 /* Button Container - Using cascade for buttons */
-.preset-add-button-container {
+.resolution-master-preset-add-button-container {
     display: flex;
     gap: var(--spacing-4);
 }
 
 /* All buttons in container share base styles */
-.preset-add-button-container button {
+.resolution-master-preset-add-button-container button {
     padding: var(--spacing-6) var(--spacing-12);
     border-radius: var(--radius-md);
     font-weight: bold;
@@ -184,31 +184,31 @@
 }
 
 /* Keyboard focus accessibility for buttons */
-.preset-add-button-container button:focus-visible {
+.resolution-master-preset-add-button-container button:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
 /* Add button (primary action) */
-.preset-add-button-container .preset-add-add-btn {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-add-btn {
     border: none;
     background: var(--color-primary);
     color: var(--color-black);
 }
 
-.preset-add-button-container .preset-add-add-btn.large {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-add-btn.large {
     font-size: var(--font-3xl);
 }
 
-.preset-add-button-container .preset-add-add-btn.normal {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-add-btn.normal {
     font-size: var(--font-lg);
 }
 
-.preset-add-button-container .preset-add-add-btn:hover:not(:disabled) {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-add-btn:hover:not(:disabled) {
     background: var(--color-primary-light);
 }
 
-.preset-add-button-container .preset-add-add-btn:disabled {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-add-btn:disabled {
     background: var(--color-gray-600);
     color: var(--color-gray-400);
     cursor: not-allowed;
@@ -216,7 +216,7 @@
 }
 
 /* Cancel button (secondary action) */
-.preset-add-button-container .preset-add-cancel-btn {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-cancel-btn {
     padding: var(--spacing-4) var(--spacing-12);
     border: 1px solid var(--color-gray-600);
     background: var(--overlay-light-10);
@@ -224,13 +224,13 @@
     font-size: var(--font-lg);
 }
 
-.preset-add-button-container .preset-add-cancel-btn:hover {
+.resolution-master-preset-add-button-container .resolution-master-preset-add-cancel-btn:hover {
     background: var(--overlay-light-20);
     border-color: var(--color-gray-500);
 }
 
 /* Preset Preview Section - Using cascade */
-.preset-add-preset-preview {
+.resolution-master-preset-add-preset-preview {
     margin-top: var(--spacing-12);
     padding: var(--spacing-10);
     background: var(--overlay-dark-20);
@@ -240,7 +240,7 @@
     overflow-y: auto;
 }
 
-.preset-add-preset-preview .preset-add-preset-preview-title {
+.resolution-master-preset-add-preset-preview .resolution-master-preset-add-preset-preview-title {
     font-size: var(--font-base);
     font-weight: bold;
     margin-bottom: var(--spacing-8);
@@ -249,14 +249,14 @@
     color: var(--color-primary);
 }
 
-.preset-add-preset-preview .preset-add-presets-grid {
+.resolution-master-preset-add-preset-preview .resolution-master-preset-add-presets-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: var(--spacing-8);
 }
 
 /* Ratio Column - Using cascade for children */
-.preset-add-ratio-column {
+.resolution-master-preset-add-ratio-column {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -267,12 +267,12 @@
     padding: var(--spacing-3);
 }
 
-.preset-add-ratio-column .preset-add-ratio-icon {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-ratio-icon {
     margin-bottom: var(--spacing-2);
     color: var(--color-primary);
 }
 
-.preset-add-ratio-column .preset-add-ratio-text {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-ratio-text {
     font-size: var(--font-base);
     font-weight: bold;
     margin-bottom: var(--spacing-3);
@@ -283,7 +283,7 @@
     color: var(--color-primary);
 }
 
-.preset-add-ratio-column .preset-add-ratio-list {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-ratio-list {
     display: flex;
     flex-direction: column;
     gap: var(--spacing-2);
@@ -294,7 +294,7 @@
 }
 
 /* Preset Item in Column - Using cascade */
-.preset-add-ratio-column .preset-add-preset-item {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-item {
     padding: var(--spacing-3) var(--spacing-4);
     background: var(--overlay-light-05);
     border: 1px solid var(--color-gray-800);
@@ -311,21 +311,21 @@
     flex-shrink: 0;
 }
 
-.preset-add-ratio-column .preset-add-preset-item:hover {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-item:hover {
     background: var(--overlay-light-15);
     border-color: var(--color-gray-600);
 }
 
-.preset-add-ratio-column .preset-add-preset-item.hidden {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-item.hidden {
     border-color: var(--color-error);
 }
 
-.preset-add-ratio-column .preset-add-preset-item:hover .preset-add-action-btn {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-item:hover .resolution-master-preset-add-action-btn {
     opacity: 1;
 }
 
 /* Preset item contents - using cascade */
-.preset-add-ratio-column .preset-add-preset-name {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-name {
     color: var(--color-gray-100);
     font-size: var(--font-base);
     font-weight: normal;
@@ -335,20 +335,20 @@
     max-width: 100px;
 }
 
-.preset-add-ratio-column .preset-add-preset-icon {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-icon {
     width: var(--spacing-12);
     height: var(--spacing-12);
     margin-left: var(--spacing-3);
     vertical-align: middle;
 }
 
-.preset-add-ratio-column .preset-add-preset-dims {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-preset-dims {
     color: var(--color-gray-500);
     font-size: var(--font-sm);
 }
 
 /* Action Buttons (Delete/Toggle) - using cascade */
-.preset-add-ratio-column .preset-add-action-btn {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-action-btn {
     position: absolute;
     top: var(--spacing-2);
     right: var(--spacing-2);
@@ -363,25 +363,25 @@
 }
 
 /* Keyboard focus shows the button */
-.preset-add-ratio-column .preset-add-action-btn:focus-visible {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-action-btn:focus-visible {
     opacity: 1;
     outline: 2px solid var(--color-white);
     outline-offset: 1px;
 }
 
-.preset-add-ratio-column .preset-add-action-btn.delete {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-action-btn.delete {
     background: rgba(255, 80, 80, 0.8);
 }
 
-.preset-add-ratio-column .preset-add-action-btn.hide {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-action-btn.hide {
     background: rgba(255, 200, 0, 0.8);
 }
 
-.preset-add-ratio-column .preset-add-action-btn.unhide {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-action-btn.unhide {
     background: rgba(80, 255, 80, 0.8);
 }
 
-.preset-add-ratio-column .preset-add-action-icon {
+.resolution-master-preset-add-ratio-column .resolution-master-preset-add-action-icon {
     width: var(--spacing-12);
     height: var(--spacing-12);
     display: block;
