@@ -1,7 +1,7 @@
 [project]
 name = "Comfyui-Resolution-Master"
 description = "ResolutionMaster is for total control over resolution and aspect ratio. It provides an intuitive interface with an interactive canvas, advanced scaling options, extensive presets (SDXL, Flux, WAN), and model-specific optimizations for high-quality AI image generation."
-version = "1.5.7"
+version = "1.5.8"
 license = { text = "MIT License" }
 
 [project.urls]
