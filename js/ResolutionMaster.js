@@ -219,6 +219,7 @@ class ResolutionMasterCanvas {
         const widthWidget = node.widgets?.find(w => w.name === 'width');
         const heightWidget = node.widgets?.find(w => w.name === 'height');
         const modeWidget = node.widgets?.find(w => w.name === 'mode');
+        const categoryWidget = node.widgets?.find(w => w.name === 'category');
         const autoDetectWidget = node.widgets?.find(w => w.name === 'auto_detect');
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
@@ -251,9 +252,31 @@ class ResolutionMasterCanvas {
         // Store widget references
         this.widthWidget = widthWidget;
         this.heightWidget = heightWidget;
+        this.categoryWidget = categoryWidget;
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
         this.batchSizeWidget = batchSizeWidget;
+        
+        // Initialize category widget from properties
+        if (categoryWidget) {
+            // Map UI category to backend category
+            const categoryMapping = {
+                'Flux': 'SD1.5/SDXL',
+                'Flux.2': 'Flux.2',
+                'Standard': 'SD1.5/SDXL',
+                'SDXL': 'SD1.5/SDXL',
+                'Social Media': 'SD1.5/SDXL',
+                'Print': 'SD1.5/SDXL',
+                'Cinema': 'SD1.5/SDXL',
+                'Display Resolutions': 'SD1.5/SDXL',
+                'WAN': 'SD1.5/SDXL',
+                'HiDream Dev': 'SD1.5/SDXL',
+                'Qwen-Image': 'SD1.5/SDXL'
+            };
+            
+            const backendCategory = categoryMapping[node.properties.selectedCategory] || 'SD1.5/SDXL';
+            categoryWidget.value = backendCategory;
+        }
         
         
         // Override onDrawForeground
@@ -333,8 +356,8 @@ class ResolutionMasterCanvas {
             };
         };
 
-                // Hide all backend widgets
-        [widthWidget, heightWidget, modeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
+        // Hide all backend widgets
+        [widthWidget, heightWidget, modeWidget, categoryWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
             if (widget) {
                 widget.hidden = true;
                 widget.type = "hidden";
@@ -942,7 +965,9 @@ class ResolutionMasterCanvas {
         if (category === "SDXL" && props.useCustomCalc) {
             message = "💡 SDXL Mode: Only using presets!";
         } else if (category === "Flux" && props.useCustomCalc) {
-            message = "💡 Flux Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
+            message = "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
+        } else if (category === "Flux.2" && props.useCustomCalc) {
+            message = "💡 FLUX.2 Mode: Round to: 16px | Edge range: 320-3840px | Max resolution: 6.0 MP";
         } else if (category === "WAN" && props.useCustomCalc && this.widthWidget && this.heightWidget) {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
@@ -2012,6 +2037,28 @@ class ResolutionMasterCanvas {
             callback = (value) => {
                 props.selectedCategory = value;
                 props.selectedPreset = null;
+                
+                // Update backend category widget
+                if (this.categoryWidget) {
+                    const categoryMapping = {
+                        'Flux': 'SD1.5/SDXL',
+                        'Flux.2': 'Flux.2',
+                        'Standard': 'SD1.5/SDXL',
+                        'SDXL': 'SD1.5/SDXL',
+                        'Social Media': 'SD1.5/SDXL',
+                        'Print': 'SD1.5/SDXL',
+                        'Cinema': 'SD1.5/SDXL',
+                        'Display Resolutions': 'SD1.5/SDXL',
+                        'WAN': 'SD1.5/SDXL',
+                        'HiDream Dev': 'SD1.5/SDXL',
+                        'Qwen-Image': 'SD1.5/SDXL'
+                    };
+                    
+                    const backendCategory = categoryMapping[value] || 'SD1.5/SDXL';
+                    this.categoryWidget.value = backendCategory;
+                    log.debug(`Updated backend category widget to: ${backendCategory} for UI category: ${value}`);
+                }
+                
                 app.graph.setDirtyCanvas(true);
             };
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
@@ -2261,6 +2308,7 @@ class ResolutionMasterCanvas {
     applyCustomCalculation(width, height, category) {
         const calculations = {
             Flux: () => this.applyFluxCalculation(width, height),
+            'Flux.2': () => this.applyFlux2Calculation(width, height),
             WAN: () => this.applyWANCalculation(width, height),
             'Qwen-Image': () => this.applyQwenCalculation(width, height),
             // SDXL and HiDream Dev zachowują się jak auto-fit - znajdą najbliższy preset
@@ -2442,6 +2490,44 @@ class ResolutionMasterCanvas {
         return {
             width: Math.max(320, Math.min(2560, finalWidth)),
             height: Math.max(320, Math.min(2560, finalHeight))
+        };
+    }
+    
+    applyFlux2Calculation(width, height) {
+        // Najpierw sprawdź czy trzeba skalować ze względu na MP (zachowując proporcje)
+        const currentMP = (width * height) / 1000000;
+        let scaledWidth = width;
+        let scaledHeight = height;
+        
+        if (currentMP > 6.0) {
+            // Skaluj zachowując dokładnie proporcje
+            const scale = Math.sqrt(6.0 / currentMP);
+            scaledWidth = width * scale;
+            scaledHeight = height * scale;
+        }
+        
+        // Ogranicz do zakresu 320-2560px zachowując proporcje
+        const maxDimension = Math.max(scaledWidth, scaledHeight);
+        if (maxDimension > 3840) {
+            const limitScale = 3840 / maxDimension;
+            scaledWidth *= limitScale;
+            scaledHeight *= limitScale;
+        }
+        
+        const minDimension = Math.min(scaledWidth, scaledHeight);
+        if (minDimension < 320) {
+            const limitScale = 320 / minDimension;
+            scaledWidth *= limitScale;
+            scaledHeight *= limitScale;
+        }
+        
+        // DOPIERO NA KOŃCU zaokrąglij do 32px (to może nieznacznie zmienić proporcje)
+        const finalWidth = Math.round(scaledWidth / 16) * 16;
+        const finalHeight = Math.round(scaledHeight / 16) * 16;
+        
+        return {
+            width: Math.max(320, Math.min(3840, finalWidth)),
+            height: Math.max(320, Math.min(3840, finalHeight))
         };
     }
     

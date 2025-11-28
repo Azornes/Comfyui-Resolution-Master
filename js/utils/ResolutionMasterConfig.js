@@ -125,6 +125,18 @@ export const presetCategories = {
         '9:16 Portrait': { width: 768, height: 1344 },
         '9:21 Portrait': { width: 672, height: 1440 },
     },
+    'Flux.2': {
+        '1:1 Square': { width: 2048, height: 2048 },
+        '1:1 Square Native': { width: 2336, height: 2336 },
+        '2:3 Portrait': { width: 1632, height: 2448 },
+        '3:4 Portrait': { width: 1728, height: 2304 },
+        '4:5 Portrait': { width: 1792, height: 2240 },
+        '9:16 Portrait': { width: 1472, height: 2624 },
+        '3:2 Landscape': { width: 2448, height: 1632 },
+        '4:3 Landscape': { width: 2304, height: 1728 },
+        '16:9 Landscape': { width: 2624, height: 1472 },
+        '21:9 Ultrawide': { width: 2912, height: 1248 },
+    },
     'WAN': {
        // Community Presets
        '16:9 Landscape-1280': { width: 1280, height: 720 },
