@@ -14,6 +14,21 @@ import { PresetManagerDialog } from "./utils/PresetManagerDialog.js";
 const log = createModuleLogger('ResolutionMaster');
 
 class ResolutionMasterCanvas {
+    // Category mapping for UI to backend widget conversion
+    static CATEGORY_MAPPING = {
+        'Flux': 'SD1.5/SDXL',
+        'Flux.2': 'Flux.2',
+        'Standard': 'SD1.5/SDXL',
+        'SDXL': 'SD1.5/SDXL',
+        'Social Media': 'SD1.5/SDXL',
+        'Print': 'SD1.5/SDXL',
+        'Cinema': 'SD1.5/SDXL',
+        'Display Resolutions': 'SD1.5/SDXL',
+        'WAN': 'SD1.5/SDXL',
+        'HiDream Dev': 'SD1.5/SDXL',
+        'Qwen-Image': 'SD1.5/SDXL'
+    };
+    
     constructor(node) {
         this.node = node;
         
@@ -259,22 +274,7 @@ class ResolutionMasterCanvas {
         
         // Initialize category widget from properties
         if (categoryWidget) {
-            // Map UI category to backend category
-            const categoryMapping = {
-                'Flux': 'SD1.5/SDXL',
-                'Flux.2': 'Flux.2',
-                'Standard': 'SD1.5/SDXL',
-                'SDXL': 'SD1.5/SDXL',
-                'Social Media': 'SD1.5/SDXL',
-                'Print': 'SD1.5/SDXL',
-                'Cinema': 'SD1.5/SDXL',
-                'Display Resolutions': 'SD1.5/SDXL',
-                'WAN': 'SD1.5/SDXL',
-                'HiDream Dev': 'SD1.5/SDXL',
-                'Qwen-Image': 'SD1.5/SDXL'
-            };
-            
-            const backendCategory = categoryMapping[node.properties.selectedCategory] || 'SD1.5/SDXL';
+            const backendCategory = ResolutionMasterCanvas.CATEGORY_MAPPING[node.properties.selectedCategory] || 'SD1.5/SDXL';
             categoryWidget.value = backendCategory;
         }
         
@@ -760,66 +760,34 @@ class ResolutionMasterCanvas {
 
     drawScalingGrid(ctx, y) {
         const margin = 20;
-        this.drawScaleRow(ctx, margin, y);
-        this.drawResolutionRow(ctx, margin, y + 35);
-        this.drawMegapixelsRow(ctx, margin, y + 70);
+        const props = this.node.properties;
+        
+        // Scale row (manual upscale slider)
+        this.drawScalingRowBase(ctx, margin, y, {
+            buttonControl: 'scaleBtn', mainControl: 'scaleSlider', radioControl: 'upscaleRadio',
+            controlType: 'slider', icon: this.icons.upscale, valueProperty: 'upscaleValue',
+            min: props.scaling_slider_min, max: props.scaling_slider_max, step: props.scaling_slider_step,
+            displayValue: props.upscaleValue.toFixed(1) + "x", scaleFactor: props.upscaleValue, rescaleMode: 'manual'
+        });
+        
+        // Resolution row (target resolution dropdown)
+        const resScale = this.calculateResolutionScale(props.targetResolution);
+        this.drawScalingRowBase(ctx, margin, y + 35, {
+            buttonControl: 'resolutionBtn', mainControl: 'resolutionDropdown', radioControl: 'resolutionRadio',
+            controlType: 'dropdown', icon: this.icons.resolution, selectedText: `${props.targetResolution}p`,
+            displayValue: `×${resScale.toFixed(2)}`, scaleFactor: resScale, rescaleMode: 'resolution'
+        });
+        
+        // Megapixels row (target MP slider)
+        const mpScale = this.calculateMegapixelsScale(props.targetMegapixels);
+        this.drawScalingRowBase(ctx, margin, y + 70, {
+            buttonControl: 'megapixelsBtn', mainControl: 'megapixelsSlider', radioControl: 'megapixelsRadio',
+            controlType: 'slider', icon: this.icons.megapixels, valueProperty: 'targetMegapixels',
+            min: props.megapixels_slider_min, max: props.megapixels_slider_max, step: props.megapixels_slider_step,
+            displayValue: `${props.targetMegapixels.toFixed(1)}MP`, scaleFactor: mpScale, rescaleMode: 'megapixels'
+        });
+        
         return 105;
-    }
-    
-    drawScaleRow(ctx, x, y) {
-        const props = this.node.properties;
-        this.drawScalingRowBase(ctx, x, y, {
-            buttonControl: 'scaleBtn',
-            mainControl: 'scaleSlider',
-            radioControl: 'upscaleRadio',
-            controlType: 'slider',
-            icon: this.icons.upscale,
-            valueProperty: 'upscaleValue',
-            min: props.scaling_slider_min,
-            max: props.scaling_slider_max,
-            step: props.scaling_slider_step,
-            displayValue: props.upscaleValue.toFixed(1) + "x",
-            scaleFactor: props.upscaleValue,
-            rescaleMode: 'manual'
-        });
-    }
-    
-    drawResolutionRow(ctx, x, y) {
-        const props = this.node.properties;
-        const selectedText = `${props.targetResolution}p`;
-        const scaleFactor = this.calculateResolutionScale(props.targetResolution);
-        
-        this.drawScalingRowBase(ctx, x, y, {
-            buttonControl: 'resolutionBtn',
-            mainControl: 'resolutionDropdown',
-            radioControl: 'resolutionRadio',
-            controlType: 'dropdown',
-            icon: this.icons.resolution,
-            selectedText: selectedText,
-            displayValue: `×${scaleFactor.toFixed(2)}`,
-            scaleFactor: scaleFactor,
-            rescaleMode: 'resolution'
-        });
-    }
-    
-    drawMegapixelsRow(ctx, x, y) {
-        const props = this.node.properties;
-        const scaleFactor = this.calculateMegapixelsScale(props.targetMegapixels);
-        
-        this.drawScalingRowBase(ctx, x, y, {
-            buttonControl: 'megapixelsBtn',
-            mainControl: 'megapixelsSlider',
-            radioControl: 'megapixelsRadio',
-            controlType: 'slider',
-            icon: this.icons.megapixels,
-            valueProperty: 'targetMegapixels',
-            min: props.megapixels_slider_min,
-            max: props.megapixels_slider_max,
-            step: props.megapixels_slider_step,
-            displayValue: `${props.targetMegapixels.toFixed(1)}MP`,
-            scaleFactor: scaleFactor,
-            rescaleMode: 'megapixels'
-        });
     }
 
     drawAutoDetectSection(ctx, y) {
@@ -2040,21 +2008,7 @@ class ResolutionMasterCanvas {
                 
                 // Update backend category widget
                 if (this.categoryWidget) {
-                    const categoryMapping = {
-                        'Flux': 'SD1.5/SDXL',
-                        'Flux.2': 'Flux.2',
-                        'Standard': 'SD1.5/SDXL',
-                        'SDXL': 'SD1.5/SDXL',
-                        'Social Media': 'SD1.5/SDXL',
-                        'Print': 'SD1.5/SDXL',
-                        'Cinema': 'SD1.5/SDXL',
-                        'Display Resolutions': 'SD1.5/SDXL',
-                        'WAN': 'SD1.5/SDXL',
-                        'HiDream Dev': 'SD1.5/SDXL',
-                        'Qwen-Image': 'SD1.5/SDXL'
-                    };
-                    
-                    const backendCategory = categoryMapping[value] || 'SD1.5/SDXL';
+                    const backendCategory = ResolutionMasterCanvas.CATEGORY_MAPPING[value] || 'SD1.5/SDXL';
                     this.categoryWidget.value = backendCategory;
                     log.debug(`Updated backend category widget to: ${backendCategory} for UI category: ${value}`);
                 }
@@ -2455,80 +2409,37 @@ class ResolutionMasterCanvas {
         return `(${Math.round(pValue)}p)`;
     }
     
-    applyFluxCalculation(width, height) {
-        // Najpierw sprawdź czy trzeba skalować ze względu na MP (zachowując proporcje)
+    // Unified Flux-like calculation (works for Flux, Flux.2, and future versions)
+    applyFluxLikeCalculation(width, height, maxMP, maxDim, minDim, multiple) {
         const currentMP = (width * height) / 1000000;
-        let scaledWidth = width;
-        let scaledHeight = height;
+        let w = width, h = height;
         
-        if (currentMP > 4.0) {
-            // Skaluj zachowując dokładnie proporcje
-            const scale = Math.sqrt(4.0 / currentMP);
-            scaledWidth = width * scale;
-            scaledHeight = height * scale;
+        // Scale down if exceeds max megapixels
+        if (currentMP > maxMP) {
+            const scale = Math.sqrt(maxMP / currentMP);
+            w *= scale; h *= scale;
         }
         
-        // Ogranicz do zakresu 320-2560px zachowując proporcje
-        const maxDimension = Math.max(scaledWidth, scaledHeight);
-        if (maxDimension > 2560) {
-            const limitScale = 2560 / maxDimension;
-            scaledWidth *= limitScale;
-            scaledHeight *= limitScale;
-        }
+        // Limit to dimension range while preserving aspect ratio
+        const maxD = Math.max(w, h);
+        if (maxD > maxDim) { const s = maxDim / maxD; w *= s; h *= s; }
         
-        const minDimension = Math.min(scaledWidth, scaledHeight);
-        if (minDimension < 320) {
-            const limitScale = 320 / minDimension;
-            scaledWidth *= limitScale;
-            scaledHeight *= limitScale;
-        }
+        const minD = Math.min(w, h);
+        if (minD < minDim) { const s = minDim / minD; w *= s; h *= s; }
         
-        // DOPIERO NA KOŃCU zaokrąglij do 32px (to może nieznacznie zmienić proporcje)
-        const finalWidth = Math.round(scaledWidth / 32) * 32;
-        const finalHeight = Math.round(scaledHeight / 32) * 32;
-        
+        // Round to multiple at the end
         return {
-            width: Math.max(320, Math.min(2560, finalWidth)),
-            height: Math.max(320, Math.min(2560, finalHeight))
+            width: Math.max(minDim, Math.min(maxDim, Math.round(w / multiple) * multiple)),
+            height: Math.max(minDim, Math.min(maxDim, Math.round(h / multiple) * multiple))
         };
     }
     
+    applyFluxCalculation(width, height) {
+        return this.applyFluxLikeCalculation(width, height, 4.0, 2560, 320, 32);
+    }
+    
     applyFlux2Calculation(width, height) {
-        // Najpierw sprawdź czy trzeba skalować ze względu na MP (zachowując proporcje)
-        const currentMP = (width * height) / 1000000;
-        let scaledWidth = width;
-        let scaledHeight = height;
-        
-        if (currentMP > 6.0) {
-            // Skaluj zachowując dokładnie proporcje
-            const scale = Math.sqrt(6.0 / currentMP);
-            scaledWidth = width * scale;
-            scaledHeight = height * scale;
-        }
-        
-        // Ogranicz do zakresu 320-2560px zachowując proporcje
-        const maxDimension = Math.max(scaledWidth, scaledHeight);
-        if (maxDimension > 3840) {
-            const limitScale = 3840 / maxDimension;
-            scaledWidth *= limitScale;
-            scaledHeight *= limitScale;
-        }
-        
-        const minDimension = Math.min(scaledWidth, scaledHeight);
-        if (minDimension < 320) {
-            const limitScale = 320 / minDimension;
-            scaledWidth *= limitScale;
-            scaledHeight *= limitScale;
-        }
-        
-        // DOPIERO NA KOŃCU zaokrąglij do 32px (to może nieznacznie zmienić proporcje)
-        const finalWidth = Math.round(scaledWidth / 16) * 16;
-        const finalHeight = Math.round(scaledHeight / 16) * 16;
-        
-        return {
-            width: Math.max(320, Math.min(3840, finalWidth)),
-            height: Math.max(320, Math.min(3840, finalHeight))
-        };
+        return this.applyFluxLikeCalculation(width, height, 6.0, 3840, 320, 16);
     }
     
     applyWANCalculation(width, height) {
