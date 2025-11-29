@@ -11,6 +11,7 @@ export const tooltips = {
     widthValueArea: "Click to set custom width value",
     heightValueArea: "Click to set custom height value",
     batchSizeValueArea: "Click to set custom batch size value",
+    latValueArea: "Click to select latent type (4x8 for SD/SDXL/Flux, 128x16 for Flux.2)",
     
     // Scaling controls (buttons and dropdowns only)
     scaleBtn: "Apply manual scaling factor and reset to 1.0x",
