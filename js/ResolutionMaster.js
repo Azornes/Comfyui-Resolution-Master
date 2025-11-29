@@ -16,17 +16,17 @@ const log = createModuleLogger('ResolutionMaster');
 class ResolutionMasterCanvas {
     // Category mapping for UI to backend widget conversion
     static CATEGORY_MAPPING = {
-        'Flux': 'SD1.5/SDXL',
-        'Flux.2': 'Flux.2',
-        'Standard': 'SD1.5/SDXL',
-        'SDXL': 'SD1.5/SDXL',
-        'Social Media': 'SD1.5/SDXL',
-        'Print': 'SD1.5/SDXL',
-        'Cinema': 'SD1.5/SDXL',
-        'Display Resolutions': 'SD1.5/SDXL',
-        'WAN': 'SD1.5/SDXL',
-        'HiDream Dev': 'SD1.5/SDXL',
-        'Qwen-Image': 'SD1.5/SDXL'
+        'Flux': 'latent_4x8',
+        'Flux.2': 'latent_128x16',
+        'Standard': 'latent_4x8',
+        'SDXL': 'latent_4x8',
+        'Social Media': 'latent_4x8',
+        'Print': 'latent_4x8',
+        'Cinema': 'latent_4x8',
+        'Display Resolutions': 'latent_4x8',
+        'WAN': 'latent_4x8',
+        'HiDream Dev': 'latent_4x8',
+        'Qwen-Image': 'latent_4x8'
     };
     
     constructor(node) {
@@ -234,7 +234,7 @@ class ResolutionMasterCanvas {
         const widthWidget = node.widgets?.find(w => w.name === 'width');
         const heightWidget = node.widgets?.find(w => w.name === 'height');
         const modeWidget = node.widgets?.find(w => w.name === 'mode');
-        const categoryWidget = node.widgets?.find(w => w.name === 'category');
+        const latentTypeWidget = node.widgets?.find(w => w.name === 'latent_type');
         const autoDetectWidget = node.widgets?.find(w => w.name === 'auto_detect');
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
@@ -267,15 +267,15 @@ class ResolutionMasterCanvas {
         // Store widget references
         this.widthWidget = widthWidget;
         this.heightWidget = heightWidget;
-        this.categoryWidget = categoryWidget;
+        this.latentTypeWidget = latentTypeWidget;
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
         this.batchSizeWidget = batchSizeWidget;
         
-        // Initialize category widget from properties
-        if (categoryWidget) {
-            const backendCategory = ResolutionMasterCanvas.CATEGORY_MAPPING[node.properties.selectedCategory] || 'SD1.5/SDXL';
-            categoryWidget.value = backendCategory;
+        // Initialize latent type widget from properties
+        if (latentTypeWidget) {
+            const backendLatentType = ResolutionMasterCanvas.CATEGORY_MAPPING[node.properties.selectedCategory] || 'latent_4x8';
+            latentTypeWidget.value = backendLatentType;
         }
         
         
@@ -357,7 +357,7 @@ class ResolutionMasterCanvas {
         };
 
         // Hide all backend widgets
-        [widthWidget, heightWidget, modeWidget, categoryWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
+        [widthWidget, heightWidget, modeWidget, latentTypeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
             if (widget) {
                 widget.hidden = true;
                 widget.type = "hidden";
@@ -2006,11 +2006,11 @@ class ResolutionMasterCanvas {
                 props.selectedCategory = value;
                 props.selectedPreset = null;
                 
-                // Update backend category widget
-                if (this.categoryWidget) {
-                    const backendCategory = ResolutionMasterCanvas.CATEGORY_MAPPING[value] || 'SD1.5/SDXL';
-                    this.categoryWidget.value = backendCategory;
-                    log.debug(`Updated backend category widget to: ${backendCategory} for UI category: ${value}`);
+                // Update backend latent type widget
+                if (this.latentTypeWidget) {
+                    const backendLatentType = ResolutionMasterCanvas.CATEGORY_MAPPING[value] || 'latent_4x8';
+                    this.latentTypeWidget.value = backendLatentType;
+                    log.debug(`Updated backend latent type widget to: ${backendLatentType} for UI category: ${value}`);
                 }
                 
                 app.graph.setDirtyCanvas(true);

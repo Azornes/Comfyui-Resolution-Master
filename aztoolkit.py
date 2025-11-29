@@ -29,9 +29,9 @@ class ResolutionMaster:
                 "mode": (
                     ["Manual", "Manual Sliders", "Common Resolutions", "Aspect Ratios"],
                 ),
-                "category": (
-                    ["SD1.5/SDXL", "Flux.2"],
-                    {"default": "SD1.5/SDXL"}
+                "latent_type": (
+                    ["latent_4x8", "latent_128x16"],
+                    {"default": "latent_4x8"}
                 ),
                 "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64}),
                 "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64}),
@@ -53,7 +53,7 @@ class ResolutionMaster:
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 
-    def main(self, mode, category, width, height, auto_detect, rescale_mode, rescale_value, batch_size=1, input_image=None, unique_id=None):
+    def main(self, mode, latent_type, width, height, auto_detect, rescale_mode, rescale_value, batch_size=1, input_image=None, unique_id=None):
         detected_width = width
         detected_height = height
 
@@ -94,8 +94,8 @@ class ResolutionMaster:
         # The rescale_factor is calculated on the frontend and passed here
         rescale_factor = rescale_value
 
-        # Generate latent tensor based on selected category
-        if category == "Flux.2":
+        # Generate latent tensor based on selected latent type
+        if latent_type == "latent_128x16":
             # Flux 2 uses 128 channels and divides by 16
             latent = torch.zeros([batch_size, 128, height // 16, width // 16], device=self.device)
         else:
