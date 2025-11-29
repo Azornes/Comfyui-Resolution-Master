@@ -1,5 +1,3 @@
-// ComfyUI.azToolkit.ResolutionMaster v.10.1.0 - Canvas version with single view (no tabs)
-// All controls visible at once like in original DOM version
 import { app } from "../../scripts/app.js";
 import { createModuleLogger } from "./utils/LoggerUtils.js";
 import { loadIcons } from "./utils/IconUtils.js";
@@ -9,12 +7,9 @@ import { SearchableDropdown } from "./SearchableDropdown.js";
 import { AspectRatioSelector } from "./AspectRatioSelector.js";
 import { CustomPresetsManager } from "./utils/CustomPresetsManager.js";
 import { PresetManagerDialog } from "./utils/PresetManagerDialog.js";
-
-// Initialize logger for this module
 const log = createModuleLogger('ResolutionMaster');
 
 class ResolutionMasterCanvas {
-    // Category mapping for UI to backend widget conversion
     static CATEGORY_MAPPING = {
         'Flux': 'latent_4x8',
         'Flux.2': 'latent_128x16',
@@ -31,66 +26,37 @@ class ResolutionMasterCanvas {
     
     constructor(node) {
         this.node = node;
-        
-        // Initialize properties
         this.node.properties = this.node.properties || {};
         this.initializeProperties();
-        
-        // Internal state
         this.node.intpos = { x: 0.5, y: 0.5 };
         this.node.capture = false;
         this.node.configured = false;
-        
-        // UI state
         this.hoverElement = null;
         this.scrollOffset = 0;
         this.dropdownOpen = null;
-        
-        // Collapsible sections state will be initialized after properties are set
         this.collapsedSections = {};
-        
-        // Initialize DialogManager
         this.dialogManager = new DialogManager(this);
-        
-        // Initialize SearchableDropdown
         this.searchableDropdown = new SearchableDropdown();
-        
-        // Initialize AspectRatioSelector
         this.aspectRatioSelector = new AspectRatioSelector();
-        
-        // Initialize CustomPresetsManager
         this.customPresetsManager = new CustomPresetsManager(this);
-        
-        // Initialize PresetManagerDialog
         this.presetManagerDialog = new PresetManagerDialog(this.customPresetsManager);
-        
-        // Tooltip state
         this.tooltipElement = null;
         this.tooltipTimer = null;
         this.tooltipDelay = 500; // ms - reduced for faster response
         this.showTooltip = false;
         this.tooltipMousePos = null; // Current mouse position
-        
-        // Auto-detect state
         this.detectedDimensions = null;
         this.dimensionCheckInterval = null;
         this.manuallySetByAutoFit = false;
-        
-        // Control positions (will be calculated dynamically)
         this.controls = {};
         this.resolutions = ['144p', '240p', '360p', '480p', '720p', '820p', '1080p', '1440p', '2160p', '4320p'];
 
         this.icons = {};
         loadIcons(this.icons);
-        
-        // Import configuration from external file
         this.tooltips = tooltips;
         this.presetCategories = presetCategories;
         
         this.setupNode();
-        
-        // Load CSS only when this specific node instance is created
-        // This prevents global CSS loading that affects entire ComfyUI
         import('./css-loader.js').then(module => {
             module.loadStylesWhenNeeded();
         }).catch(error => {
@@ -102,13 +68,10 @@ class ResolutionMasterCanvas {
         if (this.node.size[0] < 330) {
             this.node.size[0] = 330;
         }
-        
-        // Calculate needed height based on current content
         const neededHeight = this.calculateNeededHeight();
         if (neededHeight > 0) {
             this.node.size[1] = Math.max(neededHeight, this.node.min_size[1]);
         } else {
-            // Fallback to minimum if calculation not available
             if (this.node.size[1] < this.node.min_size[1]) {
                 this.node.size[1] = this.node.min_size[1];
             }
@@ -121,28 +84,18 @@ class ResolutionMasterCanvas {
         
         let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
         const spacing = 8;
-        
-        // Canvas height
         const canvasHeight = 200;
         currentY += canvasHeight + spacing;
-        
-        // Info text
         currentY += 15 + spacing;
-        
-        // Calculate section heights based on collapsed state
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,      // 25 for header, +30 for content
             scaling: this.collapsedSections?.scaling ? 25 : 130,    // 25 for header, +105 for content
             autoDetect: this.collapsedSections?.autoDetect ? 25 : 125, // 25 for header, +100 for content (3 rows)
             presets: this.collapsedSections?.presets ? 25 : 90       // 25 for header, +65 for content (2 rows)
         };
-        
-        // Add section heights
         Object.values(sectionHeights).forEach(height => {
             currentY += height + spacing;
         });
-        
-        // Info message height (if applicable)
         if (props.useCustomCalc && props.selectedCategory) {
             currentY += 40; // Approximate info message height
         }
@@ -194,18 +147,14 @@ class ResolutionMasterCanvas {
             manual_slider_min_h: 64,
             manual_slider_max_h: 2048,
             manual_slider_step_h: 64,
-            // Collapsible sections state
             section_actions_collapsed: false,
             section_scaling_collapsed: false,
             section_autoDetect_collapsed: false,
             section_presets_collapsed: false,
-            // Searchable dropdown expanded state
             dropdown_resolution_expanded: false,
             dropdown_category_expanded: false,
             dropdown_preset_expanded: false,
-            // Preset selector mode
             preset_selector_mode: 'visual', // 'visual' or 'list'
-            // Custom presets storage
             customPresetsJSON: '',
         };
 
@@ -218,19 +167,13 @@ class ResolutionMasterCanvas {
     setupNode() {
         const node = this.node;
         const self = this;
-        
-        // Set minimum size - height will be calculated dynamically
         node.size = [330, 400]; // Initial size, will be adjusted dynamically
         node.min_size = [330, 200]; // Minimum size for basic functionality
-        
-        // Clear output names for cleaner display
         if (node.outputs) {
             node.outputs.forEach(output => {
                 output.name = output.localized_name = "";
             });
         }
-        
-        // Get widgets
         const widthWidget = node.widgets?.find(w => w.name === 'width');
         const heightWidget = node.widgets?.find(w => w.name === 'height');
         const modeWidget = node.widgets?.find(w => w.name === 'mode');
@@ -239,54 +182,36 @@ class ResolutionMasterCanvas {
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
         const batchSizeWidget = node.widgets?.find(w => w.name === 'batch_size');
-        
-        // Initialize rescale widgets with proper values
         if (rescaleModeWidget) {
             rescaleModeWidget.value = node.properties.rescaleMode;
         }
         if (rescaleValueWidget) {
             rescaleValueWidget.value = node.properties.rescaleValue;
         }
-        
-        // Initialize values from widgets (widget is source of truth for backend parameters)
         if (widthWidget && heightWidget) {
             node.properties.valueX = widthWidget.value;
             node.properties.valueY = heightWidget.value;
-            
-            // Initialize intpos based on current values
             node.intpos.x = (widthWidget.value - node.properties.canvas_min_x) / (node.properties.canvas_max_x - node.properties.canvas_min_x);
             node.intpos.y = (heightWidget.value - node.properties.canvas_min_y) / (node.properties.canvas_max_y - node.properties.canvas_min_y);
         }
-        
-        // Initialize batch_size from widget to property (same as width/height)
         if (batchSizeWidget) {
             node.properties.batch_size = batchSizeWidget.value;
         }
-        
-        
-        // Store widget references
         this.widthWidget = widthWidget;
         this.heightWidget = heightWidget;
         this.latentTypeWidget = latentTypeWidget;
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
         this.batchSizeWidget = batchSizeWidget;
-        
-        // Initialize latent type widget from properties
         if (latentTypeWidget) {
             const backendLatentType = ResolutionMasterCanvas.CATEGORY_MAPPING[node.properties.selectedCategory] || 'latent_4x8';
             latentTypeWidget.value = backendLatentType;
         }
-        
-        
-        // Override onDrawForeground
         node.onDrawForeground = function(ctx) {
             if (this.flags.collapsed) return;
             self.ensureMinimumSize();
             self.drawInterface(ctx);
         };
-        
-        // Override mouse handlers
         node.onMouseDown = function(e, pos, canvas) {
             if (e.canvasY - this.pos[1] < 0) return false;
             return self.handleMouseDown(e, pos, canvas);
@@ -308,14 +233,10 @@ class ResolutionMasterCanvas {
         node.onPropertyChanged = function(property) {
             self.handlePropertyChange(property);
         };
-        
-        // Handle resize
         node.onResize = function() {
             self.ensureMinimumSize();
             app.graph.setDirtyCanvas(true);
         };
-        
-        // Cleanup
         const origOnRemoved = node.onRemoved;
         node.onRemoved = function() {
             if (self.dimensionCheckInterval) {
@@ -331,23 +252,16 @@ class ResolutionMasterCanvas {
             }
             if (origOnRemoved) origOnRemoved.apply(this, arguments);
         };
-        
-        // Initial configuration
         node.onGraphConfigured = function() {
             this.configured = true;
             this.onPropertyChanged();
-            
-            // Reload custom presets from properties (after workflow is fully loaded)
             self.customPresetsManager.loadCustomPresets();
             log.debug('Reloaded custom presets after graph configured');
             
             if (this.properties.autoDetect) {
                 self.startAutoDetect();
             }
-            // Calculate initial rescale value
             self.updateRescaleValue();
-            
-            // Initialize collapsible sections state from properties after full configuration
             self.collapsedSections = {
                 actions: this.properties.section_actions_collapsed,
                 scaling: this.properties.section_scaling_collapsed,
@@ -355,8 +269,6 @@ class ResolutionMasterCanvas {
                 presets: this.properties.section_presets_collapsed
             };
         };
-
-        // Hide all backend widgets
         [widthWidget, heightWidget, modeWidget, latentTypeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
             if (widget) {
                 widget.hidden = true;
@@ -375,7 +287,6 @@ class ResolutionMasterCanvas {
         let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
         
         if (props.mode === "Manual") {
-            // Clear controls at the start to avoid stale references
             this.controls = {};
             
             const collapsibleSection = (title, sectionKey, drawContent) => {
@@ -415,16 +326,12 @@ class ResolutionMasterCanvas {
                 if (!preview) return this.drawPresetSection(ctx, y);
                 return 30;
             });
-            
-            // Draw info message outside of any section background
             if (props.useCustomCalc && props.selectedCategory) {
                 const messageHeight = this.drawInfoMessage(ctx, currentY);
                 if (messageHeight > 0) {
                     currentY += messageHeight + spacing;
                 }
             }
-            
-            // Draw output values after all sections to ensure controls are preserved
             this.drawOutputValues(ctx);
 
         } else if (props.mode === "Manual Sliders") {
@@ -432,13 +339,10 @@ class ResolutionMasterCanvas {
         }
         
         const neededHeight = currentY + 20;
-        // Only adjust height if difference is significant (avoid micro-adjustments causing redraws)
         const heightDiff = Math.abs(node.size[1] - neededHeight);
         if (heightDiff > 1) {
             node.size[1] = Math.max(neededHeight, node.min_size[1]);
         }
-        
-        // Draw tooltip last so it appears on top
         if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
             this.drawTooltip(ctx);
         }
@@ -460,12 +364,9 @@ class ResolutionMasterCanvas {
     }
     
     drawCollapsibleSection(ctx, title, sectionKey, x, y, w, contentHeight) {
-        // Fallback to false if collapsedSections is not yet initialized
         const isCollapsed = this.collapsedSections[sectionKey] || false;
         const headerHeight = 25;
         const totalHeight = isCollapsed ? headerHeight : headerHeight + contentHeight;
-        
-        // Draw section background
         ctx.fillStyle = "rgba(0,0,0,0.2)";
         ctx.strokeStyle = "rgba(255,255,255,0.1)";
         ctx.lineWidth = 1;
@@ -473,8 +374,6 @@ class ResolutionMasterCanvas {
         ctx.roundRect(x, y, w, totalHeight, 6);
         ctx.fill();
         ctx.stroke();
-        
-        // Draw header background with hover effect
         const headerControl = `${sectionKey}Header`;
         this.controls[headerControl] = { x, y, w, h: headerHeight };
         
@@ -484,8 +383,6 @@ class ResolutionMasterCanvas {
             ctx.roundRect(x, y, w, headerHeight, 6);
             ctx.fill();
         }
-        
-        // Draw collapse/expand button and title centered
         const arrow = isCollapsed ? "▶" : "▼";
         const titleText = `${arrow} ${title}`;
         
@@ -508,20 +405,15 @@ class ResolutionMasterCanvas {
         ctx.textBaseline = "middle";
         
         if (this.widthWidget && this.heightWidget && this.batchSizeWidget) {
-            // Shift values up slightly to better match visual center of slots
             const y_offset_1 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 0.5);
             const y_offset_2 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 1.5);
             const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
             const y_offset_4 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 3.5);
-
-            // Calculate clickable area dimensions
             const valueAreaWidth = 60; // Wider area for better clicking
             const batchSizeAreaWidth = 35; // Smaller area for batch size (small numbers)
             const valueAreaHeight = 20;
             const valueAreaX = node.size[0] - valueAreaWidth - 5;
             const batchSizeAreaX = node.size[0] - batchSizeAreaWidth - 5;
-
-            // Width value area
             this.controls.widthValueArea = {
                 x: valueAreaX,
                 y: y_offset_1 - valueAreaHeight/2,
@@ -533,8 +425,6 @@ class ResolutionMasterCanvas {
 
             ctx.fillStyle = this.hoverElement === 'widthValueArea' ? "#89F" : "#89F";
             ctx.fillText(this.widthWidget.value.toString(), node.size[0] - 20, y_offset_1);
-            
-            // Height value area
             this.controls.heightValueArea = {
                 x: valueAreaX,
                 y: y_offset_2 - valueAreaHeight/2,
@@ -546,12 +436,8 @@ class ResolutionMasterCanvas {
             
             ctx.fillStyle = this.hoverElement === 'heightValueArea' ? "#F89" : "#F89";
             ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
-            
-            // Rescale value (non-clickable, green text)
             ctx.fillStyle = "#9F8";
             ctx.fillText(props.rescaleValue.toFixed(2), node.size[0] - 20, y_offset_3);
-            
-            // Batch size value area
             this.controls.batchSizeValueArea = {
                 x: batchSizeAreaX,
                 y: y_offset_4 - valueAreaHeight/2,
@@ -563,8 +449,6 @@ class ResolutionMasterCanvas {
             
             ctx.fillStyle = this.hoverElement === 'batchSizeValueArea' ? "#FAB" : "#F8B";
             ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
-            
-            // Latent output label - pink "lat" text only (non-clickable, read-only)
             const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
             
             ctx.fillStyle = "#F8B"; // Pink text color (same as batch_size)
@@ -596,8 +480,6 @@ class ResolutionMasterCanvas {
 
         this.controls.snapSlider = { x: sliderX, y, w: sliderWidth, h: 28 };
         this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.action_slider_snap_min, props.action_slider_snap_max, props.action_slider_snap_step);
-
-        // Draw clickable snap value area
         const snapValueX = sliderX + sliderWidth + gap;
         this.controls.snapValueArea = { x: snapValueX, y, w: valueWidth, h: 28 };
         
@@ -668,14 +550,10 @@ class ResolutionMasterCanvas {
         
         const knobX = offsetX + canvasW * node.intpos.x;
         const knobY = offsetY + canvasH * (1 - node.intpos.y);
-        
-        // Edge handle positions
         const rightEdgeX = offsetX + canvasW * node.intpos.x;
         const rightEdgeY = offsetY + canvasH * (1 - node.intpos.y / 2);
         const topEdgeX = offsetX + canvasW * node.intpos.x / 2;
         const topEdgeY = offsetY + canvasH * (1 - node.intpos.y);
-        
-        // Define handle areas BEFORE drawing so hover detection works
         this.controls.canvas2dRightHandle = { 
             x: rightEdgeX - 10, 
             y: rightEdgeY - 10, 
@@ -688,8 +566,6 @@ class ResolutionMasterCanvas {
             w: 20, 
             h: 20 
         };
-        
-        // Main corner knob (white)
         ctx.fillStyle = "#FFF";
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 2;
@@ -697,8 +573,6 @@ class ResolutionMasterCanvas {
         ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
-        
-        // Draw right edge handle (width control - blue) - always visible with hover effect
         const isHoveringRight = this.hoverElement === 'canvas2dRightHandle';
         ctx.fillStyle = isHoveringRight ? "#5AF" : "#89F";
         ctx.strokeStyle = isHoveringRight ? "#FFF" : "#000";
@@ -707,8 +581,6 @@ class ResolutionMasterCanvas {
         ctx.arc(rightEdgeX, rightEdgeY, isHoveringRight ? 7 : 6, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
-        
-        // Draw top edge handle (height control - pink) - always visible with hover effect
         const isHoveringTop = this.hoverElement === 'canvas2dTopHandle';
         ctx.fillStyle = isHoveringTop ? "#FAB" : "#F89";
         ctx.strokeStyle = isHoveringTop ? "#FFF" : "#000";
@@ -761,24 +633,18 @@ class ResolutionMasterCanvas {
     drawScalingGrid(ctx, y) {
         const margin = 20;
         const props = this.node.properties;
-        
-        // Scale row (manual upscale slider)
         this.drawScalingRowBase(ctx, margin, y, {
             buttonControl: 'scaleBtn', mainControl: 'scaleSlider', radioControl: 'upscaleRadio',
             controlType: 'slider', icon: this.icons.upscale, valueProperty: 'upscaleValue',
             min: props.scaling_slider_min, max: props.scaling_slider_max, step: props.scaling_slider_step,
             displayValue: props.upscaleValue.toFixed(1) + "x", scaleFactor: props.upscaleValue, rescaleMode: 'manual'
         });
-        
-        // Resolution row (target resolution dropdown)
         const resScale = this.calculateResolutionScale(props.targetResolution);
         this.drawScalingRowBase(ctx, margin, y + 35, {
             buttonControl: 'resolutionBtn', mainControl: 'resolutionDropdown', radioControl: 'resolutionRadio',
             controlType: 'dropdown', icon: this.icons.resolution, selectedText: `${props.targetResolution}p`,
             displayValue: `×${resScale.toFixed(2)}`, scaleFactor: resScale, rescaleMode: 'resolution'
         });
-        
-        // Megapixels row (target MP slider)
         const mpScale = this.calculateMegapixelsScale(props.targetMegapixels);
         this.drawScalingRowBase(ctx, margin, y + 70, {
             buttonControl: 'megapixelsBtn', mainControl: 'megapixelsSlider', radioControl: 'megapixelsRadio',
@@ -804,8 +670,6 @@ class ResolutionMasterCanvas {
 
         let currentX = margin;
         let currentY = y;
-
-        // Pierwszy rząd: Auto-detect toggle + Auto-fit button + Auto checkbox
         this.controls.autoDetectToggle = { x: currentX, y: currentY, w: toggleWidth, h: 28 };
         this.drawToggle(ctx, currentX, currentY, toggleWidth, 28, props.autoDetect,
                        props.autoDetect ? "Auto-detect ON" : "Auto-detect OFF",
@@ -824,21 +688,13 @@ class ResolutionMasterCanvas {
         ctx.font = "11px Arial";
         ctx.textAlign = "left";
         ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
-        
-        // Drugi rząd: Detected info (po lewej) + Auto-Resize button + Auto checkbox
         currentY += 35;
-        
-        // Klikalny napis "Detected" wycentrowany pod switchem Auto-detect
         if (props.autoDetect && this.detectedDimensions) {
             const detectedText = `Detected: ${this.detectedDimensions.width}×${this.detectedDimensions.height}`;
             ctx.font = "12px Arial";
             const textWidth = ctx.measureText(detectedText).width;
-            
-            // Wycentruj tekst pod switchem Auto-detect (toggleWidth = 140)
             const toggleCenterX = margin + (toggleWidth / 2);
             const textX = toggleCenterX - (textWidth / 2);
-            
-            // Definiuj obszar klikalny dla napisu "Detected" (wycentrowany pod switchem)
             this.controls.detectedInfo = { x: textX - 5, y: currentY + 2, w: textWidth + 10, h: 24 };
             
             this.drawValueAreaHoverBackground(ctx, 'detectedInfo', textX - 5, currentY + 2, textWidth + 10, 20, [95, 255, 95]);
@@ -847,12 +703,8 @@ class ResolutionMasterCanvas {
             ctx.textAlign = "left";
             ctx.fillText(detectedText, textX, currentY + 14);
         }
-        
-        // Auto-Resize button pod Auto-fit button
         this.controls.autoResizeBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
         this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoResize, this.hoverElement === 'autoResizeBtn', false, "Auto-Resize");
-        
-        // Auto-Resize checkbox pod Auto checkbox
         this.controls.autoResizeCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
         this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoResizeOnChange, this.hoverElement === 'autoResizeCheckbox');
         
@@ -860,15 +712,11 @@ class ResolutionMasterCanvas {
         ctx.font = "11px Arial";
         ctx.textAlign = "left";
         ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
-        
-        // Trzeci rząd: Auto-calc button + Calc checkbox
         currentY += 35;
         
         this.controls.autoCalcBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
         const calcEnabled = props.useCustomCalc && props.selectedCategory;
         this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoCalculate, this.hoverElement === 'autoCalcBtn', !calcEnabled, "Auto-calc");
-        
-        // Calc checkbox
         this.controls.customCalcCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
         this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.useCustomCalc, this.hoverElement === 'customCalcCheckbox');
         
@@ -890,13 +738,8 @@ class ResolutionMasterCanvas {
         let currentX = margin;
         let currentY = y;
         const iconBtnWidth = 28;
-
-        // Calculate settings button position (aligned to right edge)
         const settingsBtnX = node.size[0] - margin - iconBtnWidth;
-        
-        // Single row: Category and Preset dropdowns + Manage icon button on right
         if (props.selectedCategory) {
-            // Available width for dropdowns (excluding settings button and gaps)
             const dropdownsWidth = availableWidth - iconBtnWidth - gap;
             const categoryDDWidth = dropdownsWidth * 0.4;
             const presetDDWidth = dropdownsWidth - categoryDDWidth - gap;
@@ -910,14 +753,11 @@ class ResolutionMasterCanvas {
             const presetText = props.selectedPreset || "Select Preset...";
             this.drawDropdown(ctx, currentX, currentY, presetDDWidth, 28, presetText, this.hoverElement === 'presetDropdown');
         } else {
-            // Category dropdown takes all available width (excluding settings button and gap)
             const categoryDDWidth = availableWidth - iconBtnWidth - gap;
             this.controls.categoryDropdown = { x: currentX, y: currentY, w: categoryDDWidth, h: 28 };
             const categoryText = props.selectedCategory || "Category...";
             this.drawDropdown(ctx, currentX, currentY, categoryDDWidth, 28, categoryText, this.hoverElement === 'categoryDropdown');
         }
-
-        // Manage Presets icon button - aligned to right edge
         this.controls.managePresetsBtn = { x: settingsBtnX, y: currentY, w: iconBtnWidth, h: 28 };
         this.drawButton(ctx, settingsBtnX, currentY, iconBtnWidth, 28, this.icons.settings, this.hoverElement === 'managePresetsBtn');
 
@@ -954,8 +794,6 @@ class ResolutionMasterCanvas {
            const paddingBottom = 8;
            const lineHeight = 14;
            const maxWidth = node.size[0] - 40 - (paddingX * 2);
-
-           // Word wrap logic
            ctx.font = "11px Arial";
            const words = message.split(' ');
            const lines = [];
@@ -973,16 +811,12 @@ class ResolutionMasterCanvas {
 
            const textHeight = lines.length * lineHeight - (lineHeight - ctx.measureText("M").width);
            const boxHeight = textHeight + paddingTop + paddingBottom;
-
-           // Draw background with dynamic height
            ctx.fillStyle = "rgba(250, 165, 90, 0.15)";
            ctx.strokeStyle = "rgba(250, 165, 90, 0.5)";
            ctx.beginPath();
            ctx.roundRect(20, y, node.size[0] - 40, boxHeight, 4);
            ctx.fill();
            ctx.stroke();
-
-           // Draw multi-line text
            ctx.fillStyle = "#fa5";
            ctx.textAlign = "center";
            ctx.textBaseline = "top";
@@ -1002,12 +836,8 @@ class ResolutionMasterCanvas {
         const w = node.size[0] - margin * 2;
         
         if (!this.widthWidget || !this.heightWidget) return;
-        
-        // Draw width slider
         y = this.drawDimensionSlider(ctx, y, margin, w, "Width:", "widthSlider", 
             this.widthWidget.value, props.manual_slider_min_w, props.manual_slider_max_w, props.manual_slider_step_w);
-        
-        // Draw height slider
         this.drawDimensionSlider(ctx, y, margin, w, "Height:", "heightSlider", 
             this.heightWidget.value, props.manual_slider_min_h, props.manual_slider_max_h, props.manual_slider_step_h);
     }
@@ -1028,8 +858,6 @@ class ResolutionMasterCanvas {
         
         return y + 45;
     }
-    
-    // Drawing primitives
     drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null, centerIconAndText = false) {
         const grad = ctx.createLinearGradient(x, y, x, y + h);
         if (disabled) {
@@ -1059,12 +887,9 @@ class ResolutionMasterCanvas {
             ctx.fillText(content, x + w / 2, y + h / 2 + 1);
         } else if (content instanceof Image) {
             const iconSize = Math.min(w, h) - 12;
-            
-            // If text is provided, handle icon placement based on centerIconAndText flag
             let iconX, iconY;
             if (text) {
                 if (centerIconAndText) {
-                    // Center icon and text together as a group
                     ctx.font = "12px Arial";
                     const textWidth = ctx.measureText(text).width;
                     const gap = 4; // Gap between icon and text
@@ -1074,13 +899,11 @@ class ResolutionMasterCanvas {
                     iconX = startX;
                     iconY = y + (h - iconSize) / 2;
                 } else {
-                    // Icon aligned to left edge with small padding (for Auto-Detect buttons)
                     const iconPadding = 4;
                     iconX = x + iconPadding;
                     iconY = y + (h - iconSize) / 2;
                 }
             } else {
-                // Icon centered (for other buttons like Scaling section)
                 iconX = x + (w - iconSize) / 2;
                 iconY = y + (h - iconSize) / 2;
             }
@@ -1097,15 +920,12 @@ class ResolutionMasterCanvas {
                     ctx.fillText("?", x + w / 2, y + h / 2 + 1);
                 }
             }
-            
-            // Draw text if provided
             if (text) {
                 ctx.fillStyle = disabled ? "#888" : "#ddd";
                 ctx.font = "12px Arial";
                 ctx.textBaseline = "middle";
                 
                 if (centerIconAndText) {
-                    // Position text next to centered icon
                     ctx.textAlign = "left";
                     const textWidth = ctx.measureText(text).width;
                     const gap = 4;
@@ -1114,7 +934,6 @@ class ResolutionMasterCanvas {
                     const textX = startX + iconSize + gap;
                     ctx.fillText(text, textX, y + h / 2 + 1);
                 } else {
-                    // Text centered (for Auto-Detect buttons)
                     ctx.textAlign = "center";
                     ctx.fillText(text, x + w / 2, y + h / 2 + 1);
                 }
@@ -1127,8 +946,6 @@ class ResolutionMasterCanvas {
         ctx.beginPath();
         ctx.roundRect(x, y + h / 2 - 3, w, 6, 3);
         ctx.fill();
-        
-        // Clamp position to [0, 1] range to prevent marker from going outside UI bounds
         const pos = Math.max(0, Math.min(1, (value - min) / (max - min)));
         const knobX = x + w * pos;
         const knobY = y + h / 2;
@@ -1261,13 +1078,7 @@ class ResolutionMasterCanvas {
         const paddingBottom = 4; // Zmniejszony dolny padding
         const maxWidth = 250;
         const lineHeight = 16;
-        
-        // log.debug(`Drawing tooltip for ${this.tooltipElement}: "${tooltipText}"`);
-        
-        // Set font for measuring
         ctx.font = "12px Arial";
-        
-        // Word wrap the text
         const words = tooltipText.split(' ');
         const lines = [];
         let currentLine = '';
@@ -1286,37 +1097,25 @@ class ResolutionMasterCanvas {
         if (currentLine) {
             lines.push(currentLine);
         }
-        
-        // Calculate tooltip dimensions
         const textWidth = Math.max(...lines.map(line => ctx.measureText(line).width));
         const tooltipWidth = Math.min(textWidth + paddingX * 2, maxWidth + paddingX * 2);
         const tooltipHeight = lines.length * lineHeight + paddingTop + paddingBottom;
-        
-        // Position tooltip relative to current mouse position - can extend beyond node bounds
         const mouseRelX = this.tooltipMousePos.x - this.node.pos[0];
         const mouseRelY = this.tooltipMousePos.y - this.node.pos[1];
         
         let tooltipX = mouseRelX + 15;
         let tooltipY = mouseRelY - tooltipHeight - 10;
-        
-        // Simple positioning logic - prefer right and above mouse
         if (tooltipX + tooltipWidth > this.node.size[0] + 50) {
             tooltipX = mouseRelX - tooltipWidth - 15;
         }
         if (tooltipY < -50) {
             tooltipY = mouseRelY + 20;
         }
-        
-        // Draw tooltip background with shadow
         ctx.save();
-        
-        // Shadow
         ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
         ctx.beginPath();
         ctx.roundRect(tooltipX + 2, tooltipY + 2, tooltipWidth, tooltipHeight, 6);
         ctx.fill();
-        
-        // Background
         const bgGrad = ctx.createLinearGradient(tooltipX, tooltipY, tooltipX, tooltipY + tooltipHeight);
         bgGrad.addColorStop(0, "rgba(45, 45, 45, 0.95)");
         bgGrad.addColorStop(1, "rgba(35, 35, 35, 0.95)");
@@ -1324,13 +1123,9 @@ class ResolutionMasterCanvas {
         ctx.beginPath();
         ctx.roundRect(tooltipX, tooltipY, tooltipWidth, tooltipHeight, 6);
         ctx.fill();
-        
-        // Border
         ctx.strokeStyle = "rgba(200, 200, 200, 0.3)";
         ctx.lineWidth = 1;
         ctx.stroke();
-        
-        // Draw text
         ctx.fillStyle = "#ffffff";
         ctx.font = "12px Arial";
         ctx.textAlign = "left";
@@ -1341,11 +1136,7 @@ class ResolutionMasterCanvas {
         });
         
         ctx.restore();
-        
-        //log.debug(`Tooltip drawn at ${tooltipX}, ${tooltipY} with size ${tooltipWidth}x${tooltipHeight}`);
     }
-    
-    // Mouse handling methods
     handleMouseDown(e, pos, canvas) {
         const node = this.node;
         const props = node.properties;
@@ -1354,7 +1145,6 @@ class ResolutionMasterCanvas {
         const relY = e.canvasY - node.pos[1];
         
         if (props.mode === "Manual") {
-            // Check for edge handles first (higher priority)
             if (this.controls.canvas2dRightHandle && this.isPointInControl(relX, relY, this.controls.canvas2dRightHandle)) {
                 node.capture = 'canvas2dRightHandle';
                 node.captureInput(true);
@@ -1366,8 +1156,6 @@ class ResolutionMasterCanvas {
                 node.captureInput(true);
                 return true;
             }
-            
-            // Then check main canvas area
             const c2d = this.controls.canvas2d;
             if (c2d && this.isPointInControl(relX, relY, c2d)) {
                 node.capture = 'canvas2d';
@@ -1408,7 +1196,6 @@ class ResolutionMasterCanvas {
                     return true;
                 }
                 if (key.endsWith('ValueArea')) {
-                    // Open dialog immediately on mousedown
                     log.debug(`Detected ValueArea click: ${key}`);
                     this.dialogManager.showCustomValueDialog(key, e);
                     return true;
@@ -1429,8 +1216,6 @@ class ResolutionMasterCanvas {
         const node = this.node;
         
         if (!node.capture) return false;
-        
-        // If the mouse button is released, but we are still capturing, handle it as a mouse up event
         if (e.buttons === 0) {
             this.handleMouseUp(e);
             return true;
@@ -1480,14 +1265,11 @@ class ResolutionMasterCanvas {
         const relY = e.canvasY - node.pos[1];
         
         let newHover = null;
-        
-        // Check edge handles first (higher priority than main canvas)
         if (this.controls.canvas2dRightHandle && this.isPointInControl(relX, relY, this.controls.canvas2dRightHandle)) {
             newHover = 'canvas2dRightHandle';
         } else if (this.controls.canvas2dTopHandle && this.isPointInControl(relX, relY, this.controls.canvas2dTopHandle)) {
             newHover = 'canvas2dTopHandle';
         } else {
-            // Check other controls
             for (const element in this.controls) {
                 if (element !== 'canvas2dRightHandle' && element !== 'canvas2dTopHandle' && 
                     this.isPointInControl(relX, relY, this.controls[element])) {
@@ -1496,11 +1278,7 @@ class ResolutionMasterCanvas {
                 }
             }
         }
-        
-        // Update mouse position for tooltips
         this.tooltipMousePos = { x: e.canvasX, y: e.canvasY };
-        
-        // Only trigger redraw if hover element changed
         if (newHover !== this.hoverElement) {
             this.hoverElement = newHover;
             this.handleTooltipHover(newHover, e);
@@ -1509,26 +1287,18 @@ class ResolutionMasterCanvas {
     }
     
     handleTooltipHover(element, e) {
-        // Clear existing tooltip timer
         if (this.tooltipTimer) {
             clearTimeout(this.tooltipTimer);
             this.tooltipTimer = null;
         }
-        
-        // Hide tooltip immediately when hover changes
         if (this.showTooltip) {
             this.showTooltip = false;
             this.tooltipElement = null;
             app.graph.setDirtyCanvas(true);
         }
-        
-        // Start new tooltip timer if hovering over an element with tooltip
         if (element && this.tooltips[element]) {
-            //log.debug(`Starting tooltip timer for element: ${element}`);
-            // Store the initial mouse position when timer starts
             const initialMousePos = { x: e.canvasX, y: e.canvasY };
             this.tooltipTimer = setTimeout(() => {
-                //log.debug(`Showing tooltip for element: ${element}`);
                 this.tooltipElement = element;
                 this.showTooltip = true;
                 this.tooltipFixedPos = initialMousePos; // Use the stored initial position
@@ -1625,20 +1395,13 @@ class ResolutionMasterCanvas {
     handleSectionHeaderClick(headerKey) {
         const sectionKey = headerKey.replace('Header', '');
         this.collapsedSections[sectionKey] = !this.collapsedSections[sectionKey];
-        
-        // Save state to properties
         const propertyKey = `section_${sectionKey}_collapsed`;
         this.node.properties[propertyKey] = this.collapsedSections[sectionKey];
-        
-        // Force immediate redraw to recalculate size
         app.graph.setDirtyCanvas(true, true);
         
         log.debug(`Section ${sectionKey} ${this.collapsedSections[sectionKey] ? 'collapsed' : 'expanded'}`);
     }
-    
-    // Helper methods
     getAllPresets() {
-        // Get merged presets (built-in + custom)
         return this.customPresetsManager.getMergedPresets(this.presetCategories);
     }
     
@@ -1648,48 +1411,29 @@ class ResolutionMasterCanvas {
     
     setDimensions(width, height) {
         if (!this.validateWidgets()) return;
-        
-        // Update properties
         this.node.properties.valueX = width;
         this.node.properties.valueY = height;
-        
-        // Then update widgets
         this.widthWidget.value = width;
         this.heightWidget.value = height;
-        
-        // Update UI
         this.handlePropertyChange();
         this.updateRescaleValue();
 
         this.updateCanvasFromWidgets();
-        
-        // Force canvas redraw to update 2D slider position
         app.graph.setDirtyCanvas(true);
     }
     
     updateCanvasFromWidgets() {
-        // Aktualizuj pozycję canvas 2D na podstawie wartości widgetów
         if (!this.validateWidgets()) return;
         
         const node = this.node;
         const props = node.properties;
-        
-        // Aktualizuj properties na podstawie widgetów
         props.valueX = this.widthWidget.value;
         props.valueY = this.heightWidget.value;
-        
-        // Przelicz pozycję intpos dla canvas 2D
         node.intpos.x = (this.widthWidget.value - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
         node.intpos.y = (this.heightWidget.value - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
-        
-        // Ogranicz do zakresu 0-1
         node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
         node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
-        
-        // Aktualizuj rescale value
         this.updateRescaleValue();
-        
-        // Wymuś przerysowanie canvas
         app.graph.setDirtyCanvas(true);
     }
     
@@ -1711,13 +1455,9 @@ class ResolutionMasterCanvas {
         const props = this.node.properties;
         const layout = this.getScalingRowLayout();
         let currentX = x;
-
-        // Draw button
         this.controls[config.buttonControl] = { x: currentX, y, w: layout.btnWidth, h: 28 };
         this.drawButton(ctx, currentX, y, layout.btnWidth, 28, config.icon, this.hoverElement === config.buttonControl);
         currentX += layout.btnWidth + layout.gap;
-        
-        // Draw main control (slider or dropdown)
         if (config.controlType === 'slider') {
             this.controls[config.mainControl] = { x: currentX, y, w: layout.sliderWidth, h: 28 };
             this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28,
@@ -1728,22 +1468,16 @@ class ResolutionMasterCanvas {
             this.drawDropdown(ctx, currentX, y, layout.dropdownWidth, 28, config.selectedText, this.hoverElement === config.mainControl);
             currentX += layout.dropdownWidth + layout.gap;
         }
-        
-        // Draw clickable value display with hover effect
         const valueAreaControl = config.buttonControl.replace('Btn', 'ValueArea');
         this.controls[valueAreaControl] = { x: currentX, y, w: layout.valueWidth, h: 28 };
         
         this.drawValueAreaHoverBackground(ctx, valueAreaControl, currentX, y, layout.valueWidth, 28, [100, 150, 255]);
-        
-        // Draw value text
         this.setCanvasTextStyle(ctx, {
             fillStyle: this.hoverElement === valueAreaControl ? "#5af" : "#ccc",
             textAlign: "center"
         });
         ctx.fillText(config.displayValue, currentX + layout.valueWidth / 2, y + 14);
         currentX += layout.valueWidth + layout.gap;
-        
-        // Draw preview
         if (this.validateWidgets() && config.scaleFactor) {
             const newW = Math.round(this.widthWidget.value * config.scaleFactor);
             const newH = Math.round(this.heightWidget.value * config.scaleFactor);
@@ -1751,67 +1485,41 @@ class ResolutionMasterCanvas {
             ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
         }
         currentX += layout.previewWidth + layout.gap;
-        
-        // Draw radio button
         this.controls[config.radioControl] = { x: currentX, y: y + 5, w: layout.radioWidth, h: 18 };
         this.drawRadioButton(ctx, currentX, y + 5, layout.radioWidth,
                            props.rescaleMode === config.rescaleMode, this.hoverElement === config.radioControl);
     }
-
-    // Value update methods
     updateCanvasValue(x, y, w, h, shiftKey, ctrlKey) {
         const node = this.node;
         const props = node.properties;
         
         let vX = Math.max(0, Math.min(1, x / w));
         let vY = Math.max(0, Math.min(1, 1 - y / h));
-        
-        // Ctrl+Shift: zmiana rozmiaru po 1px z zachowaniem proporcji
         if (ctrlKey && shiftKey) {
-            // Zachowaj obecne proporcje
             const currentAspect = this.widthWidget.value / this.heightWidget.value;
             
             let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
             let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-            
-            // Zaokrąglij do 1px
             newX = Math.round(newX);
             newY = Math.round(newY);
-            
-            // Zachowaj proporcje - dostosuj Y na podstawie X
             newY = Math.round(newX / currentAspect);
-            
-            // Przelicz z powrotem na pozycje vX, vY
             vX = (newX - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
             vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
         }
-        // Shift: przeciąganie z zachowaniem proporcji
         else if (shiftKey && !ctrlKey) {
-            // Zachowaj obecne proporcje
             const currentAspect = this.widthWidget.value / this.heightWidget.value;
             
             let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
             let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-            
-            // Zastosuj snap
             let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
             let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
             vX = Math.round(vX / sX) * sX;
-            
-            // Przelicz newX po snap
             newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
-            
-            // Zachowaj proporcje - dostosuj Y na podstawie X
             newY = newX / currentAspect;
-            
-            // Przelicz z powrotem na pozycję vY
             vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
         }
-        // Ctrl: zmiana rozmiaru bez snap (poprzednia funkcjonalność Shift)
         else if (ctrlKey && !shiftKey) {
-            // Nie stosuj snap - pozostaw vX i vY bez zmian
         }
-        // Domyślnie: zastosuj snap
         else {
             let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
             let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
@@ -1829,8 +1537,6 @@ class ResolutionMasterCanvas {
         const rnY = Math.pow(10, props.canvas_decimals_y);
         newX = Math.round(rnX * newX) / rnX;
         newY = Math.round(rnY * newY) / rnY;
-        
-        // Only update if values changed
         if (props.valueX !== newX || props.valueY !== newY) {
             this.setDimensions(newX, newY);
         }
@@ -1841,8 +1547,6 @@ class ResolutionMasterCanvas {
         const props = node.properties;
         
         let vX = Math.max(0, Math.min(1, x / w));
-        
-        // Apply snap unless Ctrl is held
         if (!ctrlKey) {
             let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
             vX = Math.round(vX / sX) * sX;
@@ -1854,8 +1558,6 @@ class ResolutionMasterCanvas {
         
         const rnX = Math.pow(10, props.canvas_decimals_x);
         newX = Math.round(rnX * newX) / rnX;
-        
-        // Keep height unchanged
         this.setDimensions(newX, this.heightWidget.value);
         app.graph.setDirtyCanvas(true);
     }
@@ -1865,8 +1567,6 @@ class ResolutionMasterCanvas {
         const props = node.properties;
         
         let vY = Math.max(0, Math.min(1, 1 - y / h));
-        
-        // Apply snap unless Ctrl is held
         if (!ctrlKey) {
             let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
             vY = Math.round(vY / sY) * sY;
@@ -1878,8 +1578,6 @@ class ResolutionMasterCanvas {
         
         const rnY = Math.pow(10, props.canvas_decimals_y);
         newY = Math.round(rnY * newY) / rnY;
-        
-        // Keep width unchanged
         this.setDimensions(this.widthWidget.value, newY);
         app.graph.setDirtyCanvas(true);
     }
@@ -1933,12 +1631,10 @@ class ResolutionMasterCanvas {
         
         const commonModeChange = (newMode) => {
             props.preset_selector_mode = newMode;
-            // Call this function again with the new mode
             this.showPresetSelector(e, newMode);
         };
         
         if (mode === 'list') {
-            // Create preset items with custom flag - filter out hidden presets
             const presetItems = Object.entries(presets)
                 .filter(([name, dims]) => !dims.isHidden)  // Filter out hidden built-in presets
                 .map(([name, dims]) => {
@@ -1980,14 +1676,9 @@ class ResolutionMasterCanvas {
         
         if (dropdownName === 'categoryDropdown') {
             const allPresets = this.getAllPresets();
-            
-            // Create category items with custom flag, filtering out categories with no visible presets
             items = Object.keys(allPresets)
                 .filter(categoryName => {
-                    // Get all presets in this category
                     const categoryPresets = allPresets[categoryName];
-                    
-                    // Check if there's at least one visible preset (not hidden)
                     const hasVisiblePresets = Object.values(categoryPresets).some(preset => !preset.isHidden);
                     
                     return hasVisiblePresets;
@@ -2005,8 +1696,6 @@ class ResolutionMasterCanvas {
             callback = (value) => {
                 props.selectedCategory = value;
                 props.selectedPreset = null;
-                
-                // Update backend latent type widget
                 if (this.latentTypeWidget) {
                     const backendLatentType = ResolutionMasterCanvas.CATEGORY_MAPPING[value] || 'latent_4x8';
                     this.latentTypeWidget.value = backendLatentType;
@@ -2024,7 +1713,6 @@ class ResolutionMasterCanvas {
             title = 'Select Resolution';
             propertyKey = 'dropdown_resolution_expanded';
             callback = (value) => {
-                // Ensure value has 'p' suffix for custom values
                 let resolutionValue = value.trim();
                 if (!resolutionValue.endsWith('p')) {
                     resolutionValue = resolutionValue + 'p';
@@ -2048,9 +1736,6 @@ class ResolutionMasterCanvas {
             });
         }
     }
-    
-    
-    // Action handlers
     handleSwap() {
         if (!this.validateWidgets()) return;
         
@@ -2074,8 +1759,6 @@ class ResolutionMasterCanvas {
         const scale = scaleCalculator();
         const newWidth = Math.round(this.widthWidget.value * scale);
         const newHeight = Math.round(this.heightWidget.value * scale);
-        
-        // Reset value if provided
         if (resetValue) {
             resetValue();
         }
@@ -2104,16 +1787,10 @@ class ResolutionMasterCanvas {
             log.debug("Auto-fit: Width or height widget not found");
             return;
         }
-        
-        // Pobierz obecne wymiary z widgetów (nie z wykrytego zdjęcia)
         const currentWidth = this.widthWidget.value;
         const currentHeight = this.heightWidget.value;
-        
-        // Użyj zunifikowanej funkcji
         this.applyAutoFit(currentWidth, currentHeight, props.useCustomCalc, category, 'current');
     }
-    
-    // Zunifikowana funkcja AutoFit
     applyAutoFit(width, height, useCalc, category, source = 'detected') {
         const props = this.node.properties;
         
@@ -2126,19 +1803,14 @@ class ResolutionMasterCanvas {
         let finalWidth, finalHeight;
         
         if (useCalc) {
-            // Z kalkulacjami - sprawdź czy aspect ratio się zgadza
             const presetAspect = closestPreset.width / closestPreset.height;
             const currentAspect = width / height;
-            
-            // Jeśli aspect ratio jest prawie identyczny (różnica < 0.01)
             if (Math.abs(currentAspect - presetAspect) < 0.01) {
-                // Zachowaj obecny rozmiar lub zastosuj specyficzne kalkulacje dla kategorii
                 const result = this.applyCustomCalculation(width, height, category);
                 finalWidth = result.width;
                 finalHeight = result.height;
                 log.debug(`Auto-fit with calc (${source}): ${closestPreset.name} has matching aspect ratio. Using ${finalWidth}x${finalHeight} (from ${width}x${height})`);
             } else {
-                // Aspect ratio się różni - skaluj do presetu i zastosuj kalkulacje
                 const scaledDimensions = this.scaleToPresetAspectRatio(width, height, presetAspect);
                 const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
                 finalWidth = result.width;
@@ -2146,7 +1818,6 @@ class ResolutionMasterCanvas {
                 log.debug(`Auto-fit with calc (${source}): ${closestPreset.name} different aspect. Scaled to ${finalWidth}x${finalHeight} (from ${width}x${height})`);
             }
         } else {
-            // Bez kalkulacji - użyj presetu bezpośrednio
             finalWidth = closestPreset.width;
             finalHeight = closestPreset.height;
             log.debug(`Auto-fit preset only (${source}): ${closestPreset.name} (${finalWidth}x${finalHeight}) for input ${width}x${height}`);
@@ -2157,7 +1828,6 @@ class ResolutionMasterCanvas {
     }
     
     handleAutoCalc() {
-        // Funkcja Auto-calc - ręczne zastosowanie kalkulacji bez użycia Auto-fit
         const props = this.node.properties;
         
         if (!props.useCustomCalc || !props.selectedCategory) {
@@ -2169,30 +1839,21 @@ class ResolutionMasterCanvas {
             log.debug("Auto-calc: Width or height widget not found");
             return;
         }
-        
-        // Pobierz obecne wymiary z widgetów
         const currentWidth = this.widthWidget.value;
         const currentHeight = this.heightWidget.value;
-        
-        // Zastosuj kalkulacje specyficzne dla kategorii
         const result = this.applyCustomCalculation(currentWidth, currentHeight, props.selectedCategory);
-        
-        // Ustaw nowe wymiary
         this.setDimensions(result.width, result.height);
         
         log.debug(`Auto-calc applied: ${currentWidth}x${currentHeight} → ${result.width}x${result.height} (${props.selectedCategory})`);
     }
     
     handleAutoResize() {
-        // Funkcja Auto-Resize - stosuje skalowanie zgodnie z zaznaczonym radio button
         const props = this.node.properties;
         
         if (!this.widthWidget || !this.heightWidget) {
             log.debug("Auto-Resize: Width or height widget not found");
             return;
         }
-        
-        // Sprawdź który tryb skalowania jest zaznaczony i zastosuj odpowiednie skalowanie
         if (props.rescaleMode === 'manual') {
             this.handleScale();
             log.debug(`Auto-Resize: Applied manual scaling with factor ${props.upscaleValue}`);
@@ -2206,7 +1867,6 @@ class ResolutionMasterCanvas {
     }
     
     handleDetectedClick() {
-        // Funkcja obsługująca kliknięcie na napis "Detected" - nakłada oryginalne wymiary wykrytego zdjęcia
         if (!this.detectedDimensions) {
             log.debug("Detected click: No detected dimensions available");
             return;
@@ -2216,8 +1876,6 @@ class ResolutionMasterCanvas {
             log.debug("Detected click: Width or height widget not found");
             return;
         }
-        
-        // Ustaw oryginalne wymiary wykrytego zdjęcia
         this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
         
         log.debug(`Detected click applied: Set dimensions to ${this.detectedDimensions.width}x${this.detectedDimensions.height}`);
@@ -2257,15 +1915,12 @@ class ResolutionMasterCanvas {
             this.updateCanvasFromWidgets();
         }
     }
-    
-    // Calculation methods
     applyCustomCalculation(width, height, category) {
         const calculations = {
             Flux: () => this.applyFluxCalculation(width, height),
             'Flux.2': () => this.applyFlux2Calculation(width, height),
             WAN: () => this.applyWANCalculation(width, height),
             'Qwen-Image': () => this.applyQwenCalculation(width, height),
-            // SDXL and HiDream Dev zachowują się jak auto-fit - znajdą najbliższy preset
             'SDXL': () => this.findBestPresetForCategory(width, height, 'SDXL'),
             'HiDream Dev': () => this.findBestPresetForCategory(width, height, 'HiDream Dev'),
             'Standard': () => this.scaleToNearestPresetAspectRatio(width, height, 'Standard'),
@@ -2278,7 +1933,6 @@ class ResolutionMasterCanvas {
     }
     
     findBestPresetForCategory(width, height, category) {
-        // Znajdź najbliższy preset dla SDXL lub HiDream Dev
         const closestPreset = this.findClosestPreset(width, height, category);
         
         if (closestPreset) {
@@ -2295,14 +1949,10 @@ class ResolutionMasterCanvas {
         if (closestPreset) {
             const presetAspect = closestPreset.width / closestPreset.height;
             const currentAspect = width / height;
-            
-            // Jeśli aspect ratio jest prawie identyczny (różnica < 0.01), zachowaj obecny rozmiar
             if (Math.abs(currentAspect - presetAspect) < 0.01) {
                 log.debug(`Calc for ${category}: Preset ${closestPreset.name} has matching aspect ratio (${presetAspect.toFixed(2)}). Keeping current size ${width}x${height}`);
                 return { width, height };
             }
-            
-            // W przeciwnym razie skaluj do aspect ratio presetu
             const result = this.scaleToPresetAspectRatio(width, height, presetAspect);
             
             log.debug(`Calc for ${category}: Found preset ${closestPreset.name}. Scaling ${width}x${height} -> ${result.width}x${result.height} with aspect ${presetAspect.toFixed(2)}`);
@@ -2311,8 +1961,6 @@ class ResolutionMasterCanvas {
         
         return { width, height };
     }
-
-    // Unified preset finding logic
     findClosestPreset(width, height, category, options = {}) {
         const allPresets = this.getAllPresets();
         const presets = allPresets[category];
@@ -2326,7 +1974,6 @@ class ResolutionMasterCanvas {
         const inputPixels = width * height;
         
         Object.entries(presets).forEach(([presetName, preset]) => {
-            // Check both original and flipped orientations
             const orientations = [
                 { width: preset.width, height: preset.height, flipped: false },
                 { width: preset.height, height: preset.width, flipped: true }
@@ -2335,19 +1982,10 @@ class ResolutionMasterCanvas {
             orientations.forEach(orientation => {
                 const presetAspect = orientation.width / orientation.height;
                 const presetPixels = orientation.width * orientation.height;
-                
-                // NAJPIERW porównaj aspect ratio
                 const aspectDiff = Math.abs(inputAspect - presetAspect);
-                
-                // Jeśli aspect ratio jest bliższy lub bardzo podobny (różnica < 0.01)
                 if (aspectDiff < closestAspectDiff || (Math.abs(aspectDiff - closestAspectDiff) < 0.01)) {
-                    // Jeśli aspect ratio jest identyczny lub prawie identyczny
                     if (aspectDiff < 0.01 || aspectDiff < closestAspectDiff) {
-                        // Wtedy sprawdź różnicę w pikselach
                         const pixelDiff = Math.abs(Math.log(inputPixels / presetPixels));
-                        
-                        // Wybierz preset tylko jeśli ma lepszy aspect ratio
-                        // LUB ma ten sam aspect ratio ale bliższy rozmiar
                         if (aspectDiff < closestAspectDiff ||
                             (Math.abs(aspectDiff - closestAspectDiff) < 0.01 && pixelDiff < closestPixelDiff)) {
                             closestAspectDiff = aspectDiff;
@@ -2368,8 +2006,6 @@ class ResolutionMasterCanvas {
         
         return closestPreset;
     }
-
-    // Unified logic for choosing best scaling option based on pixel difference
     chooseBestScalingOption(currentPixels, option1Pixels, option2Pixels, option1Dims, option2Dims) {
         const option1Diff = Math.abs(option1Pixels - currentPixels);
         const option2Diff = Math.abs(option2Pixels - currentPixels);
@@ -2381,16 +2017,11 @@ class ResolutionMasterCanvas {
         }
     }
 
-    // Unified logic for scaling to preset aspect ratio
     scaleToPresetAspectRatio(currentWidth, currentHeight, presetAspect) {
         const currentPixels = currentWidth * currentHeight;
-        
-        // Option 1: base on current width
         const option1Width = currentWidth;
         const option1Height = Math.round(currentWidth / presetAspect);
         const option1Pixels = option1Width * option1Height;
-        
-        // Option 2: base on current height
         const option2Height = currentHeight;
         const option2Width = Math.round(currentHeight * presetAspect);
         const option2Pixels = option2Width * option2Height;
@@ -2408,26 +2039,18 @@ class ResolutionMasterCanvas {
         const pValue = Math.sqrt(width * height * 9 / 16);
         return `(${Math.round(pValue)}p)`;
     }
-    
-    // Unified Flux-like calculation (works for Flux, Flux.2, and future versions)
     applyFluxLikeCalculation(width, height, maxMP, maxDim, minDim, multiple) {
         const currentMP = (width * height) / 1000000;
         let w = width, h = height;
-        
-        // Scale down if exceeds max megapixels
         if (currentMP > maxMP) {
             const scale = Math.sqrt(maxMP / currentMP);
             w *= scale; h *= scale;
         }
-        
-        // Limit to dimension range while preserving aspect ratio
         const maxD = Math.max(w, h);
         if (maxD > maxDim) { const s = maxDim / maxD; w *= s; h *= s; }
         
         const minD = Math.min(w, h);
         if (minD < minDim) { const s = minDim / minD; w *= s; h *= s; }
-        
-        // Round to multiple at the end
         return {
             width: Math.max(minDim, Math.min(maxDim, Math.round(w / multiple) * multiple)),
             height: Math.max(minDim, Math.min(maxDim, Math.round(h / multiple) * multiple))
@@ -2458,24 +2081,16 @@ class ResolutionMasterCanvas {
         const currentPixels = width * height;
         const minPixels = 589824;  // ~0.6MP
         const maxPixels = 4194304; // ~4.2MP
-
-        // Explicitly check if dimensions are already within the target range
         if (currentPixels >= minPixels && currentPixels <= maxPixels) {
-            // Input is already in the desired range, return unchanged
             return { width, height };
         } else {
-            // Input is outside the range, scale to fit
             let targetPixels;
             
             if (currentPixels < minPixels) {
-                // Too small, scale up to minimum
                 targetPixels = minPixels;
             } else {
-                // Too large, scale down to maximum
                 targetPixels = maxPixels;
             }
-            
-            // Calculate new dimensions maintaining aspect ratio
             const aspect = width / height;
             let targetHeight = Math.sqrt(targetPixels / aspect);
             let targetWidth = targetHeight * aspect;
@@ -2513,21 +2128,15 @@ class ResolutionMasterCanvas {
         const value = modeCalculations[props.rescaleMode]?.() || 1.0;
         
         props.rescaleValue = value;
-        
-        // Find and update the rescale_value widget
         const rescaleValueWidget = this.node.widgets?.find(w => w.name === 'rescale_value');
         if (rescaleValueWidget) {
             rescaleValueWidget.value = value;
         }
-        
-        // Find and update the rescale_mode widget
         const rescaleModeWidget = this.node.widgets?.find(w => w.name === 'rescale_mode');
         if (rescaleModeWidget) {
             rescaleModeWidget.value = props.rescaleMode;
         }
     }
-    
-    // Auto-detect methods
     startAutoDetect() {
         if (this.dimensionCheckInterval) return;
         this.checkForImageDimensions();
@@ -2559,8 +2168,6 @@ class ResolutionMasterCanvas {
                     this.manuallySetByAutoFit = false;
                     
                     const props = node.properties;
-                    
-                    // Scenariusz 1: TYLKO autoDetect = ON (bez autoFit i bez Calc)
                     if (props.autoDetect && !props.autoFitOnChange && !props.useCustomCalc) {
                         if (this.widthWidget && this.heightWidget) {
                             this.widthWidget.value = this.detectedDimensions.width;
@@ -2568,15 +2175,12 @@ class ResolutionMasterCanvas {
                             this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
                         }
                     }
-                    // Scenariusz 2: autoFitOnChange = ON + useCustomCalc = OFF (może być z autoDetect lub bez)
                     else if (props.autoFitOnChange && !props.useCustomCalc && props.selectedCategory) {
                         this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, false, props.selectedCategory, 'detected');
                     }
-                    // Scenariusz 3: autoFitOnChange = ON + useCustomCalc = ON (może być z autoDetect lub bez)
                     else if (props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
                         this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, true, props.selectedCategory, 'detected');
                     }
-                    // Scenariusz 4: autoDetect = ON + useCustomCalc = ON + autoFitOnChange = OFF
                     else if (props.autoDetect && !props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
                         if (this.widthWidget && this.heightWidget) {
                             this.widthWidget.value = this.detectedDimensions.width;
@@ -2584,14 +2188,11 @@ class ResolutionMasterCanvas {
                             this.applyDimensionChange(); // Zastosuje kalkulacje na oryginalnych wymiarach
                         }
                     }
-                    // Fallback: tylko autoDetect bez innych opcji
                     else if (props.autoDetect && this.widthWidget && this.heightWidget) {
                         this.widthWidget.value = this.detectedDimensions.width;
                         this.heightWidget.value = this.detectedDimensions.height;
                         this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
                     }
-                    
-                    // Auto-Resize: Jeśli autoResizeOnChange jest włączone, zastosuj automatyczne skalowanie
                     if (props.autoResizeOnChange) {
                         this.handleAutoResize();
                     }
@@ -2610,8 +2211,6 @@ class ResolutionMasterCanvas {
                y >= control.y && y <= control.y + control.h;
     }
 }
-
-// Register the extension
 app.registerExtension({
     name: "azResolutionMaster",
     async beforeRegisterNodeDef(nodeType, nodeData, _app) {
