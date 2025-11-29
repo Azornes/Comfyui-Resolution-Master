@@ -9,21 +9,7 @@ import { CustomPresetsManager } from "./utils/CustomPresetsManager.js";
 import { PresetManagerDialog } from "./utils/PresetManagerDialog.js";
 const log = createModuleLogger('ResolutionMaster');
 
-class ResolutionMasterCanvas {
-    static CATEGORY_MAPPING = {
-        'Flux': 'latent_4x8',
-        'Flux.2': 'latent_128x16',
-        'Standard': 'latent_4x8',
-        'SDXL': 'latent_4x8',
-        'Social Media': 'latent_4x8',
-        'Print': 'latent_4x8',
-        'Cinema': 'latent_4x8',
-        'Display Resolutions': 'latent_4x8',
-        'WAN': 'latent_4x8',
-        'HiDream Dev': 'latent_4x8',
-        'Qwen-Image': 'latent_4x8'
-    };
-    
+class ResolutionMasterCanvas {    
     constructor(node) {
         this.node = node;
         this.node.properties = this.node.properties || {};
@@ -203,10 +189,7 @@ class ResolutionMasterCanvas {
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
         this.batchSizeWidget = batchSizeWidget;
-        if (latentTypeWidget) {
-            const backendLatentType = ResolutionMasterCanvas.CATEGORY_MAPPING[node.properties.selectedCategory] || 'latent_4x8';
-            latentTypeWidget.value = backendLatentType;
-        }
+        // Latent type is now manually controlled via LAT selector - no automatic initialization based on category
         node.onDrawForeground = function(ctx) {
             if (this.flags.collapsed) return;
             self.ensureMinimumSize();
@@ -451,10 +434,34 @@ class ResolutionMasterCanvas {
             ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
             const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
             
-            ctx.fillStyle = "#F8B"; 
+            // Create clickable area for LAT selector
+            const latAreaWidth = 50;
+            const latAreaHeight = 28;
+            const latAreaX = node.size[0] - latAreaWidth - 5;
+            
+            this.controls.latValueArea = {
+                x: latAreaX,
+                y: y_offset_5 - 10,
+                w: latAreaWidth,
+                h: latAreaHeight
+            };
+            
+            this.drawValueAreaHoverBackground(ctx, 'latValueArea', latAreaX, y_offset_5 - 10, latAreaWidth, latAreaHeight, [248, 136, 187]);
+            
+            ctx.fillStyle = this.hoverElement === 'latValueArea' ? "#FAB" : "#F8B"; 
             ctx.font = "bold 12px Arial";
             ctx.textAlign = "right";
             ctx.fillText("LAT", node.size[0] - 20, y_offset_5);
+            
+            // Draw latent type info in smaller gray font below LAT
+            if (this.latentTypeWidget) {
+                const latentType = this.latentTypeWidget.value || 'latent_4x8';
+                const shortType = latentType.replace('latent_', '');
+                ctx.fillStyle = this.hoverElement === 'latValueArea' ? "#999" : "#777"; 
+                ctx.font = "9px Arial";
+                ctx.textAlign = "right";
+                ctx.fillText(shortType, node.size[0] - 20, y_offset_5 + 12);
+            }
         }
     }
     
@@ -1197,7 +1204,11 @@ class ResolutionMasterCanvas {
                 }
                 if (key.endsWith('ValueArea')) {
                     log.debug(`Detected ValueArea click: ${key}`);
-                    this.dialogManager.showCustomValueDialog(key, e);
+                    if (key === 'latValueArea') {
+                        this.showLatentTypeSelector(e);
+                    } else {
+                        this.dialogManager.showCustomValueDialog(key, e);
+                    }
                     return true;
                 }
                 if (key.endsWith('Header')) {
@@ -1670,6 +1681,41 @@ class ResolutionMasterCanvas {
         }
     }
     
+    showLatentTypeSelector(e) {
+        if (!this.latentTypeWidget) {
+            log.debug("Latent type selector: latent_type widget not found");
+            return;
+        }
+        
+        const currentValue = this.latentTypeWidget.value || 'latent_4x8';
+        
+        // Available latent types with descriptive names
+        const latentTypes = [
+            { text: '4x8 (Standard SD/SDXL/Flux)', value: 'latent_4x8' },
+            { text: '128x16 (Flux.2)', value: 'latent_128x16' }
+        ];
+        
+        const items = latentTypes.map(type => ({
+            text: type.text,
+            value: type.value,
+            isCustom: type.value === currentValue // Highlight current selection
+        }));
+        
+        this.searchableDropdown.show(items, {
+            event: e,
+            title: 'Select Latent Type',
+            callback: (selectedText) => {
+                // Find the selected type by its display text
+                const selectedType = latentTypes.find(t => t.text === selectedText);
+                if (selectedType && this.latentTypeWidget) {
+                    this.latentTypeWidget.value = selectedType.value;
+                    log.debug(`Latent type manually changed to: ${selectedType.value}`);
+                    app.graph.setDirtyCanvas(true);
+                }
+            }
+        });
+    }
+    
     showDropdownMenu(dropdownName, e) {
         const props = this.node.properties;
         let items, callback, title, propertyKey;
@@ -1696,12 +1742,7 @@ class ResolutionMasterCanvas {
             callback = (value) => {
                 props.selectedCategory = value;
                 props.selectedPreset = null;
-                if (this.latentTypeWidget) {
-                    const backendLatentType = ResolutionMasterCanvas.CATEGORY_MAPPING[value] || 'latent_4x8';
-                    this.latentTypeWidget.value = backendLatentType;
-                    log.debug(`Updated backend latent type widget to: ${backendLatentType} for UI category: ${value}`);
-                }
-                
+                // Latent type is now manually controlled via LAT selector - no automatic change
                 app.graph.setDirtyCanvas(true);
             };
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
