@@ -42,9 +42,9 @@ class ResolutionMasterCanvas {
         this.presetManagerDialog = new PresetManagerDialog(this.customPresetsManager);
         this.tooltipElement = null;
         this.tooltipTimer = null;
-        this.tooltipDelay = 500; // ms - reduced for faster response
+        this.tooltipDelay = 500; 
         this.showTooltip = false;
-        this.tooltipMousePos = null; // Current mouse position
+        this.tooltipMousePos = null; 
         this.detectedDimensions = null;
         this.dimensionCheckInterval = null;
         this.manuallySetByAutoFit = false;
@@ -88,19 +88,19 @@ class ResolutionMasterCanvas {
         currentY += canvasHeight + spacing;
         currentY += 15 + spacing;
         const sectionHeights = {
-            actions: this.collapsedSections?.actions ? 25 : 55,      // 25 for header, +30 for content
-            scaling: this.collapsedSections?.scaling ? 25 : 130,    // 25 for header, +105 for content
-            autoDetect: this.collapsedSections?.autoDetect ? 25 : 125, // 25 for header, +100 for content (3 rows)
-            presets: this.collapsedSections?.presets ? 25 : 90       // 25 for header, +65 for content (2 rows)
+            actions: this.collapsedSections?.actions ? 25 : 55,      
+            scaling: this.collapsedSections?.scaling ? 25 : 130,    
+            autoDetect: this.collapsedSections?.autoDetect ? 25 : 125, 
+            presets: this.collapsedSections?.presets ? 25 : 90       
         };
         Object.values(sectionHeights).forEach(height => {
             currentY += height + spacing;
         });
         if (props.useCustomCalc && props.selectedCategory) {
-            currentY += 40; // Approximate info message height
+            currentY += 40; 
         }
         
-        return currentY + 20; // Add bottom padding
+        return currentY + 20; 
     }
     
     initializeProperties() {
@@ -154,7 +154,7 @@ class ResolutionMasterCanvas {
             dropdown_resolution_expanded: false,
             dropdown_category_expanded: false,
             dropdown_preset_expanded: false,
-            preset_selector_mode: 'visual', // 'visual' or 'list'
+            preset_selector_mode: 'visual', 
             customPresetsJSON: '',
         };
 
@@ -167,8 +167,8 @@ class ResolutionMasterCanvas {
     setupNode() {
         const node = this.node;
         const self = this;
-        node.size = [330, 400]; // Initial size, will be adjusted dynamically
-        node.min_size = [330, 200]; // Minimum size for basic functionality
+        node.size = [330, 400]; 
+        node.min_size = [330, 200]; 
         if (node.outputs) {
             node.outputs.forEach(output => {
                 output.name = output.localized_name = "";
@@ -409,8 +409,8 @@ class ResolutionMasterCanvas {
             const y_offset_2 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 1.5);
             const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
             const y_offset_4 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 3.5);
-            const valueAreaWidth = 60; // Wider area for better clicking
-            const batchSizeAreaWidth = 35; // Smaller area for batch size (small numbers)
+            const valueAreaWidth = 60; 
+            const batchSizeAreaWidth = 35; 
             const valueAreaHeight = 20;
             const valueAreaX = node.size[0] - valueAreaWidth - 5;
             const batchSizeAreaX = node.size[0] - batchSizeAreaWidth - 5;
@@ -451,7 +451,7 @@ class ResolutionMasterCanvas {
             ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
             const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
             
-            ctx.fillStyle = "#F8B"; // Pink text color (same as batch_size)
+            ctx.fillStyle = "#F8B"; 
             ctx.font = "bold 12px Arial";
             ctx.textAlign = "right";
             ctx.fillText("LAT", node.size[0] - 20, y_offset_5);
@@ -677,7 +677,7 @@ class ResolutionMasterCanvas {
         
         const autoFitStartX = currentX + toggleWidth + gap;
         this.controls.autoFitBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
-        const btnEnabled = props.selectedCategory; // Tylko wymaga wybranej kategorii, nie wykrytych wymiarów
+        const btnEnabled = props.selectedCategory; 
         this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoFit, this.hoverElement === 'autoFitBtn', !btnEnabled, "Auto-fit");
         
         const autoCheckboxX = autoFitStartX + autoFitWidth + gap;
@@ -733,7 +733,7 @@ class ResolutionMasterCanvas {
         const props = node.properties;
         const margin = 20;
         const availableWidth = node.size[0] - margin * 2;
-        let currentHeight = 30; // Single row
+        let currentHeight = 30; 
         const gap = 8;
         let currentX = margin;
         let currentY = y;
@@ -892,7 +892,7 @@ class ResolutionMasterCanvas {
                 if (centerIconAndText) {
                     ctx.font = "12px Arial";
                     const textWidth = ctx.measureText(text).width;
-                    const gap = 4; // Gap between icon and text
+                    const gap = 4; 
                     const totalWidth = iconSize + gap + textWidth;
                     const startX = x + (w - totalWidth) / 2;
                     
@@ -1075,7 +1075,7 @@ class ResolutionMasterCanvas {
         const tooltipText = this.tooltips[this.tooltipElement];
         const paddingX = 8;
         const paddingTop = 8;
-        const paddingBottom = 4; // Zmniejszony dolny padding
+        const paddingBottom = 4; 
         const maxWidth = 250;
         const lineHeight = 16;
         ctx.font = "12px Arial";
@@ -1301,7 +1301,7 @@ class ResolutionMasterCanvas {
             this.tooltipTimer = setTimeout(() => {
                 this.tooltipElement = element;
                 this.showTooltip = true;
-                this.tooltipFixedPos = initialMousePos; // Use the stored initial position
+                this.tooltipFixedPos = initialMousePos; 
                 app.graph.setDirtyCanvas(true);
             }, this.tooltipDelay);
         }
@@ -1636,7 +1636,7 @@ class ResolutionMasterCanvas {
         
         if (mode === 'list') {
             const presetItems = Object.entries(presets)
-                .filter(([name, dims]) => !dims.isHidden)  // Filter out hidden built-in presets
+                .filter(([name, dims]) => !dims.isHidden)  
                 .map(([name, dims]) => {
                     const isCustom = this.customPresetsManager.isCustomPreset(props.selectedCategory, name);
                     return {
@@ -2079,8 +2079,8 @@ class ResolutionMasterCanvas {
     
     applyQwenCalculation(width, height) {
         const currentPixels = width * height;
-        const minPixels = 589824;  // ~0.6MP
-        const maxPixels = 4194304; // ~4.2MP
+        const minPixels = 589824;  
+        const maxPixels = 4194304; 
         if (currentPixels >= minPixels && currentPixels <= maxPixels) {
             return { width, height };
         } else {
@@ -2185,7 +2185,7 @@ class ResolutionMasterCanvas {
                         if (this.widthWidget && this.heightWidget) {
                             this.widthWidget.value = this.detectedDimensions.width;
                             this.heightWidget.value = this.detectedDimensions.height;
-                            this.applyDimensionChange(); // Zastosuje kalkulacje na oryginalnych wymiarach
+                            this.applyDimensionChange(); 
                         }
                     }
                     else if (props.autoDetect && this.widthWidget && this.heightWidget) {
