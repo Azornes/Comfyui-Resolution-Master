@@ -503,7 +503,7 @@ class ResolutionMasterCanvas {
             // Draw latent type info in smaller gray font below LAT
             if (this.latentTypeWidget) {
                 const latentType = this.latentTypeWidget.value || 'latent_4x8';
-                const shortType = latentType.replace('latent_', '');
+                const shortType = String(latentType).replace('latent_', '');
                 ctx.fillStyle = this.hoverElement === 'latValueArea' ? "#999" : "#777"; 
                 ctx.font = "9px Arial";
                 ctx.textAlign = "right";
