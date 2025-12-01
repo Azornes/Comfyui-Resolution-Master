@@ -119,7 +119,9 @@ export const presetCategories = {
         '3:2 Landscape': { width: 1254, height: 836 }
     },
     'Flux': {
-        '1:1 Square': { width: 1024, height: 1024 },
+        '1:1 Square (Standard)': { width: 1024, height: 1024 },
+        '1:1 Square (Medium)': { width: 1408, height: 1408 },
+        '1:1 Square (High)': { width: 1440, height: 1440 },
         '2:3 Portrait': { width: 832, height: 1248 },
         '3:4 Portrait': { width: 896, height: 1184 },
         '4:5 Portrait': { width: 928, height: 1152 },
@@ -164,7 +166,7 @@ export const presetCategories = {
     'Qwen-Image': {
         '1:1 Square (Default)': { width: 1328, height: 1328 },
         '16:9 Landscape': { width: 1664, height: 928 },
-        '4:3 Landscape': { width: 1472, height: 1140 },
+        '4:3 Landscape': { width: 1472, height: 1104 },
         '3:2 Landscape': { width: 1584, height: 1056 },
         // Tests Presets
         '1:1 Square-1024': { width: 1024, height: 1024 },
