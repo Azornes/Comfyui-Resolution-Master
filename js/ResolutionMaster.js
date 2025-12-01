@@ -17,6 +17,8 @@ class ResolutionMasterCanvas {
         this.node.intpos = { x: 0.5, y: 0.5 };
         this.node.capture = false;
         this.node.configured = false;
+        this._isInitializing = true; // Flag to prevent setDirtyCanvas during init
+        this._pendingCanvasUpdate = false;
         this.hoverElement = null;
         this.scrollOffset = 0;
         this.dropdownOpen = null;
@@ -48,6 +50,41 @@ class ResolutionMasterCanvas {
         }).catch(error => {
             log.error('Failed to load CSS:', error);
         });
+        
+        // Mark initialization complete after a short delay to allow ComfyUI to finish setup
+        requestAnimationFrame(() => {
+            this._isInitializing = false;
+        });
+    }
+    
+    /**
+     * Safely request a canvas update - prevents multiple rapid updates during initialization
+     * and graph configuration that can cause ComfyUI freezing issues
+     */
+    requestCanvasUpdate(force = false) {
+        // Skip updates during initialization unless forced
+        if (this._isInitializing && !force) {
+            this._pendingCanvasUpdate = true;
+            return;
+        }
+        
+        // Ensure graph exists and is ready
+        if (!app.graph) {
+            this._pendingCanvasUpdate = true;
+            return;
+        }
+        
+        // Use requestAnimationFrame to batch updates and avoid conflicts
+        if (!this._canvasUpdateScheduled) {
+            this._canvasUpdateScheduled = true;
+            requestAnimationFrame(() => {
+                this._canvasUpdateScheduled = false;
+                this._pendingCanvasUpdate = false;
+                if (app.graph) {
+                    app.graph.setDirtyCanvas(true);
+                }
+            });
+        }
     }
     
     ensureMinimumSize() {
@@ -237,20 +274,30 @@ class ResolutionMasterCanvas {
         };
         node.onGraphConfigured = function() {
             this.configured = true;
-            this.onPropertyChanged();
-            self.customPresetsManager.loadCustomPresets();
-            log.debug('Reloaded custom presets after graph configured');
             
-            if (this.properties.autoDetect) {
-                self.startAutoDetect();
-            }
-            self.updateRescaleValue();
-            self.collapsedSections = {
-                actions: this.properties.section_actions_collapsed,
-                scaling: this.properties.section_scaling_collapsed,
-                autoDetect: this.properties.section_autoDetect_collapsed,
-                presets: this.properties.section_presets_collapsed
-            };
+            // Defer initialization to next frame to avoid interfering with ComfyUI's graph setup
+            requestAnimationFrame(() => {
+                if (!this.graph) return; // Node was removed
+                
+                self.customPresetsManager.loadCustomPresets();
+                log.debug('Reloaded custom presets after graph configured');
+                
+                self.collapsedSections = {
+                    actions: this.properties.section_actions_collapsed,
+                    scaling: this.properties.section_scaling_collapsed,
+                    autoDetect: this.properties.section_autoDetect_collapsed,
+                    presets: this.properties.section_presets_collapsed
+                };
+                
+                // Update internal position from saved properties
+                self.updateCanvasFromWidgets();
+                self.updateRescaleValue();
+                
+                // Start auto-detect after everything is initialized
+                if (this.properties.autoDetect) {
+                    self.startAutoDetect();
+                }
+            });
         };
         [widthWidget, heightWidget, modeWidget, latentTypeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
             if (widget) {
