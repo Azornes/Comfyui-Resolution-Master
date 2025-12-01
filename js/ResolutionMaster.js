@@ -1983,10 +1983,8 @@ class ResolutionMasterCanvas {
             ({ width, height } = this.applyCustomCalculation(width, height, props.selectedCategory));
         }
 
-        const newWidth = Math.max(props.canvas_min_x, Math.min(props.canvas_max_x, width));
-        const newHeight = Math.max(props.canvas_min_y, Math.min(props.canvas_max_y, height));
-        
-        this.setDimensions(newWidth, newHeight);
+        // Removed canvas min/max clamping - allow presets to set any resolution
+        this.setDimensions(width, height);
     }
 
     applyPreset(category, presetName) {
