@@ -172,6 +172,46 @@ export const presetCategories = {
         '1:1 Square-1024': { width: 1024, height: 1024 },
         '4:3 Landscape': { width: 768, height: 1024 }
     },
+    'ZImageTurbo': {
+        // === Base 1024 ===
+        '1:1 Square (1024)': { width: 1024, height: 1024 },
+        '9:7 Landscape (1024)': { width: 1152, height: 896 },
+        '7:9 Portrait (1024)': { width: 896, height: 1152 },
+        '4:3 Landscape (1024)': { width: 1152, height: 864 },
+        '3:4 Portrait (1024)': { width: 864, height: 1152 },
+        '3:2 Landscape (1024)': { width: 1248, height: 832 },
+        '2:3 Portrait (1024)': { width: 832, height: 1248 },
+        '16:9 Widescreen (1024)': { width: 1280, height: 720 },
+        '9:16 Portrait (1024)': { width: 720, height: 1280 },
+        '21:9 Ultrawide (1024)': { width: 1344, height: 576 },
+        '9:21 Ultra Portrait (1024)': { width: 576, height: 1344 },
+
+        // === Base 1280 ===
+        '1:1 Square (1280)': { width: 1280, height: 1280 },
+        '9:7 Landscape (1280)': { width: 1440, height: 1120 },
+        '7:9 Portrait (1280)': { width: 1120, height: 1440 },
+        '4:3 Landscape (1280)': { width: 1472, height: 1104 },
+        '3:4 Portrait (1280)': { width: 1104, height: 1472 },
+        '3:2 Landscape (1280)': { width: 1536, height: 1024 },
+        '2:3 Portrait (1280)': { width: 1024, height: 1536 },
+        '16:9 Widescreen (1280)': { width: 1536, height: 864 },
+        '9:16 Portrait (1280)': { width: 864, height: 1536 },
+        '21:9 Ultrawide (1280)': { width: 1680, height: 720 },
+        '9:21 Ultra Portrait (1280)': { width: 720, height: 1680 },
+
+        // === Base 1536 ===
+        '1:1 Square (1536)': { width: 1536, height: 1536 },
+        '9:7 Landscape (1536)': { width: 1728, height: 1344 },
+        '7:9 Portrait (1536)': { width: 1344, height: 1728 },
+        '4:3 Landscape (1536)': { width: 1728, height: 1296 },
+        '3:4 Portrait (1536)': { width: 1296, height: 1728 },
+        '3:2 Landscape (1536)': { width: 1872, height: 1248 },
+        '2:3 Portrait (1536)': { width: 1248, height: 1872 },
+        '16:9 Widescreen (1536)': { width: 2048, height: 1152 },
+        '9:16 Portrait (1536)': { width: 1152, height: 2048 },
+        '21:9 Ultrawide (1536)': { width: 2016, height: 864 },
+        '9:21 Ultra Portrait (1536)': { width: 864, height: 2016 },
+    },
     'Social Media': {
         // Instagram
         'Instagram Square': { width: 1080, height: 1080 },

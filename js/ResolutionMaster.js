@@ -840,6 +840,8 @@ class ResolutionMasterCanvas {
             message = "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
         } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category) && props.useCustomCalc) {
             message = "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
+        } else if (props.useCustomCalc) {
+            message = "⚠️ Calc Mode: Custom calculation not available for this category)";
         }
         
         if (message) {
