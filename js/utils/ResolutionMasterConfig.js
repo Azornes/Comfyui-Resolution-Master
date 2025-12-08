@@ -170,7 +170,7 @@ export const presetCategories = {
         '3:2 Landscape': { width: 1584, height: 1056 },
         // Tests Presets
         '1:1 Square-1024': { width: 1024, height: 1024 },
-        '4:3 Landscape': { width: 768, height: 1024 }
+        '3:4 Portrait': { width: 768, height: 1024 }
     },
     'ZImageTurbo': {
         // === Base 1024 ===
