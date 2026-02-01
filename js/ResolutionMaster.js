@@ -651,13 +651,28 @@ class ResolutionMasterCanvas {
             const width = this.widthWidget.value;
             const height = this.heightWidget.value;
             const mp = ((width * height) / 1000000).toFixed(2);
-            const aspectRatio = (width / height).toFixed(2);
             const pResolution = this.getClosestPResolution(width, height);
+
+            function gcd(a, b) {
+                while (b !== 0) {
+                    const t = a % b;
+                    a = b;
+                    b = t;
+                }
+                return a;
+            }
+
+            function aspectRatioString(w, h) {
+                const g = gcd(w, h);
+                return `${w / g}:${h / g}`;
+            }
+
+            const aspectRatio = aspectRatioString(width, height);
             
             ctx.fillStyle = "#bbb";
             ctx.font = "12px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(`${width} × ${height}  |  ${mp} MP ${pResolution}  |  ${aspectRatio}:1`,
+            ctx.fillText(`${width} × ${height}  |  ${mp} MP ${pResolution}  |  ${aspectRatio}`,
                         node.size[0] / 2, y);
         }
     }
