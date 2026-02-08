@@ -645,6 +645,23 @@ class ResolutionMasterCanvas {
         ctx.stroke();
     }
     
+    static gcd(a, b) {
+        a = Math.abs(Math.floor(Number(a))) || 1;
+        b = Math.abs(Math.floor(Number(b))) || 1;
+        
+        while (b !== 0) {
+            const t = a % b;
+            a = b;
+            b = t;
+        }
+        return a;
+    }
+
+    static aspectRatioString(w, h) {
+        const g = ResolutionMasterCanvas.gcd(w, h);
+        return `${w / g}:${h / g}`;
+    }
+
     drawInfoText(ctx, y) {
         const node = this.node;
         if (this.widthWidget && this.heightWidget) {
@@ -653,21 +670,7 @@ class ResolutionMasterCanvas {
             const mp = ((width * height) / 1000000).toFixed(2);
             const pResolution = this.getClosestPResolution(width, height);
 
-            function gcd(a, b) {
-                while (b !== 0) {
-                    const t = a % b;
-                    a = b;
-                    b = t;
-                }
-                return a;
-            }
-
-            function aspectRatioString(w, h) {
-                const g = gcd(w, h);
-                return `${w / g}:${h / g}`;
-            }
-
-            const aspectRatio = aspectRatioString(width, height);
+            const aspectRatio = ResolutionMasterCanvas.aspectRatioString(width, height);
             
             ctx.fillStyle = "#bbb";
             ctx.font = "12px Arial";
