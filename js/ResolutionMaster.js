@@ -638,11 +638,29 @@ class ResolutionMasterCanvas {
         if (props.canvas_dots) {
             ctx.fillStyle = "rgba(200,200,200,0.5)";
             ctx.beginPath();
-            let stX = canvasW * props.canvas_step_x / rangeX;
-            let stY = canvasH * props.canvas_step_y / rangeY;
-            for (let ix = stX; ix < canvasW; ix += stX) {
-                for (let iy = stY; iy < canvasH; iy += stY) {
-                    ctx.rect(offsetX + ix - 0.5, offsetY + iy - 0.5, 1, 1);
+            const stepX = Math.max(Number(props.canvas_step_x) || 1, 1);
+            const stepY = Math.max(Number(props.canvas_step_y) || 1, 1);
+            const gridXs = [];
+            const gridYs = [];
+            const addUniqueGridPoint = (points, point) => {
+                if (!points.some(existingPoint => Math.abs(existingPoint - point) < 0.5)) {
+                    points.push(point);
+                }
+            };
+
+            for (let valueX = props.canvas_min_x; valueX <= props.canvas_max_x; valueX += stepX) {
+                const ratioX = (valueX - props.canvas_min_x) / rangeX;
+                addUniqueGridPoint(gridXs, offsetX + canvasW * ratioX);
+            }
+
+            for (let valueY = props.canvas_min_y; valueY <= props.canvas_max_y; valueY += stepY) {
+                const ratioY = (valueY - props.canvas_min_y) / rangeY;
+                addUniqueGridPoint(gridYs, offsetY + canvasH * (1 - ratioY));
+            }
+
+            for (const dotX of gridXs) {
+                for (const dotY of gridYs) {
+                    ctx.rect(dotX - 0.5, dotY - 0.5, 1, 1);
                 }
             }
             ctx.fill();
