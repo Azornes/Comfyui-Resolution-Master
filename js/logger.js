@@ -1,12 +1,12 @@
 /**
- * Logger - Centralny system logowania dla ComfyUI-ResolutionMaster
+ * Logger - Central logging system for ComfyUI-ResolutionMaster
  *
- * Funkcje:
- * - Różne poziomy logowania (DEBUG, INFO, WARN, ERROR)
- * - Możliwość włączania/wyłączania logów globalnie lub per moduł
- * - Kolorowe logi w konsoli
- * - Możliwość zapisywania logów do localStorage
- * - Możliwość eksportu logów
+ * Features:
+ * - Multiple log levels (DEBUG, INFO, WARN, ERROR)
+ * - Option to enable/disable logs globally or per module
+ * - Colored console logs
+ * - Option to save logs to localStorage
+ * - Option to export logs
  */
 function padStart(str, targetLength, padString) {
     targetLength = targetLength >> 0;
@@ -58,8 +58,8 @@ class Logger {
         this.loadConfig();
     }
     /**
-     * Konfiguracja loggera
-     * @param {Partial<LoggerConfig>} config - Obiekt konfiguracyjny
+     * Logger configuration
+     * @param {Partial<LoggerConfig>} config - Configuration object
      */
     configure(config) {
         this.config = { ...this.config, ...config };
@@ -67,16 +67,16 @@ class Logger {
         return this;
     }
     /**
-     * Włącz/wyłącz logger globalnie
-     * @param {boolean} enabled - Czy logger ma być włączony
+     * Enable/disable the logger globally
+     * @param {boolean} enabled - Whether the logger should be enabled
      */
     setEnabled(enabled) {
         this.enabled = enabled;
         return this;
     }
     /**
-     * Ustaw globalny poziom logowania
-     * @param {LogLevels} level - Poziom logowania
+     * Set the global log level
+     * @param {LogLevels} level - Log level
      */
     setGlobalLevel(level) {
         this.config.globalLevel = level;
@@ -84,9 +84,9 @@ class Logger {
         return this;
     }
     /**
-     * Ustaw poziom logowania dla konkretnego modułu
-     * @param {string} module - Nazwa modułu
-     * @param {LogLevels} level - Poziom logowania
+     * Set the log level for a specific module
+     * @param {string} module - Module name
+     * @param {LogLevels} level - Log level
      */
     setModuleLevel(module, level) {
         this.config.moduleSettings[module] = level;
@@ -94,10 +94,10 @@ class Logger {
         return this;
     }
     /**
-     * Sprawdź, czy dany poziom logowania jest aktywny dla modułu
-     * @param {string} module - Nazwa modułu
-     * @param {LogLevels} level - Poziom logowania do sprawdzenia
-     * @returns {boolean} - Czy poziom jest aktywny
+     * Check whether a given log level is enabled for a module
+     * @param {string} module - Module name
+     * @param {LogLevels} level - Log level to check
+     * @returns {boolean} - Whether the level is enabled
      */
     isLevelEnabled(module, level) {
         if (!this.enabled)
@@ -108,8 +108,8 @@ class Logger {
         return level >= this.config.globalLevel;
     }
     /**
-     * Formatuj znacznik czasu
-     * @returns {string} - Sformatowany znacznik czasu
+     * Format the timestamp
+     * @returns {string} - Formatted timestamp
      */
     formatTimestamp() {
         const now = new Date();
@@ -121,10 +121,10 @@ class Logger {
             .replace('SSS', padStart(String(now.getMilliseconds()), 3, '0'));
     }
     /**
-     * Zapisz log
-     * @param {string} module - Nazwa modułu
-     * @param {LogLevels} level - Poziom logowania
-     * @param {any[]} args - Argumenty do zalogowania
+     * Save a log entry
+     * @param {string} module - Module name
+     * @param {LogLevels} level - Log level
+     * @param {any[]} args - Arguments to log
      */
     log(module, level, ...args) {
         if (!this.isLevelEnabled(module, level))
@@ -149,8 +149,8 @@ class Logger {
         this.printToConsole(logData);
     }
     /**
-     * Wyświetl log w konsoli
-     * @param {LogData} logData - Dane logu
+     * Print the log entry to the console
+     * @param {LogData} logData - Log data
      */
     printToConsole(logData) {
         const { timestamp, module, level, levelName, args } = logData;
@@ -163,7 +163,7 @@ class Logger {
         console.log(prefix, ...args);
     }
     /**
-     * Zapisz logi do localStorage
+     * Save logs to localStorage
      */
     saveLogs() {
         if (typeof localStorage !== 'undefined' && this.config.saveToStorage) {
@@ -192,7 +192,7 @@ class Logger {
         }
     }
     /**
-     * Załaduj logi z localStorage
+     * Load logs from localStorage
      */
     loadLogs() {
         if (typeof localStorage !== 'undefined' && this.config.saveToStorage) {
@@ -208,7 +208,7 @@ class Logger {
         }
     }
     /**
-     * Zapisz konfigurację do localStorage
+     * Save configuration to localStorage
      */
     saveConfig() {
         if (typeof localStorage !== 'undefined') {
@@ -221,7 +221,7 @@ class Logger {
         }
     }
     /**
-     * Załaduj konfigurację z localStorage
+     * Load configuration from localStorage
      */
     loadConfig() {
         if (typeof localStorage !== 'undefined') {
@@ -237,7 +237,7 @@ class Logger {
         }
     }
     /**
-     * Wyczyść wszystkie logi
+     * Clear all logs
      */
     clearLogs() {
         this.logs = [];
@@ -247,8 +247,8 @@ class Logger {
         return this;
     }
     /**
-     * Eksportuj logi do pliku
-     * @param {'json' | 'txt'} format - Format eksportu
+     * Export logs to a file
+     * @param {'json' | 'txt'} format - Export format
      */
     exportLogs(format = 'json') {
         if (this.logs.length === 0) {
@@ -279,33 +279,33 @@ class Logger {
         URL.revokeObjectURL(url);
     }
     /**
-     * Log na poziomie DEBUG
-     * @param {string} module - Nazwa modułu
-     * @param {any[]} args - Argumenty do zalogowania
+     * Log at DEBUG level
+     * @param {string} module - Module name
+     * @param {any[]} args - Arguments to log
      */
     debug(module, ...args) {
         this.log(module, LogLevel.DEBUG, ...args);
     }
     /**
-     * Log na poziomie INFO
-     * @param {string} module - Nazwa modułu
-     * @param {any[]} args - Argumenty do zalogowania
+     * Log at INFO level
+     * @param {string} module - Module name
+     * @param {any[]} args - Arguments to log
      */
     info(module, ...args) {
         this.log(module, LogLevel.INFO, ...args);
     }
     /**
-     * Log na poziomie WARN
-     * @param {string} module - Nazwa modułu
-     * @param {any[]} args - Argumenty do zalogowania
+     * Log at WARN level
+     * @param {string} module - Module name
+     * @param {any[]} args - Arguments to log
      */
     warn(module, ...args) {
         this.log(module, LogLevel.WARN, ...args);
     }
     /**
-     * Log na poziomie ERROR
-     * @param {string} module - Nazwa modułu
-     * @param {any[]} args - Argumenty do zalogowania
+     * Log at ERROR level
+     * @param {string} module - Module name
+     * @param {any[]} args - Arguments to log
      */
     error(module, ...args) {
         this.log(module, LogLevel.ERROR, ...args);

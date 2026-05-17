@@ -278,7 +278,7 @@ pre.jsoneditor-preview {
   opacity: 1 !important;
 }
 
-/* Ikony */
+/* Icons */
 .jsoneditor-search button.jsoneditor-refresh {
   background-position: -99px -73px !important;
 }
@@ -296,7 +296,7 @@ pre.jsoneditor-preview {
   background-position: -148px -49px !important;
 }
 
-/* === Walidacja / błędy JSONEditor (Twilight dark theme fix) === */
+/* === JSONEditor validation/errors (Twilight dark theme fix) === */
 .jsoneditor-validation-errors-container {
   background: var(--vsc-panel-bg) !important;
   border-top: 1px solid var(--vsc-border) !important;
@@ -305,34 +305,34 @@ pre.jsoneditor-preview {
   font-size: 13px !important;
 }
 
-/* Każdy wiersz błędu */
+/* Each error row */
 .jsoneditor-validation-errors tr {
-  background: rgba(255, 0, 0, 0.05) !important; /* delikatne czerwone tło */
+  background: rgba(255, 0, 0, 0.05) !important; /* subtle red background */
   color: var(--vsc-foreground) !important;
 }
 
-/* Wyróżnienie konkretnego błędu (parse error) */
+/* Highlight a specific error (parse error) */
 .jsoneditor-validation-errors tr.parse-error {
   background: rgba(255, 60, 60, 0.12) !important;
-  border-left: 3px solid #f44747 !important; /* akcent VSCode error red */
+  border-left: 3px solid #f44747 !important; /* VSCode error red accent */
 }
 
-/* Tekst błędu */
+/* Error text */
 .jsoneditor-validation-errors pre {
-  color: #f88 !important; /* jasny czerwony, dobrze widoczny */
+  color: #f88 !important; /* light red, easy to see */
   background: transparent !important;
   font-family: Consolas, Menlo, Monaco, monospace !important;
   white-space: pre-wrap !important;
   word-break: break-word !important;
 }
 
-/* Numer linii błędu */
+/* Error line number */
 .jsoneditor-validation-errors td {
-  color: #ffbaba !important; /* lekko różowy akcent */
+  color: #ffbaba !important; /* light pink accent */
   padding: 4px 6px !important;
 }
 
-/* Przycisk po lewej (czerwony “dot”) */
+/* Left-side button (red dot) */
 button.jsoneditor-schema-error {
   width: 12px !important;
   height: 12px !important;
@@ -344,7 +344,7 @@ button.jsoneditor-schema-error {
   box-shadow: 0 0 4px rgba(244, 71, 71, 0.6);
 }
 
-/* "Scroll for more ▿" pasek */
+/* "Scroll for more" bar */
 .jsoneditor-additional-errors {
   background: rgba(255, 255, 255, 0.05) !important;
   color: var(--vsc-muted) !important;
@@ -365,7 +365,7 @@ button.jsoneditor-schema-error {
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Nagłówek okna */
+/* Window header */
 .jsoneditor-modal-transform .pico-modal-header {
   font-size: 16px !important;
   font-weight: 600 !important;
@@ -374,7 +374,7 @@ button.jsoneditor-schema-error {
   text-transform: uppercase !important;
 }
 
-/* Opis / linki JMESPath */
+/* Description / JMESPath links */
 .jsoneditor-modal-transform p,
 .jsoneditor-modal-transform a {
   color: var(--vsc-foreground) !important;
@@ -384,7 +384,7 @@ button.jsoneditor-schema-error {
   color: var(--vsc-blue) !important;
 }
 
-/* Etykiety (Wizard, Query, Preview) */
+/* Labels (Wizard, Query, Preview) */
 .jsoneditor-jmespath-label {
   color: var(--vsc-muted) !important;
   margin-top: 10px !important;
@@ -392,7 +392,7 @@ button.jsoneditor-schema-error {
   font-size: 13px !important;
 }
 
-/* Pola tekstowe (Query, Preview) */
+/* Text fields (Query, Preview) */
 .jsoneditor-modal-transform textarea {
   background: var(--vsc-editor-bg) !important;
   color: var(--vsc-foreground) !important;
@@ -416,7 +416,7 @@ button.jsoneditor-schema-error {
   color: #fff !important;
 }
 
-/* Przycisk OK */
+/* OK button */
 .jsoneditor-modal-transform input[type="submit"],
 .jsoneditor-modal-transform button#ok {
   background: var(--vsc-button-bg) !important;
@@ -433,7 +433,7 @@ button.jsoneditor-schema-error {
   border-color: var(--vsc-blue) !important;
 }
 
-/* Przycisk zamknięcia (X) */
+/* Close button (X) */
 .jsoneditor-modal-transform .pico-close {
   background: var(--vsc-button-bg) !important;
   color: var(--vsc-foreground) !important;
@@ -454,11 +454,11 @@ button.jsoneditor-schema-error {
   color: var(--vsc-blue) !important;
 }
 
-/* === Fix: pico-modal-header (usuń niebieskie tło) === */
+/* === Fix: pico-modal-header (remove blue background) === */
 .jsoneditor-modal-transform .pico-modal-header {
-  background: transparent !important; /* usuwa niebieskie tło */
-  color: var(--vsc-blue) !important; /* dopasowany akcent Twilight */
-  border-bottom: 1px solid var(--vsc-border) !important; /* subtelny separator */
+  background: transparent !important; /* removes the blue background */
+  color: var(--vsc-blue) !important; /* matching Twilight accent */
+  border-bottom: 1px solid var(--vsc-border) !important; /* subtle separator */
   padding-bottom: 6px !important;
   margin-bottom: 10px !important;
   font-weight: 600 !important;
@@ -478,7 +478,7 @@ button.jsoneditor-schema-error {
   box-shadow: 0 0 25px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Nagłówek */
+/* Header */
 .jsoneditor-modal-sort .pico-modal-header {
   background: transparent !important;
   color: var(--vsc-blue) !important;
@@ -490,7 +490,7 @@ button.jsoneditor-schema-error {
   text-transform: uppercase !important;
 }
 
-/* Teksty, etykiety */
+/* Texts, labels */
 .jsoneditor-modal-sort td {
   color: var(--vsc-foreground) !important;
   font-size: 13px !important;
@@ -511,7 +511,7 @@ button.jsoneditor-schema-error {
   outline: none !important;
 }
 
-/* Kierunek sortowania (Asc / Desc) */
+/* Sort direction (Asc / Desc) */
 .jsoneditor-modal-sort .jsoneditor-button-group input[type="button"] {
   background: var(--vsc-button-bg) !important;
   color: var(--vsc-foreground) !important;
@@ -529,7 +529,7 @@ button.jsoneditor-schema-error {
   border-color: var(--vsc-blue) !important;
 }
 
-/* Aktywny przycisk (aktualny kierunek sortowania) */
+/* Active button (current sort direction) */
 .jsoneditor-modal-sort .jsoneditor-button-group-value-asc .jsoneditor-button-asc,
 .jsoneditor-modal-sort .jsoneditor-button-group-value-desc .jsoneditor-button-desc {
   background: var(--vsc-blue) !important;
@@ -537,7 +537,7 @@ button.jsoneditor-schema-error {
   border-color: var(--vsc-blue) !important;
 }
 
-/* Przycisk OK */
+/* OK button */
 .jsoneditor-modal-sort input[type="submit"],
 .jsoneditor-modal-sort button#ok {
   background: var(--vsc-button-bg) !important;
@@ -554,7 +554,7 @@ button.jsoneditor-schema-error {
   border-color: var(--vsc-blue) !important;
 }
 
-/* Przycisk zamknięcia (X) */
+/* Close button (X) */
 .jsoneditor-modal-sort .pico-close {
   background: var(--vsc-button-bg) !important;
   color: var(--vsc-foreground) !important;
@@ -575,24 +575,24 @@ button.jsoneditor-schema-error {
   color: var(--vsc-blue) !important;
 }
 
-/* === Fix: pozycjonowanie selecta w modal-sort === */
+/* === Fix: select positioning in modal-sort === */
 .jsoneditor-modal-sort .jsoneditor-select-wrapper {
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  margin-top: 8px !important; /* 🔹 odstęp od nagłówka */
+  margin-top: 8px !important; /* spacing from the header */
   margin-bottom: 8px !important;
   width: 100% !important;
 }
 
-/* Select sam w sobie */
+/* Select itself */
 .jsoneditor-modal-sort select {
-  width: 100% !important; /* dopasowany do szerokości okna */
-  max-width: 240px !important; /* niech nie będzie zbyt szeroki */
+  width: 100% !important; /* matched to the window width */
+  max-width: 240px !important; /* keep it from getting too wide */
   box-sizing: border-box !important;
 }
 
-/* Dodatkowo poprawienie układu w tabeli (wyrównanie w pionie) */
+/* Additional table layout fix (vertical alignment) */
 .jsoneditor-modal-sort table td {
   vertical-align: middle !important;
   padding-top: 6px !important;

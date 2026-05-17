@@ -1,11 +1,11 @@
 /**
- * ErrorHandler - Centralna obsługa błędów
- * Eliminuje powtarzalne wzorce obsługi błędów w całym projekcie
+ * ErrorHandler - Centralized error handling
+ * Removes repetitive error handling patterns across the project
  */
 import { createModuleLogger } from "./utils/LoggerUtils.js";
 const log = createModuleLogger('ErrorHandler');
 /**
- * Typy błędów w aplikacji
+ * Application error types
  */
 export const ErrorTypes = {
     VALIDATION: 'VALIDATION_ERROR',
@@ -18,7 +18,7 @@ export const ErrorTypes = {
     SYSTEM: 'SYSTEM_ERROR'
 };
 /**
- * Klasa błędu aplikacji z dodatkowymi informacjami
+ * Application error class with additional information
  */
 export class AppError extends Error {
     constructor(message, type = ErrorTypes.SYSTEM, details = null, originalError = null) {
@@ -34,7 +34,7 @@ export class AppError extends Error {
     }
 }
 /**
- * Handler błędów z automatycznym logowaniem i kategoryzacją
+ * Error handler with automatic logging and categorization
  */
 export class ErrorHandler {
     constructor() {
@@ -43,11 +43,11 @@ export class ErrorHandler {
         this.maxHistorySize = 100;
     }
     /**
-     * Obsługuje błąd z automatycznym logowaniem
-     * @param {Error | AppError | string} error - Błąd do obsłużenia
-     * @param {string} context - Kontekst wystąpienia błędu
-     * @param {object} additionalInfo - Dodatkowe informacje
-     * @returns {AppError} Znormalizowany błąd
+     * Handles an error with automatic logging
+     * @param {Error | AppError | string} error - Error to handle
+     * @param {string} context - Error occurrence context
+     * @param {object} additionalInfo - Additional information
+     * @returns {AppError} Normalized error
      */
     handle(error, context = 'Unknown', additionalInfo = {}) {
         const normalizedError = this.normalizeError(error, context, additionalInfo);
@@ -57,11 +57,11 @@ export class ErrorHandler {
         return normalizedError;
     }
     /**
-     * Normalizuje błąd do standardowego formatu
-     * @param {Error | AppError | string} error - Błąd do znormalizowania
-     * @param {string} context - Kontekst
-     * @param {object} additionalInfo - Dodatkowe informacje
-     * @returns {AppError} Znormalizowany błąd
+     * Normalizes an error to the standard format
+     * @param {Error | AppError | string} error - Error to normalize
+     * @param {string} context - Context
+     * @param {object} additionalInfo - Additional information
+     * @returns {AppError} Normalized error
      */
     normalizeError(error, context, additionalInfo) {
         if (error instanceof AppError) {
@@ -77,10 +77,10 @@ export class ErrorHandler {
         return new AppError('Unknown error occurred', ErrorTypes.SYSTEM, { context, originalError: error, ...additionalInfo });
     }
     /**
-     * Kategoryzuje błąd na podstawie wiadomości i kontekstu
-     * @param {Error} error - Błąd do skategoryzowania
-     * @param {string} context - Kontekst
-     * @returns {ErrorType} Typ błędu
+     * Categorizes an error based on the message and context
+     * @param {Error} error - Error to categorize
+     * @param {string} context - Context
+     * @returns {ErrorType} Error type
      */
     categorizeError(error, context) {
         const message = error.message.toLowerCase();
@@ -110,9 +110,9 @@ export class ErrorHandler {
         return ErrorTypes.SYSTEM;
     }
     /**
-     * Loguje błąd z odpowiednim poziomem
-     * @param {AppError} error - Błąd do zalogowania
-     * @param {string} context - Kontekst
+     * Logs an error with the appropriate level
+     * @param {AppError} error - Error to log
+     * @param {string} context - Context
      */
     logError(error, context) {
         const logMessage = `[${error.type}] ${error.message}`;
@@ -135,8 +135,8 @@ export class ErrorHandler {
         }
     }
     /**
-     * Zapisuje błąd w historii
-     * @param {AppError} error - Błąd do zapisania
+     * Records an error in history
+     * @param {AppError} error - Error to record
      */
     recordError(error) {
         this.errorHistory.push({
@@ -150,16 +150,16 @@ export class ErrorHandler {
         }
     }
     /**
-     * Zwiększa licznik błędów dla danego typu
-     * @param {ErrorType} errorType - Typ błędu
+     * Increments the error count for the given type
+     * @param {ErrorType} errorType - Error type
      */
     incrementErrorCount(errorType) {
         const current = this.errorCounts.get(errorType) || 0;
         this.errorCounts.set(errorType, current + 1);
     }
     /**
-     * Zwraca statystyki błędów
-     * @returns {ErrorStats} Statystyki błędów
+     * Returns error statistics
+     * @returns {ErrorStats} Error statistics
      */
     getErrorStats() {
         const errorCountsObj = {};
@@ -174,8 +174,8 @@ export class ErrorHandler {
         };
     }
     /**
-     * Grupuje błędy według typu
-     * @returns {{ [key: string]: ErrorHistoryEntry[] }} Błędy pogrupowane według typu
+     * Groups errors by type
+     * @returns {{ [key: string]: ErrorHistoryEntry[] }} Errors grouped by type
      */
     groupErrorsByType() {
         const grouped = {};
@@ -188,7 +188,7 @@ export class ErrorHandler {
         return grouped;
     }
     /**
-     * Czyści historię błędów
+     * Clears the error history
      */
     clearHistory() {
         this.errorHistory = [];
@@ -198,10 +198,10 @@ export class ErrorHandler {
 }
 const errorHandler = new ErrorHandler();
 /**
- * Wrapper funkcji z automatyczną obsługą błędów
- * @param {Function} fn - Funkcja do opakowania
- * @param {string} context - Kontekst wykonania
- * @returns {Function} Opakowana funkcja
+ * Function wrapper with automatic error handling
+ * @param {Function} fn - Function to wrap
+ * @param {string} context - Execution context
+ * @returns {Function} Wrapped function
  */
 export function withErrorHandling(fn, context) {
     return async function (...args) {
@@ -218,8 +218,8 @@ export function withErrorHandling(fn, context) {
     };
 }
 /**
- * Decorator dla metod klasy z automatyczną obsługą błędów
- * @param {string} context - Kontekst wykonania
+ * Decorator for class methods with automatic error handling
+ * @param {string} context - Execution context
  */
 export function handleErrors(context) {
     return function (target, propertyKey, descriptor) {
@@ -241,38 +241,38 @@ export function handleErrors(context) {
     };
 }
 /**
- * Funkcja pomocnicza do tworzenia błędów walidacji
- * @param {string} message - Wiadomość błędu
- * @param {object} details - Szczegóły walidacji
- * @returns {AppError} Błąd walidacji
+ * Helper function for creating validation errors
+ * @param {string} message - Error message
+ * @param {object} details - Validation details
+ * @returns {AppError} Validation error
  */
 export function createValidationError(message, details = {}) {
     return new AppError(message, ErrorTypes.VALIDATION, details);
 }
 /**
- * Funkcja pomocnicza do tworzenia błędów sieciowych
- * @param {string} message - Wiadomość błędu
- * @param {object} details - Szczegóły sieci
- * @returns {AppError} Błąd sieciowy
+ * Helper function for creating network errors
+ * @param {string} message - Error message
+ * @param {object} details - Network details
+ * @returns {AppError} Network error
  */
 export function createNetworkError(message, details = {}) {
     return new AppError(message, ErrorTypes.NETWORK, details);
 }
 /**
- * Funkcja pomocnicza do tworzenia błędów plików
- * @param {string} message - Wiadomość błędu
- * @param {object} details - Szczegóły pliku
- * @returns {AppError} Błąd pliku
+ * Helper function for creating file errors
+ * @param {string} message - Error message
+ * @param {object} details - File details
+ * @returns {AppError} File error
  */
 export function createFileError(message, details = {}) {
     return new AppError(message, ErrorTypes.FILE_IO, details);
 }
 /**
- * Funkcja pomocnicza do bezpiecznego wykonania operacji
- * @param {() => Promise<T>} operation - Operacja do wykonania
- * @param {T} fallbackValue - Wartość fallback w przypadku błędu
- * @param {string} context - Kontekst operacji
- * @returns {Promise<T>} Wynik operacji lub wartość fallback
+ * Helper function for safely executing an operation
+ * @param {() => Promise<T>} operation - Operation to execute
+ * @param {T} fallbackValue - Fallback value in case of error
+ * @param {string} context - Operation context
+ * @returns {Promise<T>} Operation result or fallback value
  */
 export async function safeExecute(operation, fallbackValue, context = 'SafeExecute') {
     try {
@@ -284,12 +284,12 @@ export async function safeExecute(operation, fallbackValue, context = 'SafeExecu
     }
 }
 /**
- * Funkcja do retry operacji z exponential backoff
- * @param {() => Promise<T>} operation - Operacja do powtórzenia
- * @param {number} maxRetries - Maksymalna liczba prób
- * @param {number} baseDelay - Podstawowe opóźnienie w ms
- * @param {string} context - Kontekst operacji
- * @returns {Promise<T>} Wynik operacji
+ * Retries an operation with exponential backoff
+ * @param {() => Promise<T>} operation - Operation to retry
+ * @param {number} maxRetries - Maximum number of attempts
+ * @param {number} baseDelay - Base delay in ms
+ * @param {string} context - Operation context
+ * @returns {Promise<T>} Operation result
  */
 export async function retryWithBackoff(operation, maxRetries = 3, baseDelay = 1000, context = 'RetryOperation') {
     let lastError;

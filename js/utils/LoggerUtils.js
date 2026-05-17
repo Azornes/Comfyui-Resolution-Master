@@ -1,13 +1,13 @@
 /**
- * LoggerUtils - Centralizacja inicjalizacji loggerów
- * Eliminuje powtarzalny kod inicjalizacji loggera w każdym module
+ * LoggerUtils - Centralized logger initialization
+ * Removes repetitive logger initialization code from each module
  */
 import { logger, LogLevel } from "../logger.js";
 import { LOG_LEVEL } from '../config.js';
 /**
- * Tworzy obiekt loggera dla modułu z predefiniowanymi metodami
- * @param {string} moduleName - Nazwa modułu
- * @returns {Logger} Obiekt z metodami logowania
+ * Creates a logger object for a module with predefined methods
+ * @param {string} moduleName - Module name
+ * @returns {Logger} Object with logging methods
  */
 export function createModuleLogger(moduleName) {
     logger.setModuleLevel(moduleName, LogLevel[LOG_LEVEL]);
@@ -19,8 +19,8 @@ export function createModuleLogger(moduleName) {
     };
 }
 /**
- * Tworzy logger z automatycznym wykrywaniem nazwy modułu z URL
- * @returns {Logger} Obiekt z metodami logowania
+ * Creates a logger with automatic module name detection from the URL
+ * @returns {Logger} Object with logging methods
  */
 export function createAutoLogger() {
     const stack = new Error().stack;
@@ -29,11 +29,11 @@ export function createAutoLogger() {
     return createModuleLogger(moduleName);
 }
 /**
- * Wrapper dla operacji z automatycznym logowaniem błędów
- * @param {Function} operation - Operacja do wykonania
- * @param {Logger} log - Obiekt loggera
- * @param {string} operationName - Nazwa operacji (dla logów)
- * @returns {Function} Opakowana funkcja
+ * Wrapper for operations with automatic error logging
+ * @param {Function} operation - Operation to execute
+ * @param {Logger} log - Logger object
+ * @param {string} operationName - Operation name (for logs)
+ * @returns {Function} Wrapped function
  */
 export function withErrorLogging(operation, log, operationName) {
     return async function (...args) {
@@ -50,9 +50,9 @@ export function withErrorLogging(operation, log, operationName) {
     };
 }
 /**
- * Decorator dla metod klasy z automatycznym logowaniem
- * @param {Logger} log - Obiekt loggera
- * @param {string} methodName - Nazwa metody
+ * Decorator for class methods with automatic logging
+ * @param {Logger} log - Logger object
+ * @param {string} methodName - Method name
  */
 export function logMethod(log, methodName) {
     return function (target, propertyKey, descriptor) {

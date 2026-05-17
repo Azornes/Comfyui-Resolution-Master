@@ -1,36 +1,36 @@
 /**
  * CSS Custom Properties (Variables)
- * Centralne definicje dla całego projektu
+ * Central definitions for the entire project
  */
 
 .resolution-master-container,
 [class*="resolution-master-"]{
-    /* ===== KOLORY - PRIMARY ===== */
-    --color-primary: #5af;              /* Główny niebieski */
-    --color-primary-light: #7cf;        /* Jaśniejszy niebieski (hover) */
-    --color-primary-lighter: #7bf;      /* Najjaśniejszy niebieski */
+    /* ===== COLORS - PRIMARY ===== */
+    --color-primary: #5af;              /* Main blue */
+    --color-primary-light: #7cf;        /* Lighter blue (hover) */
+    --color-primary-lighter: #7bf;      /* Lightest blue */
     
-    /* ===== KOLORY - STATES ===== */
-    --color-success: #5f5;              /* Zielony sukces */
-    --color-error: #f00;                /* Czerwony błąd */
-    --color-error-light: #f55;          /* Jaśniejszy czerwony */
-    --color-error-lighter: #f77;        /* Najjaśniejszy czerwony */
-    --color-warning: #fa0;              /* Pomarańczowy warning */
+    /* ===== COLORS - STATES ===== */
+    --color-success: #5f5;              /* Success green */
+    --color-error: #f00;                /* Error red */
+    --color-error-light: #f55;          /* Lighter red */
+    --color-error-lighter: #f77;        /* Lightest red */
+    --color-warning: #fa0;              /* Warning orange */
     
-    /* ===== KOLORY - GRAYSCALE ===== */
+    /* ===== COLORS - GRAYSCALE ===== */
     --color-white: #fff;
     --color-black: #000;
-    --color-gray-100: #ddd;             /* Bardzo jasny */
-    --color-gray-200: #ccc;             /* Jasny */
-    --color-gray-300: #aaa;             /* Średnio jasny */
+    --color-gray-100: #ddd;             /* Very light */
+    --color-gray-200: #ccc;             /* Light */
+    --color-gray-300: #aaa;             /* Medium light */
     --color-gray-400: #999;             /* Disabled text */
-    --color-gray-500: #888;             /* Średni */
-    --color-gray-600: #666;             /* Średnio ciemny */
-    --color-gray-700: #555;             /* Ciemny */
-    --color-gray-800: #444;             /* Bardzo ciemny */
-    --color-gray-900: #333;             /* Najciemniejszy */
+    --color-gray-500: #888;             /* Medium */
+    --color-gray-600: #666;             /* Medium dark */
+    --color-gray-700: #555;             /* Dark */
+    --color-gray-800: #444;             /* Very dark */
+    --color-gray-900: #333;             /* Darkest */
     
-    /* ===== KOLORY - BACKGROUND ===== */
+    /* ===== COLORS - BACKGROUND ===== */
     --color-bg-dark-1: #2a2a2a;         /* Gradient start */
     --color-bg-dark-2: #1e1e1e;         /* Gradient end */
     --color-bg-dark-3: #1a1a1a;         /* JSON editor container */

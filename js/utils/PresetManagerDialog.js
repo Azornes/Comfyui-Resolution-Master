@@ -59,12 +59,12 @@ export class PresetManagerDialog {
         // Icons container
         const iconContainer = {};
         
-        // Ikony, które chcemy nadpisać kolor
+        // Icons whose colors we want to override
         const iconColors = {
-            add_plus: "#000000" // czarny kolor dla ikony 'add_plus'
+            add_plus: "#000000" // Black color for the 'add_plus' icon
         };
 
-        // Wczytanie ikon z nadpisanym kolorem dla add_plus
+        // Load icons with the overridden color for add_plus
         loadIcons(iconContainer, "#ffffffff", iconColors);
 
         
