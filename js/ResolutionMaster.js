@@ -2658,33 +2658,20 @@ class ResolutionMasterCanvas {
                     this.manuallySetByAutoFit = false;
                     
                     const props = node.properties;
-                    if (props.autoDetect && !props.autoFitOnChange && !props.useCustomCalc) {
-                        if (this.widthWidget && this.heightWidget) {
-                            this.widthWidget.value = this.detectedDimensions.width;
-                            this.heightWidget.value = this.detectedDimensions.height;
-                            this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
-                        }
-                    }
-                    else if (props.autoFitOnChange && !props.useCustomCalc && props.selectedCategory) {
+                    if (props.autoFitOnChange && props.selectedCategory) {
                         this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, false, props.selectedCategory, 'detected');
-                    }
-                    else if (props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
-                        this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, true, props.selectedCategory, 'detected');
-                    }
-                    else if (props.autoDetect && !props.autoFitOnChange && props.useCustomCalc && props.selectedCategory) {
-                        if (this.widthWidget && this.heightWidget) {
-                            this.widthWidget.value = this.detectedDimensions.width;
-                            this.heightWidget.value = this.detectedDimensions.height;
-                            this.applyDimensionChange(); 
-                        }
                     }
                     else if (props.autoDetect && this.widthWidget && this.heightWidget) {
                         this.widthWidget.value = this.detectedDimensions.width;
                         this.heightWidget.value = this.detectedDimensions.height;
                         this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
                     }
+
                     if (props.autoResizeOnChange) {
                         this.handleAutoResize();
+                    }
+                    if (props.useCustomCalc && props.selectedCategory) {
+                        this.handleAutoCalc();
                     }
                     
                     app.graph.setDirtyCanvas(true);
