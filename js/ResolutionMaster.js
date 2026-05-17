@@ -126,7 +126,7 @@ class ResolutionMasterCanvas {
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,      
             scaling: this.collapsedSections?.scaling ? 25 : 130,    
-            autoDetect: this.collapsedSections?.autoDetect ? 25 : 125, 
+            autoDetect: this.collapsedSections?.autoDetect ? 25 : 160, 
             presets: this.collapsedSections?.presets ? 25 : 90       
         };
         Object.values(sectionHeights).forEach(height => {
@@ -175,6 +175,7 @@ class ResolutionMasterCanvas {
             autoDetect: false,
             autoFitOnChange: false,
             autoResizeOnChange: false,
+            autoSnapOnChange: false,
             selectedCategory: "Standard",
             selectedPreset: null,
             useCustomCalc: false,
@@ -478,7 +479,7 @@ class ResolutionMasterCanvas {
                 
                 collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
                     if (!preview) return this.drawAutoDetectSection(ctx, y);
-                    return 100;
+                    return 135;
                 });
                 
                 collapsibleSection("Presets", "presets", (ctx, y, preview) => {
@@ -992,6 +993,17 @@ class ResolutionMasterCanvas {
         ctx.textAlign = "left";
         ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
         currentY += 35;
+
+        this.controls.autoSnapBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
+        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.snap, this.hoverElement === 'autoSnapBtn', false, "Auto-Snap");
+        this.controls.autoSnapCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
+        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoSnapOnChange, this.hoverElement === 'autoSnapCheckbox');
+        
+        ctx.fillStyle = "#ddd";
+        ctx.font = "11px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
+        currentY += 35;
         
         this.controls.autoCalcBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
         const calcEnabled = props.useCustomCalc && props.selectedCategory;
@@ -1004,7 +1016,7 @@ class ResolutionMasterCanvas {
         ctx.textAlign = "left";
         ctx.fillText("Calc", autoCheckboxX + checkboxWidth + 4, currentY + 14);
         
-        return 100;
+        return 135;
     }
     
     drawPresetSection(ctx, y) {
@@ -1640,6 +1652,7 @@ class ResolutionMasterCanvas {
             megapixelsBtn: () => this.handleMegapixelsScale(),
             autoFitBtn: () => this.handleAutoFit(),
             autoResizeBtn: () => this.handleAutoResize(),
+            autoSnapBtn: () => this.handleSnap(),
             autoCalcBtn: () => this.handleAutoCalc(),
             detectedInfo: () => this.handleDetectedClick(),
             managePresetsBtn: () => this.handleManagePresets(),
@@ -1720,6 +1733,8 @@ class ResolutionMasterCanvas {
             props.autoFitOnChange = !props.autoFitOnChange;
         } else if (checkboxName === 'autoResizeCheckbox') {
             props.autoResizeOnChange = !props.autoResizeOnChange;
+        } else if (checkboxName === 'autoSnapCheckbox') {
+            props.autoSnapOnChange = !props.autoSnapOnChange;
         } else if (checkboxName === 'customCalcCheckbox') {
             props.useCustomCalc = !props.useCustomCalc;
         } else if (checkboxName === 'preserveScalingRatioCheckbox') {
@@ -2669,6 +2684,9 @@ class ResolutionMasterCanvas {
 
                     if (props.autoResizeOnChange) {
                         this.handleAutoResize();
+                    }
+                    if (props.autoSnapOnChange) {
+                        this.handleSnap();
                     }
                     if (props.useCustomCalc && props.selectedCategory) {
                         this.handleAutoCalc();
