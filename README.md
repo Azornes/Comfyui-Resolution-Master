@@ -164,6 +164,7 @@ For new image generation:
 - **⬆ Manual Scale Button**: Applies the manual scale factor to current dimensions
 - **📺 Resolution Button**: Scales to target resolution (e.g., 1080p)
 - **📷 Megapixels Button**: Scales to target megapixel count
+- **Prioritize Ratio Checkbox**: Preserves the current aspect ratio as the top priority when applying scaling. The final dimensions may be slightly above or below the selected scale, p-value, or megapixel target.
 - **Radio Buttons**: Select which scaling mode affects the `rescale_factor` output
 
 ### Auto-Detect Section
@@ -409,6 +410,7 @@ The node provides three scaling methods that work together:
    - Resolution: Target specific output resolution
    - Megapixels: Target specific pixel count
 3. **Apply Scale**: Updates dimensions while maintaining aspect ratio
+   - Enable **Prioritize Ratio** when exact aspect ratio should matter more than hitting the scale target exactly. For example, a 3.0 MP target may resolve to 2.99 MP or 3.01 MP if that is the closest exact-ratio result.
 4. **Use Rescale Factor**: Connect to upscaling nodes in your workflow
 
 ### Snap Functionality
@@ -471,6 +473,8 @@ Each scaling row shows:
 - Calculated scale factor
 - Preview of resulting dimensions
 - Radio button to set as active rescale mode
+
+When **Prioritize Ratio** is enabled, the preview and applied dimensions use the closest exact aspect-ratio match. This can make the final output slightly different from the selected 1.1x, p-value, or MP target.
 
 ---
 
