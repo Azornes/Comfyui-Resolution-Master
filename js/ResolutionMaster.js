@@ -1586,15 +1586,12 @@ class ResolutionMasterCanvas {
             vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
         }
         else if (shiftKey && !ctrlKey) {
-            const currentAspect = this.getCanvasAspectLock().aspect;
-            
             let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
             let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-            let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
-            let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
-            vX = Math.round(vX / sX) * sX;
-            newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
-            newY = newX / currentAspect;
+            const lockedDimensions = this.getAspectLockedDimensions(newX, newY, true);
+            newX = lockedDimensions.width;
+            newY = lockedDimensions.height;
+            vX = (newX - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
             vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
         }
         else if (ctrlKey && !shiftKey) {
@@ -1642,7 +1639,7 @@ class ResolutionMasterCanvas {
         return this.canvasDragAspectLock;
     }
 
-    getAspectLockedDimensions(targetWidth, targetHeight) {
+    getAspectLockedDimensions(targetWidth, targetHeight, snapToGrid = false) {
         const props = this.node.properties;
         const lock = this.getCanvasAspectLock();
         const minScale = Math.max(
@@ -1655,30 +1652,62 @@ class ResolutionMasterCanvas {
             Math.floor(props.canvas_max_y / lock.ratioY)
         ));
 
-        const widthScale = Math.max(minScale, Math.min(maxScale, Math.round(targetWidth / lock.ratioX)));
-        const heightScale = Math.max(minScale, Math.min(maxScale, Math.round(targetHeight / lock.ratioY)));
-
-        const widthCandidate = {
-            width: lock.ratioX * widthScale,
-            height: lock.ratioY * widthScale
-        };
-        const heightCandidate = {
-            width: lock.ratioX * heightScale,
-            height: lock.ratioY * heightScale
-        };
+        if (snapToGrid) {
+            return this.createGridAspectCandidate(targetWidth, targetHeight, lock);
+        }
 
         const rangeX = Math.max(1, props.canvas_max_x - props.canvas_min_x);
         const rangeY = Math.max(1, props.canvas_max_y - props.canvas_min_y);
-        const widthDistance = Math.hypot(
-            (widthCandidate.width - targetWidth) / rangeX,
-            (widthCandidate.height - targetHeight) / rangeY
-        );
-        const heightDistance = Math.hypot(
-            (heightCandidate.width - targetWidth) / rangeX,
-            (heightCandidate.height - targetHeight) / rangeY
-        );
+        const candidates = [
+            this.createAspectCandidate(targetWidth / lock.ratioX, minScale, maxScale, 1, lock),
+            this.createAspectCandidate(targetHeight / lock.ratioY, minScale, maxScale, 1, lock)
+        ];
 
-        return widthDistance <= heightDistance ? widthCandidate : heightCandidate;
+        return candidates.reduce((best, candidate) => {
+            const distance = Math.hypot(
+                (candidate.width - targetWidth) / rangeX,
+                (candidate.height - targetHeight) / rangeY
+            );
+            if (!best || distance < best.distance) {
+                return { ...candidate, distance };
+            }
+            return best;
+        }, null);
+    }
+
+    createGridAspectCandidate(targetWidth, targetHeight, lock) {
+        const props = this.node.properties;
+        const stepX = Math.max(1, Math.round(Number(props.canvas_step_x) || 1));
+        const stepY = Math.max(1, Math.round(Number(props.canvas_step_y) || 1));
+        const targetAspect = targetWidth / Math.max(1, targetHeight);
+        const widthControls = targetAspect <= lock.aspect;
+        const minScale = Math.max(
+            1,
+            Math.ceil(props.canvas_min_x / lock.ratioX),
+            Math.ceil(props.canvas_min_y / lock.ratioY)
+        );
+        const maxScale = Math.max(minScale, Math.min(
+            Math.floor(props.canvas_max_x / lock.ratioX),
+            Math.floor(props.canvas_max_y / lock.ratioY)
+        ));
+
+        const targetScale = widthControls
+            ? targetWidth / lock.ratioX
+            : targetHeight / lock.ratioY;
+        const desiredStep = widthControls ? stepX / lock.ratioX : stepY / lock.ratioY;
+        const scaleStep = Math.max(1, Math.round(desiredStep));
+
+        return this.createAspectCandidate(targetScale, minScale, maxScale, scaleStep, lock);
+    }
+
+    createAspectCandidate(targetScale, minScale, maxScale, scaleStep, lock) {
+        const snappedScale = Math.round(targetScale / scaleStep) * scaleStep;
+        const scale = Math.max(minScale, Math.min(maxScale, snappedScale));
+
+        return {
+            width: lock.ratioX * scale,
+            height: lock.ratioY * scale
+        };
     }
     
     updateCanvasValueWidth(x, w, ctrlKey) {
