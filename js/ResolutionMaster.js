@@ -249,24 +249,57 @@ class ResolutionMasterCanvas {
         const isCompact = this.collapsedSections?.extraControls || false;
 
         this.node.inputs?.forEach(input => {
-            if (!input._resolutionMasterStoredLabel) {
-                input._resolutionMasterStoredLabel = {
-                    exists: Object.prototype.hasOwnProperty.call(input, "label"),
-                    value: input.label
+            if (!input._resolutionMasterStoredVisualNames) {
+                input._resolutionMasterStoredVisualNames = {
+                    labelExists: Object.prototype.hasOwnProperty.call(input, "label"),
+                    label: input.label,
+                    localizedName: input.localized_name,
+                    displayName: input.displayName,
+                    displayNameExists: Object.prototype.hasOwnProperty.call(input, "displayName")
                 };
             }
 
-            input.name = input.localized_name = "input_image";
+            input.name = "input_image";
             input.hidden = false;
 
             if (isCompact) {
-                input.label = "";
-            } else if (input._resolutionMasterStoredLabel.exists) {
-                input.label = input._resolutionMasterStoredLabel.value;
+                input.label = " ";
+                input.localized_name = " ";
+                input.displayName = " ";
             } else {
-                delete input.label;
+                const stored = input._resolutionMasterStoredVisualNames;
+                input.localized_name = stored.localizedName ?? input.name;
+                if (stored.labelExists) {
+                    input.label = stored.label;
+                } else {
+                    delete input.label;
+                }
+                if (stored.displayNameExists) {
+                    input.displayName = stored.displayName;
+                } else {
+                    delete input.displayName;
+                }
             }
         });
+
+        if (!this.node._resolutionMasterHasStoredGetInputLabel) {
+            this.node._resolutionMasterOriginalGetInputLabel = this.node.getInputLabel;
+            this.node._resolutionMasterHasStoredGetInputLabel = true;
+        }
+        if (isCompact) {
+            this.node.getInputLabel = function(slot) {
+                if (slot === 0) return " ";
+                return this._resolutionMasterOriginalGetInputLabel
+                    ? this._resolutionMasterOriginalGetInputLabel.call(this, slot)
+                    : this.inputs?.[slot]?.localized_name || this.inputs?.[slot]?.name || " ";
+            };
+        } else if (this.node._resolutionMasterHasStoredGetInputLabel) {
+            if (this.node._resolutionMasterOriginalGetInputLabel) {
+                this.node.getInputLabel = this.node._resolutionMasterOriginalGetInputLabel;
+            } else {
+                delete this.node.getInputLabel;
+            }
+        }
 
         this.node.outputs?.forEach(output => {
             output.hidden = false;
@@ -546,11 +579,15 @@ class ResolutionMasterCanvas {
         ctx.fill();
         ctx.stroke();
 
+        const label = isActive ? "+" : "-";
         ctx.fillStyle = this.hoverElement === 'compactToggleBtn' || isActive ? "#fff" : "#cfcfcf";
-        ctx.font = "bold 13px Arial";
+        ctx.font = isActive ? "bold 13px Arial" : "bold 18px Arial";
         ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(isActive ? "+" : "-", x + buttonSize / 2, y + buttonSize / 2 - 1);
+        ctx.textBaseline = "alphabetic";
+        const metrics = ctx.measureText(label);
+        const minusOffsetY = isActive ? 0 : 0.4;
+        const textY = y + buttonSize / 2 - (metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent) / 2 + metrics.actualBoundingBoxAscent + minusOffsetY;
+        ctx.fillText(label, x + buttonSize / 2, textY);
     }
 
     drawOutputValues(ctx) {
