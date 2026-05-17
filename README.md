@@ -172,22 +172,30 @@ For new image generation:
   - Monitors input connection every second
   - Updates dimensions when new image is detected
   - Shows detected resolution in green text
+- Auto-Detect buttons can be clicked manually. The checkbox beside each button enables that same action automatically for newly detected images.
 - **🎯 Auto-fit Button**: Finds best matching preset for current dimensions
   - Analyzes both aspect ratio and total pixels
   - Checks both normal and flipped orientations
   - Applies category-specific scaling when Custom Calc is enabled
-- **Auto Checkbox**: Enable automatic fitting when dimensions change
-  - Located next to Auto-Fit button
+- **Fit Checkbox**: Automatically run Fit when dimensions change
+  - Located next to the Fit button
   - Only active when category is selected and image detected
 - **📐 Auto-Resize Button**: Applies scaling based on selected mode (Manual/Resolution/Megapixels)
   - Integrates with active scaling mode from Scaling section
   - Maintains manual scale value without reset to 1.0x
-- **Auto Checkbox**: Automatically apply scaling when new image is detected
+- **Resize Checkbox**: Automatically apply scaling when new image is detected
   - Works in sequence after Auto-fit (if enabled)
   - Applies chosen scaling mode to detected dimensions
+- **Auto-Snap Button**: Snaps current dimensions to the configured snap value
+  - Uses the same snap logic as the Snap button in the Actions section
+  - Prevents dimensions from snapping down to 0; small dimensions snap up to at least one snap step
+- **Snap Checkbox**: Automatically snap dimensions after Resize when a new image is detected
+  - Runs in sequence after Auto-Fit and Auto-Resize
+  - Useful for keeping detected or resized dimensions aligned to model-friendly multiples
 - **Detected Text (green)**: Click to apply the detected image's original dimensions
 - **⚡ Auto-calc Button**: Applies model-specific calculations to current dimensions
-- **Calc Checkbox**: Enables automatic model-specific optimizations
+- **Calc Checkbox**: Automatically applies model-specific optimizations after Fit, Resize, and Snap
+- **Show Toggle**: Shows or hides the orange Calc information panel without changing Auto-Calc behavior
 
 ### Presets Section
 - **Category Dropdown**: Select preset category (Standard, SDXL, Flux, etc.)
@@ -426,19 +434,14 @@ The node provides three scaling methods that work together:
   - **Ctrl + Drag**: Disables snap for fine-tuning without grid constraints
   - **Ctrl + Shift + Drag**: Preserves aspect ratio with 1px precision (no snap)
 
-### Auto-Detect & Auto-Fit
+### Auto-Detect Automation Order
 
-- **Auto-Detect Toggle**: Automatically detects dimensions from connected images
-  - Monitors input connection every second
-  - Updates dimensions when new image is detected
-  - Shows detected resolution in green text
-- **Auto-Fit Button**: Intelligently matches detected dimensions to closest preset
-  - Analyzes both aspect ratio and total pixels
-  - Checks both normal and flipped orientations
-  - Applies category-specific scaling when Custom Calc is enabled
-- **Auto Checkbox**: Enable automatic fitting when dimensions change
-  - Located next to Auto-Fit button
-  - Only active when category is selected and image detected
+The detailed controls are described in **Understanding the Controls > Auto-Detect Section**. When multiple Auto-Detect checkboxes are enabled, actions run in this order:
+
+1. **Fit**: Match the detected size to the closest preset.
+2. **Resize**: Apply the active scaling mode.
+3. **Snap**: Round dimensions to the configured snap value.
+4. **Calc**: Apply model-specific constraints.
 
 ---
 
@@ -525,9 +528,12 @@ Workflow Setup:
 When using auto-detect with scaling:
 
 1. **Auto-detect updates base resolution** from connected images
-2. **Your scaling mode remains active** (manual/resolution/megapixel)
-3. **rescale_factor recalculates** to maintain your scaling intent
-4. **Canvas drag operations** update base resolution but preserve scaling intent
+2. **Auto-Fit can match the detected size** to the closest preset when enabled
+3. **Auto-Resize can apply the active scaling mode** (manual/resolution/megapixel)
+4. **Auto-Snap can round the result** to the configured snap value when enabled
+5. **Auto-Calc can apply model-specific constraints** when enabled
+6. **rescale_factor recalculates** to maintain your scaling intent
+7. **Canvas drag operations** update base resolution but preserve scaling intent
 
 This design allows **resolution-independent workflows** where you can swap input images without breaking your scaling logic.
 
