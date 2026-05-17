@@ -460,7 +460,7 @@ class ResolutionMasterCanvas {
             this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
             currentY += canvasHeight + this.getCanvasInfoGap();
 
-            const infoY = this.collapsedSections.extraControls && this.lastCanvasBounds
+            const infoY = this.lastCanvasBounds
                 ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
                 : currentY;
             this.drawInfoText(ctx, infoY);
