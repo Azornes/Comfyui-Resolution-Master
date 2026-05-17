@@ -26,6 +26,7 @@ export const tooltips = {
     megapixelsBtn: "Scale to target megapixel count",
     megapixelsRadio: "Use megapixel-based scaling for rescale output",
     megapixelsValueArea: "Click to set custom megapixel value (e.g., 3.5MP)",
+    preserveScalingRatioCheckbox: "Prioritize the current aspect ratio when applying scaling. Final dimensions may be slightly above or below the selected scale, p-value, or megapixel target.",
     
     // Auto-detect controls
     autoDetectToggle: "Automatically detect resolution from connected image input",

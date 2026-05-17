@@ -159,6 +159,7 @@ class ResolutionMasterCanvas {
             targetMegapixels: 2.0,
             rescaleMode: "resolution",
             rescaleValue: 1.0,
+            preserveScalingRatio: false,
             autoDetect: false,
             autoFitOnChange: false,
             autoResizeOnChange: false,
@@ -345,7 +346,7 @@ class ResolutionMasterCanvas {
             
             collapsibleSection("Scaling", "scaling", (ctx, y, preview) => {
                 if (!preview) return this.drawScalingGrid(ctx, y);
-                return 105;
+                return 130;
             });
             
             collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
@@ -725,8 +726,23 @@ class ResolutionMasterCanvas {
             min: props.megapixels_slider_min, max: props.megapixels_slider_max, step: props.megapixels_slider_step,
             displayValue: `${props.targetMegapixels.toFixed(1)}MP`, scaleFactor: mpScale, rescaleMode: 'megapixels'
         });
+
+        const checkboxSize = 18;
+        const ratioY = y + 105;
+        const checkboxLabel = "Prioritize ratio";
+        ctx.font = "12px Arial";
+        const labelWidth = ctx.measureText(checkboxLabel).width;
+        const checkboxGap = 6;
+        const groupWidth = checkboxSize + checkboxGap + labelWidth;
+        const checkboxX = margin + (this.node.size[0] - margin * 2 - groupWidth) / 2;
+        this.controls.preserveScalingRatioCheckbox = { x: checkboxX, y: ratioY + 3, w: checkboxSize, h: checkboxSize };
+        this.drawCheckbox(ctx, checkboxX, ratioY + 3, checkboxSize, props.preserveScalingRatio, this.hoverElement === 'preserveScalingRatioCheckbox');
+        ctx.fillStyle = this.hoverElement === 'preserveScalingRatioCheckbox' ? "#5af" : "#ccc";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(checkboxLabel, checkboxX + checkboxSize + checkboxGap, ratioY + 12);
         
-        return 105;
+        return 130;
     }
 
     drawAutoDetectSection(ctx, y) {
@@ -1457,6 +1473,8 @@ class ResolutionMasterCanvas {
             props.autoResizeOnChange = !props.autoResizeOnChange;
         } else if (checkboxName === 'customCalcCheckbox') {
             props.useCustomCalc = !props.useCustomCalc;
+        } else if (checkboxName === 'preserveScalingRatioCheckbox') {
+            props.preserveScalingRatio = !props.preserveScalingRatio;
         }
         app.graph.setDirtyCanvas(true);
     }
@@ -1560,8 +1578,9 @@ class ResolutionMasterCanvas {
         ctx.fillText(config.displayValue, currentX + layout.valueWidth / 2, y + 14);
         currentX += layout.valueWidth + layout.gap;
         if (this.validateWidgets() && config.scaleFactor) {
-            const newW = Math.round(this.widthWidget.value * config.scaleFactor);
-            const newH = Math.round(this.heightWidget.value * config.scaleFactor);
+            const dimensions = this.calculateScaledDimensions(config.scaleFactor);
+            const newW = dimensions.width;
+            const newH = dimensions.height;
             this.setCanvasTextStyle(ctx, { fillStyle: "#888", font: "11px Arial", textAlign: "left" });
             ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
         }
@@ -1955,13 +1974,39 @@ class ResolutionMasterCanvas {
         if (!this.validateWidgets()) return;
         
         const scale = scaleCalculator();
-        const newWidth = Math.round(this.widthWidget.value * scale);
-        const newHeight = Math.round(this.heightWidget.value * scale);
+        const dimensions = this.calculateScaledDimensions(scale);
         if (resetValue) {
             resetValue();
         }
         
-        this.setDimensions(newWidth, newHeight);
+        this.setDimensions(dimensions.width, dimensions.height);
+    }
+
+    calculateScaledDimensions(scale) {
+        if (this.node.properties.preserveScalingRatio) {
+            return this.calculateRatioPreservingScaledDimensions(scale);
+        }
+
+        return {
+            width: Math.round(this.widthWidget.value * scale),
+            height: Math.round(this.heightWidget.value * scale)
+        };
+    }
+
+    calculateRatioPreservingScaledDimensions(scale) {
+        const currentWidth = Math.max(1, Math.round(Number(this.widthWidget.value) || 1));
+        const currentHeight = Math.max(1, Math.round(Number(this.heightWidget.value) || 1));
+        const divisor = ResolutionMasterCanvas.gcd(currentWidth, currentHeight);
+        const ratioX = currentWidth / divisor;
+        const ratioY = currentHeight / divisor;
+        const targetPixels = currentWidth * currentHeight * scale * scale;
+        const ratioPixels = ratioX * ratioY;
+        const ratioScale = Math.max(1, Math.round(Math.sqrt(targetPixels / ratioPixels)));
+
+        return {
+            width: ratioX * ratioScale,
+            height: ratioY * ratioScale
+        };
     }
 
     handleScale() {
