@@ -26,6 +26,8 @@ class ResolutionMasterCanvas {
         this.node.configured = false;
         this._isInitializing = true; // Flag to prevent setDirtyCanvas during init
         this._pendingCanvasUpdate = false;
+        this._isApplyingAutoSize = false;
+        this.userPreferredHeight = null;
         this.hoverElement = null;
         this.scrollOffset = 0;
         this.dropdownOpen = null;
@@ -99,12 +101,13 @@ class ResolutionMasterCanvas {
             this.node.size[0] = 330;
         }
         const neededHeight = this.calculateNeededHeight();
-        if (neededHeight > 0) {
-            this.node.size[1] = Math.max(neededHeight, this.node.min_size[1]);
-        } else {
-            if (this.node.size[1] < this.node.min_size[1]) {
-                this.node.size[1] = this.node.min_size[1];
-            }
+        const preferredHeight = this.userPreferredHeight ?? 0;
+        const targetHeight = Math.max(neededHeight, preferredHeight, this.node.min_size[1]);
+
+        if (Math.abs(this.node.size[1] - targetHeight) > 1) {
+            this._isApplyingAutoSize = true;
+            this.node.size[1] = targetHeight;
+            this._isApplyingAutoSize = false;
         }
     }
     
@@ -114,7 +117,7 @@ class ResolutionMasterCanvas {
         
         let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
         const spacing = 8;
-        const canvasHeight = this.getManualCanvasHeight();
+        const canvasHeight = this.getManualCanvasHeight(currentY, false);
         currentY += canvasHeight + spacing;
         currentY += 15 + spacing;
         if (this.collapsedSections?.extraControls) {
@@ -198,13 +201,18 @@ class ResolutionMasterCanvas {
         });
     }
 
-    getManualCanvasHeight() {
+    getManualCanvasHeight(currentY = LiteGraph.NODE_TITLE_HEIGHT + 2, useAvailableHeight = true) {
         if (!this.collapsedSections?.extraControls) {
             return 200;
         }
 
-        const compactCanvasHeight = this.node.size[0] - 70;
-        return Math.max(200, Math.min(360, compactCanvasHeight));
+        if (!useAvailableHeight) {
+            return 200;
+        }
+
+        const bottomContentHeight = 8 + 15 + 8 + 20;
+        const availableHeight = this.node.size[1] - currentY - bottomContentHeight;
+        return Math.max(200, availableHeight);
     }
     
     
@@ -281,6 +289,9 @@ class ResolutionMasterCanvas {
             self.handlePropertyChange(property);
         };
         node.onResize = function() {
+            if (!self._isApplyingAutoSize) {
+                self.userPreferredHeight = Math.max(this.size[1], this.min_size[1]);
+            }
             self.ensureMinimumSize();
             app.graph.setDirtyCanvas(true);
         };
@@ -358,7 +369,7 @@ class ResolutionMasterCanvas {
                 currentY += sectionInfo.totalHeight + spacing;
             };
 
-            const canvasHeight = this.getManualCanvasHeight();
+            const canvasHeight = this.getManualCanvasHeight(currentY);
             this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight);
             currentY += canvasHeight + spacing;
             
@@ -401,11 +412,7 @@ class ResolutionMasterCanvas {
             this.drawSliderMode(ctx, currentY);
         }
         
-        const neededHeight = currentY + 20;
-        const heightDiff = Math.abs(node.size[1] - neededHeight);
-        if (heightDiff > 1) {
-            node.size[1] = Math.max(neededHeight, node.min_size[1]);
-        }
+        this.ensureMinimumSize();
         if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
             this.drawTooltip(ctx);
         }
