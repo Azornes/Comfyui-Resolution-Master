@@ -2228,9 +2228,13 @@ class ResolutionMasterCanvas {
     handleSnap() {
         if (!this.validateWidgets()) return;
         
-        const snap = this.node.properties.snapValue;
-        const newWidth = Math.round(this.widthWidget.value / snap) * snap;
-        const newHeight = Math.round(this.heightWidget.value / snap) * snap;
+        const props = this.node.properties;
+        const snap = Math.max(1, Number(props.snapValue) || 1);
+        const minWidth = Math.max(1, snap, Number(props.manual_slider_min_w) || 1, Number(props.canvas_min_x) || 0);
+        const minHeight = Math.max(1, snap, Number(props.manual_slider_min_h) || 1, Number(props.canvas_min_y) || 0);
+        const snapDimension = (value, minValue) => Math.max(minValue, Math.round(value / snap) * snap);
+        const newWidth = snapDimension(this.widthWidget.value, minWidth);
+        const newHeight = snapDimension(this.heightWidget.value, minHeight);
         this.setDimensions(newWidth, newHeight);
     }
     
