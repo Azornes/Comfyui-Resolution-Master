@@ -127,13 +127,13 @@ class ResolutionMasterCanvas {
             actions: this.collapsedSections?.actions ? 25 : 55,      
             scaling: this.collapsedSections?.scaling ? 25 : 130,    
             autoDetect: this.collapsedSections?.autoDetect ? 25 : 135, 
-            presets: this.collapsedSections?.presets ? 25 : 90       
+            presets: this.collapsedSections?.presets ? 25 : 55       
         };
         Object.values(sectionHeights).forEach(height => {
             currentY += height + spacing;
         });
         if (props.showCalcInfo && props.selectedCategory) {
-            currentY += 40; 
+            currentY += this.measureCalcInfoMessage().boxHeight + spacing;
         }
         
         return currentY + 20; 
@@ -1046,55 +1046,71 @@ class ResolutionMasterCanvas {
         return currentHeight;
     }
     
-    drawInfoMessage(ctx, y) {
-        const node = this.node;
-        const props = node.properties;
+    getCalcInfoMessage() {
+        const props = this.node.properties;
         const category = props.selectedCategory;
-        
-        let message = "";
+
         if (category === "SDXL") {
-            message = "💡 SDXL Mode: Only using presets!";
+            return "💡 SDXL Mode: Only using presets!";
         } else if (category === "Flux") {
-            message = "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
+            return "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
         } else if (category === "Flux.2") {
-            message = "💡 FLUX.2 Mode: Round to: 16px | Edge range: 320-3840px | Max resolution: 6.0 MP";
+            return "💡 FLUX.2 Mode: Round to: 16px | Edge range: 320-3840px | Max resolution: 6.0 MP";
         } else if (category === "WAN" && this.widthWidget && this.heightWidget) {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
-            message = `💡 WAN Mode: Suggesting ${model} model | Round to: 16px | Resolution range: 320p-820p`;
+            return `💡 WAN Mode: Suggesting ${model} model | Round to: 16px | Resolution range: 320p-820p`;
         } else if (category === "HiDream Dev") {
-            message = "💡 HiDream Dev: Only using presets!";
+            return "💡 HiDream Dev: Only using presets!";
         } else if (category === "Qwen-Image") {
-            message = "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
+            return "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
         } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category)) {
-            message = "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
-        } else {
-            message = "⚠️ Calc Mode: Custom calculation not available for this category)";
+            return "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
         }
-        
-        if (message) {
-           const paddingX = 10;
-           const paddingTop = 8;
-           const paddingBottom = 8;
-           const lineHeight = 14;
-           const maxWidth = node.size[0] - 40 - (paddingX * 2);
-           ctx.font = "11px Arial";
-           const words = message.split(' ');
-           const lines = [];
-           let currentLine = '';
-           for (const word of words) {
-               const testLine = currentLine ? `${currentLine} ${word}` : word;
-               if (ctx.measureText(testLine).width > maxWidth && currentLine) {
-                   lines.push(currentLine);
-                   currentLine = word;
-               } else {
-                   currentLine = testLine;
-               }
-           }
-           if (currentLine) lines.push(currentLine);
+        return "⚠️ Calc Mode: Custom calculation not available for this category)";
+    }
 
-           const textHeight = lines.length * lineHeight - (lineHeight - ctx.measureText("M").width);
-           const boxHeight = textHeight + paddingTop + paddingBottom;
+    getMeasureContext() {
+        if (!this.measureContext && typeof document !== "undefined") {
+            this.measureContext = document.createElement("canvas").getContext("2d");
+        }
+        return this.measureContext;
+    }
+
+    measureCalcInfoMessage(ctx = null) {
+        const message = this.getCalcInfoMessage();
+        if (!message) return { boxHeight: 0 };
+
+        const measureCtx = ctx || this.getMeasureContext();
+        const paddingX = 10;
+        const paddingTop = 8;
+        const paddingBottom = 8;
+        const lineHeight = 14;
+        const maxWidth = this.node.size[0] - 40 - (paddingX * 2);
+        const words = message.split(' ');
+        const lines = [];
+        let currentLine = '';
+
+        if (measureCtx) measureCtx.font = "11px Arial";
+        for (const word of words) {
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const testWidth = measureCtx ? measureCtx.measureText(testLine).width : testLine.length * 6;
+            if (testWidth > maxWidth && currentLine) {
+                lines.push(currentLine);
+                currentLine = word;
+            } else {
+                currentLine = testLine;
+            }
+        }
+        if (currentLine) lines.push(currentLine);
+
+        return { boxHeight: lines.length * lineHeight + paddingTop + paddingBottom, lines, paddingTop, lineHeight };
+    }
+
+    drawInfoMessage(ctx, y) {
+        const node = this.node;
+        const { boxHeight, lines = [], paddingTop = 8, lineHeight = 14 } = this.measureCalcInfoMessage(ctx);
+        if (boxHeight > 0) {
            ctx.fillStyle = "rgba(250, 165, 90, 0.15)";
            ctx.strokeStyle = "rgba(250, 165, 90, 0.5)";
            ctx.beginPath();
