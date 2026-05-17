@@ -342,6 +342,10 @@ class ResolutionMasterCanvas {
         node.onMouseDown = function(e, pos, canvas) {
             const relX = e.canvasX - this.pos[0];
             const relY = e.canvasY - this.pos[1];
+            if (self.controls.compactHelpBtn && self.isPointInControl(relX, relY, self.controls.compactHelpBtn)) {
+                self.showHelpDialog();
+                return true;
+            }
             if (self.controls.compactToggleBtn && self.isPointInControl(relX, relY, self.controls.compactToggleBtn)) {
                 self.handleSectionHeaderClick('extraControlsHeader');
                 return true;
@@ -554,7 +558,25 @@ class ResolutionMasterCanvas {
         const buttonSize = 18;
         const x = this.node.size[0] - buttonSize - 9;
         const y = -LiteGraph.NODE_TITLE_HEIGHT + 5;
+        const helpX = x - buttonSize - 6;
+        this.controls.compactHelpBtn = { x: helpX, y, w: buttonSize, h: buttonSize };
         this.controls.compactToggleBtn = { x, y, w: buttonSize, h: buttonSize };
+
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.strokeStyle = this.hoverElement === 'compactHelpBtn'
+            ? "rgba(255,255,255,0.65)"
+            : "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(helpX, y, buttonSize, buttonSize, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = this.hoverElement === 'compactHelpBtn' ? "#fff" : "#cfcfcf";
+        ctx.font = "bold 13px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", helpX + buttonSize / 2, y + buttonSize / 2 + 0.5);
 
         ctx.fillStyle = isActive ? "rgba(90, 170, 255, 0.45)" : "rgba(255,255,255,0.08)";
         ctx.strokeStyle = this.hoverElement === 'compactToggleBtn'
@@ -1620,9 +1642,64 @@ class ResolutionMasterCanvas {
             autoResizeBtn: () => this.handleAutoResize(),
             autoCalcBtn: () => this.handleAutoCalc(),
             detectedInfo: () => this.handleDetectedClick(),
-            managePresetsBtn: () => this.handleManagePresets()
+            managePresetsBtn: () => this.handleManagePresets(),
+            compactHelpBtn: () => this.showHelpDialog()
         };
         actions[buttonName]?.();
+    }
+
+    showHelpDialog() {
+        this.closeHelpDialog();
+
+        const overlay = document.createElement('div');
+        this.helpDialogOverlay = overlay;
+        overlay.style.cssText = `
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
+        `;
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === overlay) this.closeHelpDialog();
+        });
+
+        const dialog = document.createElement('div');
+        this.helpDialog = dialog;
+        dialog.addEventListener('mousedown', (e) => e.stopPropagation());
+        dialog.style.cssText = `
+            width: min(420px, calc(100vw - 40px));
+            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+            border: 1px solid rgba(160, 190, 255, 0.45);
+            border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.75);
+            color: #ddd; font-family: Arial, sans-serif; padding: 18px;
+        `;
+
+        dialog.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
+                <div style="font-size:16px; font-weight:700; color:#fff;">Resolution Master Help</div>
+                <button type="button" data-close style="width:28px; height:28px; border-radius:5px; border:1px solid #555; background:#333; color:#ddd; cursor:pointer; font-size:16px; line-height:1;">×</button>
+            </div>
+            <div style="font-size:12px; line-height:1.55; color:#cfcfcf;">
+                <div style="font-weight:700; color:#fff; margin-bottom:4px;">2D Canvas shortcuts</div>
+                <div>Drag: set width and height</div>
+                <div>Shift + drag: keep aspect ratio</div>
+                <div>Ctrl + drag: disable canvas snap</div>
+                <div>Ctrl + Shift + drag: keep exact aspect ratio</div>
+                <div style="font-weight:700; color:#fff; margin:14px 0 4px;">Project</div>
+                <a href="https://github.com/Azornes/Comfyui-Resolution-Master" target="_blank" rel="noopener noreferrer" style="color:#8fc7ff; text-decoration:none;">Azornes/Comfyui-Resolution-Master</a>
+                <div style="margin-top:10px; color:#aaa;">If this node helps you, please consider starring the repository.</div>
+            </div>
+        `;
+
+        dialog.querySelector('[data-close]')?.addEventListener('click', () => this.closeHelpDialog());
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+    }
+
+    closeHelpDialog() {
+        if (this.helpDialogOverlay?.parentNode) {
+            this.helpDialogOverlay.parentNode.removeChild(this.helpDialogOverlay);
+        }
+        this.helpDialogOverlay = null;
+        this.helpDialog = null;
     }
 
     handleToggleClick(toggleName) {

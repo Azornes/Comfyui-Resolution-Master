@@ -42,6 +42,7 @@ export const tooltips = {
     customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution (read orange information below)",
     autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)",
     compactToggleBtn: "Hide/show all extra control sections below the 2D canvas",
+    compactHelpBtn: "Open Resolution Master help and project link",
     
     // Section headers
     extraControlsHeader: "Toggle Canvas Only mode to hide/show all extra control sections",
