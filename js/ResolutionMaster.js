@@ -1356,7 +1356,8 @@ class ResolutionMasterCanvas {
         ctx.font = "bold 11px Arial";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+        const textOffset = isOn ? -(h * 0.25) : (h * 0.25);
+        ctx.fillText(text, x + w / 2 + textOffset, y + h / 2 + 1);
     }
     
     drawValueAreaHoverBackground(ctx, controlName, x, y, w, h, color, borderRadius = 4) {
