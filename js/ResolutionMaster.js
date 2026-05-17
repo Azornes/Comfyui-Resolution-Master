@@ -27,7 +27,7 @@ class ResolutionMasterCanvas {
         this._isInitializing = true; // Flag to prevent setDirtyCanvas during init
         this._pendingCanvasUpdate = false;
         this._isApplyingAutoSize = false;
-        this.userPreferredHeight = null;
+        this.userPreferredHeight = this.getStoredPreferredHeight();
         this.hoverElement = null;
         this.scrollOffset = 0;
         this.dropdownOpen = null;
@@ -101,7 +101,7 @@ class ResolutionMasterCanvas {
             this.node.size[0] = 330;
         }
         const neededHeight = this.calculateNeededHeight();
-        const preferredHeight = this.userPreferredHeight ?? 0;
+        const preferredHeight = this.userPreferredHeight ?? this.getStoredPreferredHeight() ?? 0;
         const targetHeight = Math.max(neededHeight, preferredHeight, this.node.min_size[1]);
 
         if (Math.abs(this.node.size[1] - targetHeight) > 1) {
@@ -191,6 +191,8 @@ class ResolutionMasterCanvas {
             section_autoDetect_collapsed: false,
             section_presets_collapsed: false,
             section_extraControls_collapsed: false,
+            preferred_compact_height: null,
+            preferred_expanded_height: null,
             dropdown_resolution_expanded: false,
             dropdown_category_expanded: false,
             dropdown_preset_expanded: false,
@@ -374,7 +376,7 @@ class ResolutionMasterCanvas {
         };
         node.onResize = function() {
             if (!self._isApplyingAutoSize) {
-                self.userPreferredHeight = Math.max(this.size[1], this.min_size[1]);
+                self.storePreferredHeight(this.size[1]);
             }
             self.ensureMinimumSize();
             app.graph.setDirtyCanvas(true);
@@ -411,6 +413,7 @@ class ResolutionMasterCanvas {
                     presets: this.properties.section_presets_collapsed,
                     extraControls: this.properties.section_extraControls_collapsed
                 };
+                self.userPreferredHeight = self.getStoredPreferredHeight();
                 self.applyCompactSlotLabels();
                 
                 // Update internal position from saved properties
@@ -619,41 +622,17 @@ class ResolutionMasterCanvas {
             const valueAreaHeight = 20;
             const valueAreaX = node.size[0] - valueAreaWidth - 5;
             const batchSizeAreaX = node.size[0] - batchSizeAreaWidth - 5;
-            this.controls.widthValueArea = {
-                x: valueAreaX,
-                y: y_offset_1 - valueAreaHeight/2,
-                w: valueAreaWidth,
-                h: valueAreaHeight
-            };
-            
-            this.drawValueAreaHoverBackground(ctx, 'widthValueArea', valueAreaX, y_offset_1 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, [136, 153, 255]);
-
-            ctx.fillStyle = this.hoverElement === 'widthValueArea' ? "#89F" : "#89F";
-            ctx.fillText(this.widthWidget.value.toString(), node.size[0] - 20, y_offset_1);
-            this.controls.heightValueArea = {
-                x: valueAreaX,
-                y: y_offset_2 - valueAreaHeight/2,
-                w: valueAreaWidth,
-                h: valueAreaHeight
-            };
-            
-            this.drawValueAreaHoverBackground(ctx, 'heightValueArea', valueAreaX, y_offset_2 - valueAreaHeight/2, valueAreaWidth, valueAreaHeight, [248, 136, 153]);
-            
-            ctx.fillStyle = this.hoverElement === 'heightValueArea' ? "#F89" : "#F89";
-            ctx.fillText(this.heightWidget.value.toString(), node.size[0] - 20, y_offset_2);
+            this.drawOutputValueArea(ctx, 'widthValueArea', valueAreaX, y_offset_1 - valueAreaHeight/2,
+                valueAreaWidth, valueAreaHeight, this.widthWidget.value.toString(), y_offset_1,
+                [136, 153, 255], "#89F", "#89F");
+            this.drawOutputValueArea(ctx, 'heightValueArea', valueAreaX, y_offset_2 - valueAreaHeight/2,
+                valueAreaWidth, valueAreaHeight, this.heightWidget.value.toString(), y_offset_2,
+                [248, 136, 153], "#F89", "#F89");
             ctx.fillStyle = "#9F8";
             ctx.fillText(props.rescaleValue.toFixed(2), node.size[0] - 20, y_offset_3);
-            this.controls.batchSizeValueArea = {
-                x: batchSizeAreaX,
-                y: y_offset_4 - valueAreaHeight/2,
-                w: batchSizeAreaWidth,
-                h: valueAreaHeight
-            };
-            
-            this.drawValueAreaHoverBackground(ctx, 'batchSizeValueArea', batchSizeAreaX, y_offset_4 - valueAreaHeight/2, batchSizeAreaWidth, valueAreaHeight, [255, 136, 187]);
-            
-            ctx.fillStyle = this.hoverElement === 'batchSizeValueArea' ? "#FAB" : "#F8B";
-            ctx.fillText(this.batchSizeWidget.value.toString(), node.size[0] - 20, y_offset_4);
+            this.drawOutputValueArea(ctx, 'batchSizeValueArea', batchSizeAreaX, y_offset_4 - valueAreaHeight/2,
+                batchSizeAreaWidth, valueAreaHeight, this.batchSizeWidget.value.toString(), y_offset_4,
+                [255, 136, 187], "#FAB", "#F8B");
             const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
             
             // Create clickable area for LAT selector
@@ -685,6 +664,31 @@ class ResolutionMasterCanvas {
                 ctx.fillText(shortType, node.size[0] - 20, y_offset_5 + 12);
             }
         }
+    }
+
+    getPreferredHeightPropertyKey(isCompact = this.collapsedSections?.extraControls) {
+        return isCompact ? 'preferred_compact_height' : 'preferred_expanded_height';
+    }
+
+    getStoredPreferredHeight(isCompact = this.collapsedSections?.extraControls) {
+        const value = Number(this.node.properties?.[this.getPreferredHeightPropertyKey(isCompact)]);
+        return Number.isFinite(value) && value > 0 ? value : null;
+    }
+
+    storePreferredHeight(height = this.node.size?.[1], isCompact = this.collapsedSections?.extraControls) {
+        const value = Math.max(Number(height) || 0, this.node.min_size?.[1] || 0);
+        if (value > 0) {
+            this.node.properties[this.getPreferredHeightPropertyKey(isCompact)] = value;
+        }
+        this.userPreferredHeight = value || null;
+    }
+
+    drawOutputValueArea(ctx, controlName, x, y, w, h, text, textY, hoverColor, activeTextColor, textColor) {
+        const node = this.node;
+        this.controls[controlName] = { x, y, w, h };
+        this.drawValueAreaHoverBackground(ctx, controlName, x, y, w, h, hoverColor);
+        ctx.fillStyle = this.hoverElement === controlName ? activeTextColor : textColor;
+        ctx.fillText(text, node.size[0] - 20, textY);
     }
     
     drawPrimaryControls(ctx, y) {
@@ -997,17 +1001,18 @@ class ResolutionMasterCanvas {
                 this.drawToggle(ctx, toggleX, actionY + 3, showToggleWidth, 22, props.showCalcInfo, "Show", this.hoverElement === 'calcInfoToggle');
                 ctx.globalAlpha = previousAlpha;
 
-                const checkboxX = toggleX + showToggleWidth + 4;
-                this.controls[action.checkbox] = { x: checkboxX, y: actionY + 5, w: checkboxWidth, h: 18 };
-                this.drawCheckbox(ctx, checkboxX, actionY + 5, checkboxWidth, action.checked, this.hoverElement === action.checkbox, action.disabled);
+                this.drawAutoDetectActionCheckbox(ctx, action, toggleX + showToggleWidth + 4, actionY, checkboxWidth);
             } else {
-                const checkboxX = x + buttonWidth + 4;
-                this.controls[action.checkbox] = { x: checkboxX, y: actionY + 5, w: checkboxWidth, h: 18 };
-                this.drawCheckbox(ctx, checkboxX, actionY + 5, checkboxWidth, action.checked, this.hoverElement === action.checkbox, action.disabled);
+                this.drawAutoDetectActionCheckbox(ctx, action, x + buttonWidth + 4, actionY, checkboxWidth);
             }
         });
 
         return 110;
+    }
+
+    drawAutoDetectActionCheckbox(ctx, action, x, y, size) {
+        this.controls[action.checkbox] = { x, y: y + 5, w: size, h: 18 };
+        this.drawCheckbox(ctx, x, y + 5, size, action.checked, this.hoverElement === action.checkbox, action.disabled);
     }
     
     drawPresetSection(ctx, y) {
@@ -1767,9 +1772,15 @@ class ResolutionMasterCanvas {
     
     handleSectionHeaderClick(headerKey) {
         const sectionKey = headerKey.replace('Header', '');
+        if (sectionKey === 'extraControls') {
+            this.storePreferredHeight(this.node.size[1], this.collapsedSections.extraControls);
+        }
         this.collapsedSections[sectionKey] = !this.collapsedSections[sectionKey];
         const propertyKey = `section_${sectionKey}_collapsed`;
         this.node.properties[propertyKey] = this.collapsedSections[sectionKey];
+        if (sectionKey === 'extraControls') {
+            this.userPreferredHeight = this.getStoredPreferredHeight(this.collapsedSections.extraControls);
+        }
         app.graph.setDirtyCanvas(true, true);
         
         log.debug(`Section ${sectionKey} ${this.collapsedSections[sectionKey] ? 'collapsed' : 'expanded'}`);
