@@ -36,6 +36,7 @@ class ResolutionMasterCanvas {
         this.detectedDimensions = null;
         this.dimensionCheckInterval = null;
         this.manuallySetByAutoFit = false;
+        this.canvasDragAspectLock = null;
         this.controls = {};
         this.resolutions = ['144p', '240p', '360p', '480p', '720p', '820p', '1080p', '1440p', '2160p', '4320p'];
 
@@ -1233,6 +1234,7 @@ class ResolutionMasterCanvas {
             const c2d = this.controls.canvas2d;
             if (c2d && this.isPointInControl(relX, relY, c2d)) {
                 node.capture = 'canvas2d';
+                this.canvasDragAspectLock = this.createAspectLock();
                 node.captureInput(true);
                 this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
                 return true;
@@ -1391,6 +1393,7 @@ class ResolutionMasterCanvas {
         if (!node.capture) return false;
         
         node.capture = false;
+        this.canvasDragAspectLock = null;
         node.captureInput(false);
         
         if (this.widthWidget && this.heightWidget) {
@@ -1574,18 +1577,16 @@ class ResolutionMasterCanvas {
         let vX = Math.max(0, Math.min(1, x / w));
         let vY = Math.max(0, Math.min(1, 1 - y / h));
         if (ctrlKey && shiftKey) {
-            const currentAspect = this.widthWidget.value / this.heightWidget.value;
-            
             let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
             let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-            newX = Math.round(newX);
-            newY = Math.round(newY);
-            newY = Math.round(newX / currentAspect);
+            const lockedDimensions = this.getAspectLockedDimensions(newX, newY);
+            newX = lockedDimensions.width;
+            newY = lockedDimensions.height;
             vX = (newX - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
             vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
         }
         else if (shiftKey && !ctrlKey) {
-            const currentAspect = this.widthWidget.value / this.heightWidget.value;
+            const currentAspect = this.getCanvasAspectLock().aspect;
             
             let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
             let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
@@ -1618,6 +1619,66 @@ class ResolutionMasterCanvas {
         if (props.valueX !== newX || props.valueY !== newY) {
             this.setDimensions(newX, newY);
         }
+    }
+
+    createAspectLock() {
+        const width = Math.max(1, Math.round(Number(this.widthWidget?.value) || this.node.properties.valueX || 1));
+        const height = Math.max(1, Math.round(Number(this.heightWidget?.value) || this.node.properties.valueY || 1));
+        const divisor = ResolutionMasterCanvas.gcd(width, height);
+        const ratioX = width / divisor;
+        const ratioY = height / divisor;
+
+        return {
+            aspect: width / height,
+            ratioX,
+            ratioY
+        };
+    }
+
+    getCanvasAspectLock() {
+        if (!this.canvasDragAspectLock) {
+            this.canvasDragAspectLock = this.createAspectLock();
+        }
+        return this.canvasDragAspectLock;
+    }
+
+    getAspectLockedDimensions(targetWidth, targetHeight) {
+        const props = this.node.properties;
+        const lock = this.getCanvasAspectLock();
+        const minScale = Math.max(
+            1,
+            Math.ceil(props.canvas_min_x / lock.ratioX),
+            Math.ceil(props.canvas_min_y / lock.ratioY)
+        );
+        const maxScale = Math.max(minScale, Math.min(
+            Math.floor(props.canvas_max_x / lock.ratioX),
+            Math.floor(props.canvas_max_y / lock.ratioY)
+        ));
+
+        const widthScale = Math.max(minScale, Math.min(maxScale, Math.round(targetWidth / lock.ratioX)));
+        const heightScale = Math.max(minScale, Math.min(maxScale, Math.round(targetHeight / lock.ratioY)));
+
+        const widthCandidate = {
+            width: lock.ratioX * widthScale,
+            height: lock.ratioY * widthScale
+        };
+        const heightCandidate = {
+            width: lock.ratioX * heightScale,
+            height: lock.ratioY * heightScale
+        };
+
+        const rangeX = Math.max(1, props.canvas_max_x - props.canvas_min_x);
+        const rangeY = Math.max(1, props.canvas_max_y - props.canvas_min_y);
+        const widthDistance = Math.hypot(
+            (widthCandidate.width - targetWidth) / rangeX,
+            (widthCandidate.height - targetHeight) / rangeY
+        );
+        const heightDistance = Math.hypot(
+            (heightCandidate.width - targetWidth) / rangeX,
+            (heightCandidate.height - targetHeight) / rangeY
+        );
+
+        return widthDistance <= heightDistance ? widthCandidate : heightCandidate;
     }
     
     updateCanvasValueWidth(x, w, ctrlKey) {
