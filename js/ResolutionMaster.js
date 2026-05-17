@@ -115,10 +115,10 @@ class ResolutionMasterCanvas {
         const props = this.node.properties;
         if (!props || props.mode !== "Manual") return 0;
         
-        let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
-        const spacing = 8;
+        let currentY = this.getManualContentStartY();
+        const spacing = this.getManualSpacing();
         const canvasHeight = this.getManualCanvasHeight(currentY, false);
-        currentY += canvasHeight + spacing;
+        currentY += canvasHeight + this.getCanvasInfoGap();
         currentY += 15 + spacing;
         if (this.collapsedSections?.extraControls) {
             return currentY + 20;
@@ -201,7 +201,23 @@ class ResolutionMasterCanvas {
         });
     }
 
-    getManualCanvasHeight(currentY = LiteGraph.NODE_TITLE_HEIGHT + 2, useAvailableHeight = true) {
+    getManualContentStartY() {
+        return this.collapsedSections?.extraControls ? 2 : LiteGraph.NODE_TITLE_HEIGHT + 2;
+    }
+
+    getManualSpacing() {
+        return this.collapsedSections?.extraControls ? 4 : 8;
+    }
+
+    getCanvasInfoGap() {
+        return this.collapsedSections?.extraControls ? 16 : this.getManualSpacing();
+    }
+
+    getManualBottomPadding() {
+        return this.collapsedSections?.extraControls ? 8 : 20;
+    }
+
+    getManualCanvasHeight(currentY = this.getManualContentStartY(), useAvailableHeight = true) {
         if (!this.collapsedSections?.extraControls) {
             return 200;
         }
@@ -210,9 +226,52 @@ class ResolutionMasterCanvas {
             return 200;
         }
 
-        const bottomContentHeight = 8 + 15 + 8 + 20;
+        const spacing = this.getManualSpacing();
+        const bottomContentHeight = this.getCanvasInfoGap() + 15 + spacing + this.getManualBottomPadding();
         const availableHeight = this.node.size[1] - currentY - bottomContentHeight;
         return Math.max(200, availableHeight);
+    }
+
+    normalizeInputSlots() {
+        if (!Array.isArray(this.node.inputs) || this.node.inputs.length <= 1) {
+            return;
+        }
+
+        const keepIndex = this.node.inputs.findIndex(input => input?.link != null);
+        const canonicalInput = this.node.inputs[keepIndex >= 0 ? keepIndex : 0];
+        canonicalInput.name = canonicalInput.localized_name = "input_image";
+        canonicalInput.hidden = false;
+        this.node.inputs = [canonicalInput];
+    }
+
+    applyCompactSlotLabels() {
+        this.normalizeInputSlots();
+        const isCompact = this.collapsedSections?.extraControls || false;
+
+        this.node.inputs?.forEach(input => {
+            if (!input._resolutionMasterStoredLabel) {
+                input._resolutionMasterStoredLabel = {
+                    exists: Object.prototype.hasOwnProperty.call(input, "label"),
+                    value: input.label
+                };
+            }
+
+            input.name = input.localized_name = "input_image";
+            input.hidden = false;
+
+            if (isCompact) {
+                input.label = "";
+            } else if (input._resolutionMasterStoredLabel.exists) {
+                input.label = input._resolutionMasterStoredLabel.value;
+            } else {
+                delete input.label;
+            }
+        });
+
+        this.node.outputs?.forEach(output => {
+            output.hidden = false;
+            output.name = output.localized_name = "";
+        });
     }
     
     
@@ -221,8 +280,10 @@ class ResolutionMasterCanvas {
         const self = this;
         node.size = [330, 400]; 
         node.min_size = [330, 200]; 
+        this.applyCompactSlotLabels();
         if (node.outputs) {
             node.outputs.forEach(output => {
+                output.hidden = false;
                 output.name = output.localized_name = "";
             });
         }
@@ -327,6 +388,7 @@ class ResolutionMasterCanvas {
                     presets: this.properties.section_presets_collapsed,
                     extraControls: this.properties.section_extraControls_collapsed
                 };
+                self.applyCompactSlotLabels();
                 
                 // Update internal position from saved properties
                 self.updateCanvasFromWidgets();
@@ -351,12 +413,13 @@ class ResolutionMasterCanvas {
         const node = this.node;
         const props = node.properties;
         const margin = 10;
-        const spacing = 8;
+        const spacing = this.getManualSpacing();
         
-        let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
+        let currentY = this.getManualContentStartY();
         
         if (props.mode === "Manual") {
             this.controls = {};
+            this.applyCompactSlotLabels();
             
             const collapsibleSection = (title, sectionKey, drawContent) => {
                 const contentHeight = drawContent(ctx, currentY + 25, true);
@@ -370,14 +433,14 @@ class ResolutionMasterCanvas {
             };
 
             const canvasHeight = this.getManualCanvasHeight(currentY);
-            this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight);
-            currentY += canvasHeight + spacing;
+            const canvasPadding = this.collapsedSections.extraControls ? 8 : 20;
+            this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
+            currentY += canvasHeight + this.getCanvasInfoGap();
             
             this.drawInfoText(ctx, currentY);
             currentY += 15 + spacing;
 
             if (this.collapsedSections.extraControls) {
-                this.drawOutputValues(ctx);
             } else {
                 collapsibleSection("Actions", "actions", (ctx, y, preview) => {
                     if (!preview) this.drawPrimaryControls(ctx, y);
@@ -610,7 +673,7 @@ class ResolutionMasterCanvas {
         ctx.fillText(props.snapValue.toString(), snapValueX + 10, y + 14);
     }
     
-    draw2DCanvas(ctx, x, y, w, h) {
+    draw2DCanvas(ctx, x, y, w, h, padding = 20) {
         const node = this.node;
         const props = node.properties;
         
@@ -620,8 +683,8 @@ class ResolutionMasterCanvas {
         const rangeY = props.canvas_max_y - props.canvas_min_y;
         const aspectRatio = rangeX / rangeY;
         
-        let canvasW = w - 20;
-        let canvasH = h - 20;
+        let canvasW = w - padding;
+        let canvasH = h - padding;
         
         if (aspectRatio > canvasW / canvasH) {
             canvasH = canvasW / aspectRatio;
