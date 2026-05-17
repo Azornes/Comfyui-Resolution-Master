@@ -210,7 +210,7 @@ class ResolutionMasterCanvas {
     }
 
     getCanvasInfoGap() {
-        return this.collapsedSections?.extraControls ? 16 : this.getManualSpacing();
+        return this.collapsedSections?.extraControls ? 4 : this.getManualSpacing();
     }
 
     getManualBottomPadding() {
@@ -227,7 +227,9 @@ class ResolutionMasterCanvas {
         }
 
         const spacing = this.getManualSpacing();
-        const bottomContentHeight = this.getCanvasInfoGap() + 15 + spacing + this.getManualBottomPadding();
+        const bottomContentHeight = this.collapsedSections?.extraControls
+            ? 15 + this.getManualBottomPadding()
+            : this.getCanvasInfoGap() + 15 + spacing + this.getManualBottomPadding();
         const availableHeight = this.node.size[1] - currentY - bottomContentHeight;
         return Math.max(200, availableHeight);
     }
@@ -249,16 +251,6 @@ class ResolutionMasterCanvas {
         const isCompact = this.collapsedSections?.extraControls || false;
 
         this.node.inputs?.forEach(input => {
-            if (!input._resolutionMasterStoredVisualNames) {
-                input._resolutionMasterStoredVisualNames = {
-                    labelExists: Object.prototype.hasOwnProperty.call(input, "label"),
-                    label: input.label,
-                    localizedName: input.localized_name,
-                    displayName: input.displayName,
-                    displayNameExists: Object.prototype.hasOwnProperty.call(input, "displayName")
-                };
-            }
-
             input.name = "input_image";
             input.hidden = false;
 
@@ -267,18 +259,9 @@ class ResolutionMasterCanvas {
                 input.localized_name = " ";
                 input.displayName = " ";
             } else {
-                const stored = input._resolutionMasterStoredVisualNames;
-                input.localized_name = stored.localizedName ?? input.name;
-                if (stored.labelExists) {
-                    input.label = stored.label;
-                } else {
-                    delete input.label;
-                }
-                if (stored.displayNameExists) {
-                    input.displayName = stored.displayName;
-                } else {
-                    delete input.displayName;
-                }
+                input.label = "input_image";
+                input.localized_name = "input_image";
+                input.displayName = "input_image";
             }
         });
 
@@ -294,11 +277,12 @@ class ResolutionMasterCanvas {
                     : this.inputs?.[slot]?.localized_name || this.inputs?.[slot]?.name || " ";
             };
         } else if (this.node._resolutionMasterHasStoredGetInputLabel) {
-            if (this.node._resolutionMasterOriginalGetInputLabel) {
-                this.node.getInputLabel = this.node._resolutionMasterOriginalGetInputLabel;
-            } else {
-                delete this.node.getInputLabel;
-            }
+            this.node.getInputLabel = function(slot) {
+                if (slot === 0) return "input_image";
+                return this._resolutionMasterOriginalGetInputLabel
+                    ? this._resolutionMasterOriginalGetInputLabel.call(this, slot)
+                    : this.inputs?.[slot]?.localized_name || this.inputs?.[slot]?.name || "";
+            };
         }
 
         this.node.outputs?.forEach(output => {
@@ -469,8 +453,11 @@ class ResolutionMasterCanvas {
             const canvasPadding = this.collapsedSections.extraControls ? 8 : 20;
             this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
             currentY += canvasHeight + this.getCanvasInfoGap();
-            
-            this.drawInfoText(ctx, currentY);
+
+            const infoY = this.collapsedSections.extraControls && this.lastCanvasBounds
+                ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
+                : currentY;
+            this.drawInfoText(ctx, infoY);
             currentY += 15 + spacing;
 
             if (this.collapsedSections.extraControls) {
@@ -733,6 +720,7 @@ class ResolutionMasterCanvas {
         const offsetY = y + (h - canvasH) / 2;
         
         this.controls.canvas2d = { x: offsetX, y: offsetY, w: canvasW, h: canvasH };
+        this.lastCanvasBounds = this.controls.canvas2d;
         
         ctx.fillStyle = "rgba(20,20,20,0.8)";
         ctx.strokeStyle = "rgba(0,0,0,0.5)";

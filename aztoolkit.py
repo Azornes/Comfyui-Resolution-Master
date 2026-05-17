@@ -28,20 +28,21 @@ class ResolutionMaster:
             "required": {
                 "mode": (
                     ["Manual", "Manual Sliders", "Common Resolutions", "Aspect Ratios"],
+                    {"tooltip": "Frontend control mode for choosing the output resolution. Resolution Master currently uses Manual mode for the custom 2D canvas interface."}
                 ),
                 "latent_type": (
                     ["latent_4x8", "latent_128x16"],
-                    {"default": "latent_4x8"}
+                    {"default": "latent_4x8", "tooltip": "Latent tensor format to create: latent_4x8 for SD/SDXL/Flux-style latents, or latent_128x16 for Flux.2-style latents."}
                 ),
-                "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64}),
-                "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64}),
-                "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual"}),
-                "rescale_mode": ("STRING", {"default": "resolution"}),
-                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0}),
+                "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Output width in pixels. This value is controlled by the Resolution Master canvas and preset tools."}),
+                "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Output height in pixels. This value is controlled by the Resolution Master canvas and preset tools."}),
+                "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual", "tooltip": "When enabled, reads the connected input image dimensions for auto-detect and auto-fit workflows."}),
+                "rescale_mode": ("STRING", {"default": "resolution", "tooltip": "Frontend-selected scaling intent used for the rescale_factor output: manual, resolution, or megapixels."}),
+                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0, "tooltip": "Calculated scale factor passed from the frontend. This becomes the rescale_factor output."}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."}),
             },
             "optional": {
-                "input_image": ("IMAGE",),
+                "input_image": ("IMAGE", {"tooltip": "Optional image used for auto-detecting source width and height when auto_detect is enabled."}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -50,6 +51,14 @@ class ResolutionMaster:
 
     RETURN_TYPES = ("INT", "INT", "FLOAT", "INT", "LATENT")
     RETURN_NAMES = ("width", "height", "rescale_factor", "batch_size", "latent")
+    OUTPUT_TOOLTIPS = (
+        "Final output width in pixels.",
+        "Final output height in pixels.",
+        "Scale factor needed to reach the selected scaling target.",
+        "Batch size forwarded from the node input.",
+        "Empty latent tensor created at the selected resolution, batch size, and latent type.",
+    )
+    DESCRIPTION = "Interactive resolution, scaling, preset, and latent-size helper with optional input-image auto-detection."
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 
