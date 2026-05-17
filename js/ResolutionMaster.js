@@ -126,7 +126,7 @@ class ResolutionMasterCanvas {
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,      
             scaling: this.collapsedSections?.scaling ? 25 : 130,    
-            autoDetect: this.collapsedSections?.autoDetect ? 25 : 160, 
+            autoDetect: this.collapsedSections?.autoDetect ? 25 : 120, 
             presets: this.collapsedSections?.presets ? 25 : 90       
         };
         Object.values(sectionHeights).forEach(height => {
@@ -479,7 +479,7 @@ class ResolutionMasterCanvas {
                 
                 collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
                     if (!preview) return this.drawAutoDetectSection(ctx, y);
-                    return 135;
+                    return 95;
                 });
                 
                 collapsibleSection("Presets", "presets", (ctx, y, preview) => {
@@ -941,82 +941,57 @@ class ResolutionMasterCanvas {
         const props = node.properties;
         const margin = 20;
         const availableWidth = node.size[0] - margin * 2;
-        const gap = 8;
-        
-        const toggleWidth = 110;
+        const gap = 6;
+        const toggleWidth = 140;
         const checkboxWidth = 18;
-        const checkboxLabelWidth = 30;
-        const autoFitWidth = availableWidth - toggleWidth - checkboxWidth - checkboxLabelWidth - (gap * 2);
 
-        let currentX = margin;
         let currentY = y;
-        this.controls.autoDetectToggle = { x: currentX, y: currentY, w: toggleWidth, h: 28 };
-        this.drawToggle(ctx, currentX, currentY, toggleWidth, 28, props.autoDetect,
+        this.controls.autoDetectToggle = { x: margin, y: currentY, w: toggleWidth, h: 28 };
+        this.drawToggle(ctx, margin, currentY, toggleWidth, 28, props.autoDetect,
                        props.autoDetect ? "Auto-detect ON" : "Auto-detect OFF",
                        this.hoverElement === 'autoDetectToggle');
-        
-        const autoFitStartX = currentX + toggleWidth + gap;
-        this.controls.autoFitBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
-        const btnEnabled = props.selectedCategory; 
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoFit, this.hoverElement === 'autoFitBtn', !btnEnabled, "Auto-fit");
-        
-        const autoCheckboxX = autoFitStartX + autoFitWidth + gap;
-        this.controls.autoFitCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
-        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoFitOnChange, this.hoverElement === 'autoFitCheckbox', !btnEnabled);
-        
-        ctx.fillStyle = btnEnabled ? "#ddd" : "#777";
-        ctx.font = "11px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
-        currentY += 35;
+
         if (props.autoDetect && this.detectedDimensions) {
-            const detectedText = `Detected: ${this.detectedDimensions.width}×${this.detectedDimensions.height}`;
-            ctx.font = "12px Arial";
-            const textWidth = ctx.measureText(detectedText).width;
-            const toggleCenterX = margin + (toggleWidth / 2);
-            const textX = toggleCenterX - (textWidth / 2);
-            this.controls.detectedInfo = { x: textX - 5, y: currentY + 2, w: textWidth + 10, h: 24 };
-            
-            this.drawValueAreaHoverBackground(ctx, 'detectedInfo', textX - 5, currentY + 2, textWidth + 10, 20, [95, 255, 95]);
-            
+            const detectedText = `Detected: ${this.detectedDimensions.width}x${this.detectedDimensions.height}`;
+            const detectedX = margin + toggleWidth + gap;
+            const detectedWidth = availableWidth - toggleWidth - gap;
+            this.controls.detectedInfo = { x: detectedX, y: currentY + 2, w: detectedWidth, h: 24 };
+
+            this.drawValueAreaHoverBackground(ctx, 'detectedInfo', detectedX, currentY + 2, detectedWidth, 20, [95, 255, 95]);
+
             ctx.fillStyle = this.hoverElement === 'detectedInfo' ? "#7f7" : "#5f5";
-            ctx.textAlign = "left";
-            ctx.fillText(detectedText, textX, currentY + 14);
+            ctx.font = "12px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(detectedText, detectedX + detectedWidth / 2, currentY + 14);
         }
-        this.controls.autoResizeBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoResize, this.hoverElement === 'autoResizeBtn', false, "Auto-Resize");
-        this.controls.autoResizeCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
-        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoResizeOnChange, this.hoverElement === 'autoResizeCheckbox');
-        
-        ctx.fillStyle = "#ddd";
-        ctx.font = "11px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
+
         currentY += 35;
 
-        this.controls.autoSnapBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.snap, this.hoverElement === 'autoSnapBtn', false, "Auto-Snap");
-        this.controls.autoSnapCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
-        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.autoSnapOnChange, this.hoverElement === 'autoSnapCheckbox');
-        
-        ctx.fillStyle = "#ddd";
-        ctx.font = "11px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText("Auto", autoCheckboxX + checkboxWidth + 4, currentY + 14);
-        currentY += 35;
-        
-        this.controls.autoCalcBtn = { x: autoFitStartX, y: currentY, w: autoFitWidth, h: 28 };
-        const calcEnabled = props.useCustomCalc && props.selectedCategory;
-        this.drawButton(ctx, autoFitStartX, currentY, autoFitWidth, 28, this.icons.autoCalculate, this.hoverElement === 'autoCalcBtn', !calcEnabled, "Auto-calc");
-        this.controls.customCalcCheckbox = { x: autoCheckboxX, y: currentY + 5, w: checkboxWidth, h: 18 };
-        this.drawCheckbox(ctx, autoCheckboxX, currentY + 5, checkboxWidth, props.useCustomCalc, this.hoverElement === 'customCalcCheckbox');
-        
-        ctx.fillStyle = "#ddd";
-        ctx.font = "11px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText("Calc", autoCheckboxX + checkboxWidth + 4, currentY + 14);
-        
-        return 135;
+        const actionGap = 8;
+        const rowGap = 6;
+        const actionWidth = (availableWidth - actionGap) / 2;
+        const actionButtonWidth = actionWidth - checkboxWidth - 4;
+        const calcEnabled = !!props.selectedCategory;
+        const actions = [
+            { button: 'autoFitBtn', checkbox: 'autoFitCheckbox', icon: this.icons.autoFit, label: 'Fit', checked: props.autoFitOnChange, disabled: !props.selectedCategory, col: 0, row: 0 },
+            { button: 'autoResizeBtn', checkbox: 'autoResizeCheckbox', icon: this.icons.autoResize, label: 'Resize', checked: props.autoResizeOnChange, disabled: false, col: 0, row: 1 },
+            { button: 'autoSnapBtn', checkbox: 'autoSnapCheckbox', icon: this.icons.snap, label: 'Snap', checked: props.autoSnapOnChange, disabled: false, col: 1, row: 0 },
+            { button: 'autoCalcBtn', checkbox: 'customCalcCheckbox', icon: this.icons.autoCalculate, label: 'Calc', checked: props.useCustomCalc, disabled: !calcEnabled, col: 1, row: 1 }
+        ];
+
+        actions.forEach((action) => {
+            const x = margin + action.col * (actionWidth + actionGap);
+            const actionY = currentY + action.row * (28 + rowGap);
+            this.controls[action.button] = { x, y: actionY, w: actionButtonWidth, h: 28 };
+            this.drawButton(ctx, x, actionY, actionButtonWidth, 28, action.icon, this.hoverElement === action.button, action.disabled, action.label);
+
+            const checkboxX = x + actionButtonWidth + 4;
+            this.controls[action.checkbox] = { x: checkboxX, y: actionY + 5, w: checkboxWidth, h: 18 };
+            this.drawCheckbox(ctx, checkboxX, actionY + 5, checkboxWidth, action.checked, this.hoverElement === action.checkbox, action.disabled);
+        });
+
+        return 95;
     }
     
     drawPresetSection(ctx, y) {
@@ -2341,8 +2316,8 @@ class ResolutionMasterCanvas {
     handleAutoCalc() {
         const props = this.node.properties;
         
-        if (!props.useCustomCalc || !props.selectedCategory) {
-            log.debug("Auto-calc: Calc checkbox or category not selected");
+        if (!props.selectedCategory) {
+            log.debug("Auto-calc: Category not selected");
             return;
         }
         
