@@ -41,8 +41,9 @@ export const tooltips = {
     // Preset controls
     categoryDropdown: "Select preset category (Standard, SDXL, Flux, HiDream Dev, Qwen-Image, etc.)",
     presetDropdown: "Choose specific preset from selected category",
-    customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution (read orange information below)",
-    autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)",
+    customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution",
+    autoCalcBtn: "Apply model-specific optimizations for current resolution",
+    calcInfoToggle: "Show or hide information about the selected Calc mode",
     compactToggleBtn: "Hide/show all extra control sections below the 2D canvas",
     compactHelpBtn: "Open Resolution Master help and project link",
     

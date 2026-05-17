@@ -126,13 +126,13 @@ class ResolutionMasterCanvas {
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,      
             scaling: this.collapsedSections?.scaling ? 25 : 130,    
-            autoDetect: this.collapsedSections?.autoDetect ? 25 : 120, 
+            autoDetect: this.collapsedSections?.autoDetect ? 25 : 135, 
             presets: this.collapsedSections?.presets ? 25 : 90       
         };
         Object.values(sectionHeights).forEach(height => {
             currentY += height + spacing;
         });
-        if (props.useCustomCalc && props.selectedCategory) {
+        if (props.showCalcInfo && props.selectedCategory) {
             currentY += 40; 
         }
         
@@ -179,6 +179,7 @@ class ResolutionMasterCanvas {
             selectedCategory: "Standard",
             selectedPreset: null,
             useCustomCalc: false,
+            showCalcInfo: false,
             manual_slider_min_w: 64,
             manual_slider_max_w: 2048,
             manual_slider_step_w: 64,
@@ -479,14 +480,14 @@ class ResolutionMasterCanvas {
                 
                 collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
                     if (!preview) return this.drawAutoDetectSection(ctx, y);
-                    return 95;
+                    return 110;
                 });
                 
                 collapsibleSection("Presets", "presets", (ctx, y, preview) => {
                     if (!preview) return this.drawPresetSection(ctx, y);
                     return 30;
                 });
-                if (props.useCustomCalc && props.selectedCategory) {
+                if (props.showCalcInfo && props.selectedCategory) {
                     const messageHeight = this.drawInfoMessage(ctx, currentY);
                     if (messageHeight > 0) {
                         currentY += messageHeight + spacing;
@@ -972,26 +973,41 @@ class ResolutionMasterCanvas {
         const rowGap = 6;
         const actionWidth = (availableWidth - actionGap) / 2;
         const actionButtonWidth = actionWidth - checkboxWidth - 4;
+        const showToggleWidth = 56;
         const calcEnabled = !!props.selectedCategory;
         const actions = [
             { button: 'autoFitBtn', checkbox: 'autoFitCheckbox', icon: this.icons.autoFit, label: 'Fit', checked: props.autoFitOnChange, disabled: !props.selectedCategory, col: 0, row: 0 },
             { button: 'autoResizeBtn', checkbox: 'autoResizeCheckbox', icon: this.icons.autoResize, label: 'Resize', checked: props.autoResizeOnChange, disabled: false, col: 0, row: 1 },
             { button: 'autoSnapBtn', checkbox: 'autoSnapCheckbox', icon: this.icons.snap, label: 'Snap', checked: props.autoSnapOnChange, disabled: false, col: 1, row: 0 },
-            { button: 'autoCalcBtn', checkbox: 'customCalcCheckbox', icon: this.icons.autoCalculate, label: 'Calc', checked: props.useCustomCalc, disabled: !calcEnabled, col: 1, row: 1 }
+            { button: 'autoCalcBtn', checkbox: 'customCalcCheckbox', icon: this.icons.autoCalculate, label: 'Calc', checked: props.useCustomCalc, disabled: !calcEnabled, col: 1, row: 1, showInfoToggle: true, textOffset: 8 }
         ];
 
         actions.forEach((action) => {
             const x = margin + action.col * (actionWidth + actionGap);
             const actionY = currentY + action.row * (28 + rowGap);
-            this.controls[action.button] = { x, y: actionY, w: actionButtonWidth, h: 28 };
-            this.drawButton(ctx, x, actionY, actionButtonWidth, 28, action.icon, this.hoverElement === action.button, action.disabled, action.label);
+            const buttonWidth = action.showInfoToggle ? actionWidth - checkboxWidth - showToggleWidth - 8 : actionButtonWidth;
+            this.controls[action.button] = { x, y: actionY, w: buttonWidth, h: 28 };
+            this.drawButton(ctx, x, actionY, buttonWidth, 28, action.icon, this.hoverElement === action.button, action.disabled, action.label, false, action.textOffset || 0);
 
-            const checkboxX = x + actionButtonWidth + 4;
-            this.controls[action.checkbox] = { x: checkboxX, y: actionY + 5, w: checkboxWidth, h: 18 };
-            this.drawCheckbox(ctx, checkboxX, actionY + 5, checkboxWidth, action.checked, this.hoverElement === action.checkbox, action.disabled);
+            if (action.showInfoToggle) {
+                const toggleX = x + buttonWidth + 4;
+                this.controls.calcInfoToggle = { x: toggleX, y: actionY + 3, w: showToggleWidth, h: 22 };
+                const previousAlpha = ctx.globalAlpha;
+                if (action.disabled) ctx.globalAlpha = 0.5;
+                this.drawToggle(ctx, toggleX, actionY + 3, showToggleWidth, 22, props.showCalcInfo, "Show", this.hoverElement === 'calcInfoToggle');
+                ctx.globalAlpha = previousAlpha;
+
+                const checkboxX = toggleX + showToggleWidth + 4;
+                this.controls[action.checkbox] = { x: checkboxX, y: actionY + 5, w: checkboxWidth, h: 18 };
+                this.drawCheckbox(ctx, checkboxX, actionY + 5, checkboxWidth, action.checked, this.hoverElement === action.checkbox, action.disabled);
+            } else {
+                const checkboxX = x + buttonWidth + 4;
+                this.controls[action.checkbox] = { x: checkboxX, y: actionY + 5, w: checkboxWidth, h: 18 };
+                this.drawCheckbox(ctx, checkboxX, actionY + 5, checkboxWidth, action.checked, this.hoverElement === action.checkbox, action.disabled);
+            }
         });
 
-        return 95;
+        return 110;
     }
     
     drawPresetSection(ctx, y) {
@@ -1036,23 +1052,23 @@ class ResolutionMasterCanvas {
         const category = props.selectedCategory;
         
         let message = "";
-        if (category === "SDXL" && props.useCustomCalc) {
+        if (category === "SDXL") {
             message = "💡 SDXL Mode: Only using presets!";
-        } else if (category === "Flux" && props.useCustomCalc) {
+        } else if (category === "Flux") {
             message = "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
-        } else if (category === "Flux.2" && props.useCustomCalc) {
+        } else if (category === "Flux.2") {
             message = "💡 FLUX.2 Mode: Round to: 16px | Edge range: 320-3840px | Max resolution: 6.0 MP";
-        } else if (category === "WAN" && props.useCustomCalc && this.widthWidget && this.heightWidget) {
+        } else if (category === "WAN" && this.widthWidget && this.heightWidget) {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
             message = `💡 WAN Mode: Suggesting ${model} model | Round to: 16px | Resolution range: 320p-820p`;
-        } else if (category === "HiDream Dev" && props.useCustomCalc) {
+        } else if (category === "HiDream Dev") {
             message = "💡 HiDream Dev: Only using presets!";
-        } else if (category === "Qwen-Image" && props.useCustomCalc) {
+        } else if (category === "Qwen-Image") {
             message = "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
-        } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category) && props.useCustomCalc) {
+        } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category)) {
             message = "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
-        } else if (props.useCustomCalc) {
+        } else {
             message = "⚠️ Calc Mode: Custom calculation not available for this category)";
         }
         
@@ -1126,7 +1142,7 @@ class ResolutionMasterCanvas {
         
         return y + 45;
     }
-    drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null, centerIconAndText = false) {
+    drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null, centerIconAndText = false, textOffset = 0) {
         const grad = ctx.createLinearGradient(x, y, x, y + h);
         if (disabled) {
             grad.addColorStop(0, "#4a4a4a");
@@ -1203,7 +1219,7 @@ class ResolutionMasterCanvas {
                     ctx.fillText(text, textX, y + h / 2 + 1);
                 } else {
                     ctx.textAlign = "center";
-                    ctx.fillText(text, x + w / 2, y + h / 2 + 1);
+                    ctx.fillText(text, x + w / 2 + textOffset, y + h / 2 + 1);
                 }
             }
         }
@@ -1698,6 +1714,9 @@ class ResolutionMasterCanvas {
             else this.stopAutoDetect();
             const widget = this.node.widgets?.find(w => w.name === 'auto_detect');
             if (widget) widget.value = props.autoDetect;
+            app.graph.setDirtyCanvas(true);
+        } else if (toggleName === 'calcInfoToggle' && props.selectedCategory) {
+            props.showCalcInfo = !props.showCalcInfo;
             app.graph.setDirtyCanvas(true);
         }
     }
