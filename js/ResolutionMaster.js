@@ -14,6 +14,13 @@ class ResolutionMasterCanvas {
         this.node = node;
         this.node.properties = this.node.properties || {};
         this.initializeProperties();
+        this.collapsedSections = {
+            actions: this.node.properties.section_actions_collapsed,
+            scaling: this.node.properties.section_scaling_collapsed,
+            autoDetect: this.node.properties.section_autoDetect_collapsed,
+            presets: this.node.properties.section_presets_collapsed,
+            extraControls: this.node.properties.section_extraControls_collapsed
+        };
         this.node.intpos = { x: 0.5, y: 0.5 };
         this.node.capture = false;
         this.node.configured = false;
@@ -22,7 +29,6 @@ class ResolutionMasterCanvas {
         this.hoverElement = null;
         this.scrollOffset = 0;
         this.dropdownOpen = null;
-        this.collapsedSections = {};
         this.dialogManager = new DialogManager(this);
         this.searchableDropdown = new SearchableDropdown();
         this.aspectRatioSelector = new AspectRatioSelector();
@@ -108,9 +114,12 @@ class ResolutionMasterCanvas {
         
         let currentY = LiteGraph.NODE_TITLE_HEIGHT + 2;
         const spacing = 8;
-        const canvasHeight = 200;
+        const canvasHeight = this.getManualCanvasHeight();
         currentY += canvasHeight + spacing;
         currentY += 15 + spacing;
+        if (this.collapsedSections?.extraControls) {
+            return currentY + 20;
+        }
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,      
             scaling: this.collapsedSections?.scaling ? 25 : 130,    
@@ -176,6 +185,7 @@ class ResolutionMasterCanvas {
             section_scaling_collapsed: false,
             section_autoDetect_collapsed: false,
             section_presets_collapsed: false,
+            section_extraControls_collapsed: false,
             dropdown_resolution_expanded: false,
             dropdown_category_expanded: false,
             dropdown_preset_expanded: false,
@@ -186,6 +196,15 @@ class ResolutionMasterCanvas {
         Object.entries(defaultProperties).forEach(([key, defaultValue]) => {
             this.node.properties[key] = this.node.properties[key] ?? defaultValue;
         });
+    }
+
+    getManualCanvasHeight() {
+        if (!this.collapsedSections?.extraControls) {
+            return 200;
+        }
+
+        const compactCanvasHeight = this.node.size[0] - 70;
+        return Math.max(200, Math.min(360, compactCanvasHeight));
     }
     
     
@@ -235,7 +254,13 @@ class ResolutionMasterCanvas {
             self.drawInterface(ctx);
         };
         node.onMouseDown = function(e, pos, canvas) {
-            if (e.canvasY - this.pos[1] < 0) return false;
+            const relX = e.canvasX - this.pos[0];
+            const relY = e.canvasY - this.pos[1];
+            if (self.controls.compactToggleBtn && self.isPointInControl(relX, relY, self.controls.compactToggleBtn)) {
+                self.handleSectionHeaderClick('extraControlsHeader');
+                return true;
+            }
+            if (relY < 0) return false;
             return self.handleMouseDown(e, pos, canvas);
         };
         
@@ -288,7 +313,8 @@ class ResolutionMasterCanvas {
                     actions: this.properties.section_actions_collapsed,
                     scaling: this.properties.section_scaling_collapsed,
                     autoDetect: this.properties.section_autoDetect_collapsed,
-                    presets: this.properties.section_presets_collapsed
+                    presets: this.properties.section_presets_collapsed,
+                    extraControls: this.properties.section_extraControls_collapsed
                 };
                 
                 // Update internal position from saved properties
@@ -332,39 +358,44 @@ class ResolutionMasterCanvas {
                 currentY += sectionInfo.totalHeight + spacing;
             };
 
-            const canvasHeight = 200;
+            const canvasHeight = this.getManualCanvasHeight();
             this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight);
             currentY += canvasHeight + spacing;
             
             this.drawInfoText(ctx, currentY);
             currentY += 15 + spacing;
 
-            collapsibleSection("Actions", "actions", (ctx, y, preview) => {
-                if (!preview) this.drawPrimaryControls(ctx, y);
-                return 30;
-            });
-            
-            collapsibleSection("Scaling", "scaling", (ctx, y, preview) => {
-                if (!preview) return this.drawScalingGrid(ctx, y);
-                return 130;
-            });
-            
-            collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
-                if (!preview) return this.drawAutoDetectSection(ctx, y);
-                return 100;
-            });
-            
-            collapsibleSection("Presets", "presets", (ctx, y, preview) => {
-                if (!preview) return this.drawPresetSection(ctx, y);
-                return 30;
-            });
-            if (props.useCustomCalc && props.selectedCategory) {
-                const messageHeight = this.drawInfoMessage(ctx, currentY);
-                if (messageHeight > 0) {
-                    currentY += messageHeight + spacing;
+            if (this.collapsedSections.extraControls) {
+                this.drawOutputValues(ctx);
+            } else {
+                collapsibleSection("Actions", "actions", (ctx, y, preview) => {
+                    if (!preview) this.drawPrimaryControls(ctx, y);
+                    return 30;
+                });
+                
+                collapsibleSection("Scaling", "scaling", (ctx, y, preview) => {
+                    if (!preview) return this.drawScalingGrid(ctx, y);
+                    return 130;
+                });
+                
+                collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
+                    if (!preview) return this.drawAutoDetectSection(ctx, y);
+                    return 100;
+                });
+                
+                collapsibleSection("Presets", "presets", (ctx, y, preview) => {
+                    if (!preview) return this.drawPresetSection(ctx, y);
+                    return 30;
+                });
+                if (props.useCustomCalc && props.selectedCategory) {
+                    const messageHeight = this.drawInfoMessage(ctx, currentY);
+                    if (messageHeight > 0) {
+                        currentY += messageHeight + spacing;
+                    }
                 }
+                this.drawOutputValues(ctx);
             }
-            this.drawOutputValues(ctx);
+            this.drawCompactToggleButton(ctx);
 
         } else if (props.mode === "Manual Sliders") {
             this.drawSliderMode(ctx, currentY);
@@ -427,7 +458,31 @@ class ResolutionMasterCanvas {
         
         return { totalHeight, isCollapsed, contentStartY: y + headerHeight };
     }
-    
+
+    drawCompactToggleButton(ctx) {
+        const isActive = this.collapsedSections.extraControls || false;
+        const buttonSize = 18;
+        const x = this.node.size[0] - buttonSize - 9;
+        const y = -LiteGraph.NODE_TITLE_HEIGHT + 5;
+        this.controls.compactToggleBtn = { x, y, w: buttonSize, h: buttonSize };
+
+        ctx.fillStyle = isActive ? "rgba(90, 170, 255, 0.45)" : "rgba(255,255,255,0.08)";
+        ctx.strokeStyle = this.hoverElement === 'compactToggleBtn'
+            ? "rgba(255,255,255,0.65)"
+            : isActive ? "rgba(120, 190, 255, 0.85)" : "rgba(255,255,255,0.25)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, buttonSize, buttonSize, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = this.hoverElement === 'compactToggleBtn' || isActive ? "#fff" : "#cfcfcf";
+        ctx.font = "bold 13px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(isActive ? "+" : "-", x + buttonSize / 2, y + buttonSize / 2 - 1);
+    }
+
     drawOutputValues(ctx) {
         const node = this.node;
         const props = node.properties;
@@ -1424,6 +1479,10 @@ class ResolutionMasterCanvas {
     
     handlePropertyChange(property) {
         const node = this.node;
+        if (property?.startsWith('section_') && property.endsWith('_collapsed')) {
+            const sectionKey = property.replace(/^section_/, '').replace(/_collapsed$/, '');
+            this.collapsedSections[sectionKey] = node.properties[property];
+        }
         if (!node.configured) return;
         
         node.intpos.x = (node.properties.valueX - node.properties.canvas_min_x) / 

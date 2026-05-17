@@ -225,6 +225,8 @@ You can customize various parameters by accessing the node's Properties panel in
 - **`megapixels_slider_step`**: Step increment for megapixels slider (default: 0.1)
 
 ### Section Collapse States
+- **`section_extraControls_collapsed`**: Canvas Only mode state. When enabled, all extra control sections below the 2D canvas are hidden (default: false)
+  - Toggle it with the compact button in the top-right corner of the node title bar.
 - **`section_actions_collapsed`**: Actions section collapsed state (default: false)
 - **`section_scaling_collapsed`**: Scaling section collapsed state (default: false)
 - **`section_autoDetect_collapsed`**: Auto-Detect section collapsed state (default: false)

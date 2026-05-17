@@ -41,8 +41,10 @@ export const tooltips = {
     presetDropdown: "Choose specific preset from selected category",
     customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution (read orange information below)",
     autoCalcBtn: "Apply model-specific optimizations for current resolution (read orange information below)",
+    compactToggleBtn: "Hide/show all extra control sections below the 2D canvas",
     
     // Section headers
+    extraControlsHeader: "Toggle Canvas Only mode to hide/show all extra control sections",
     actionsHeader: "Click to collapse/expand Actions section",
     scalingHeader: "Click to collapse/expand Scaling section",
     autoDetectHeader: "Click to collapse/expand Auto-Detect section",
