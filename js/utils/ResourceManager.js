@@ -7,17 +7,26 @@ export const addStylesheet = withErrorHandling(function (url) {
     if (!url) {
         throw createValidationError("URL is required", { url });
     }
-    log.debug('Adding stylesheet:', { url });
     if (url.endsWith(".js")) {
         url = url.substr(0, url.length - 2) + "css";
     }
+
+    const finalUrl = url.startsWith("http") ? url : getUrl(url);
+    const existingLink = Array.from(document.head.querySelectorAll('link[rel="stylesheet"]'))
+        .find(link => link.href === finalUrl);
+    if (existingLink) {
+        log.debug('Stylesheet already present, skipping:', { finalUrl });
+        return existingLink;
+    }
+
+    log.debug('Adding stylesheet:', { url, finalUrl });
     $el("link", {
         parent: document.head,
         rel: "stylesheet",
         type: "text/css",
-        href: url.startsWith("http") ? url : getUrl(url),
+        href: finalUrl,
     });
-    log.debug('Stylesheet added successfully:', { finalUrl: url });
+    log.debug('Stylesheet added successfully:', { finalUrl });
 }, 'addStylesheet');
 export function getUrl(path, baseUrl) {
     if (!path) {

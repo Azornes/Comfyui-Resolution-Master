@@ -7,12 +7,18 @@ import { addStylesheet, getUrl } from "./utils/ResourceManager.js";
 import { createModuleLogger } from "./utils/LoggerUtils.js";
 
 const log = createModuleLogger('CSSLoader');
+let stylesLoaded = false;
 
 /**
  * Loads all CSS files for the application
  */
 export function loadAllStyles() {
     try {
+        if (stylesLoaded) {
+            log.debug('CSS files already loaded, skipping');
+            return;
+        }
+
         log.info('Loading CSS files...');
         
         // Load all CSS files using getUrl for proper path resolution
@@ -35,6 +41,7 @@ export function loadAllStyles() {
             log.debug(`Loaded: ${file}`);
         });
         
+        stylesLoaded = true;
         log.info('All CSS files loaded successfully');
     } catch (error) {
         log.error('Error loading CSS files:', error);
