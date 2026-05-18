@@ -1,6 +1,6 @@
 [project]
 name = "Comfyui-Resolution-Master"
-description = "ResolutionMaster is for total control over resolution and aspect ratio. It provides an intuitive interface with an interactive canvas, advanced scaling options, extensive presets (SDXL, Flux, WAN), and model-specific optimizations for high-quality AI image generation."
+description = "ResolutionMaster is a ComfyUI custom node for resolution, aspect ratio, scaling, preset, and latent control. It provides an interactive canvas, auto-detect workflows, model-specific optimizations, and presets for SDXL, Flux, Flux.2, WAN, HiDream Dev, Qwen-Image, social media, print, cinema, and display resolutions."
 version = "1.5.14"
 license = { text = "MIT License" }
 

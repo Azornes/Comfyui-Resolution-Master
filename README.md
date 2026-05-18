@@ -1,7 +1,7 @@
 <h1 align="center">ResolutionMaster – Precise resolution and aspect ratio control for ComfyUI</h1>
 
 
-<p align="center"><i>ResolutionMaster A powerful and feature-rich ComfyUI custom node for precise resolution and aspect ratio control in AI image generation workflows. This node provides an intuitive interface with advanced scaling options, preset management, and model-specific optimizations.</i></p>
+<p align="center"><i>ResolutionMaster is a powerful ComfyUI custom node for precise resolution and aspect ratio control in AI image generation workflows. It provides an intuitive interface with advanced scaling options, preset management, latent output, and model-specific optimizations.</i></p>
 
 <p align="center">
 
@@ -25,13 +25,13 @@
   <strong>⚠️ <a href="https://github.com/Azornes/Comfyui-Resolution-Master/tree/main?tab=readme-ov-file#%EF%B8%8F-known-issues--compatibility">Known Issues</a></strong>
 </p>
 
-
 https://github.com/user-attachments/assets/f9b51c0f-677c-410e-8980-3f75bb4f8032
 
 https://github.com/user-attachments/assets/f15ea0c2-0a65-4578-b2c7-db812bf4020c
 
+---
 
-## Features
+## Detailed Features
 
 ### 🎯 Core Functionality
 - **Interactive 2D Canvas Control**: Visually select resolution with real-time preview
@@ -56,6 +56,7 @@ Extensive preset library organized by use case:
 - **Standard**: Common aspect ratios (1:1, 4:3, 16:9, 21:9, etc.)
 - **SDXL**: Optimized resolutions for Stable Diffusion XL
 - **Flux**: Flux model optimized presets with smart constraints
+- **Flux.2**: Flux.2 optimized presets with 128-channel latent support
 - **WAN**: Video model presets with resolution recommendations
 - **HiDream Dev**: HiDream model optimized presets
 - **Qwen-Image**: Qwen-Image model optimized presets
@@ -66,33 +67,14 @@ Extensive preset library organized by use case:
 
 ### 🤖 Model-Specific Optimizations
 
-#### SDXL Mode
-- Enforces officially supported resolutions
-- Fixed dimensions for optimal generation quality
-
-#### Flux Mode
-- 32px increment enforcement
-- Resolution range: 320px to 2560px
-- Maximum 4.0 megapixels constraint
-- Sweet spot recommendation: 1920×1080
-
-#### WAN Mode
-- Flexible 320p to 820p range
-- 16px increments for video encoding compatibility
-- Automatic model recommendation (480p vs 720p)
-- Maintains proper aspect ratios for video generation
-
-#### HiDream Dev Mode
-- Preset-based optimization system
-- Uses closest matching preset from HiDream Dev category
-- Automatically selects best preset based on input dimensions and aspect ratio
-- Supports both original and flipped orientations for optimal matching
-
-#### Qwen-Image Mode
-- Resolution range: ~0.6MP to 4.2MP (589,824 to 4,194,304 pixels)
-- Smart scaling: If input is already within range, dimensions remain unchanged
-- Automatic scaling: Input outside range is scaled to fit while maintaining aspect ratio
-- Preserves original dimensions when already optimized
+| Mode | Best For | Optimization Rules |
+|------|----------|--------------------|
+| **SDXL** | Stable Diffusion XL generation | Enforces officially supported fixed resolutions for optimal generation quality |
+| **Flux** | Flux image workflows | Uses 32px increments, keeps dimensions between 320px and 2560px, and limits output to 4.0 MP |
+| **Flux.2** | Flux.2 workflows | Uses Flux.2-specific preset matching and supports the `latent_128x16` latent type |
+| **WAN** | Video generation | Supports 320p to 820p, uses 16px increments, keeps video-friendly ratios, and recommends 480p or 720p |
+| **HiDream Dev** | HiDream preset matching | Finds the closest HiDream Dev preset by dimensions and aspect ratio, including flipped orientations |
+| **Qwen-Image** | Qwen-Image workflows | Keeps images in the ~0.6 MP to 4.2 MP range, preserving valid inputs and scaling out-of-range inputs |
 
 ---
 
@@ -458,8 +440,9 @@ The detailed controls are described in **Understanding the Controls > Auto-Detec
   - Use this when you need to generate multiple images with the same resolution settings
   - Connect to nodes that support batch processing
 - **latent** (LATENT): Generated empty latent tensor ready for sampling
-  - Automatically created based on width, height, and batch_size
-  - Dimensions: [batch_size, 4, height÷8, width÷8]
+  - Automatically created based on width, height, batch_size, and latent_type
+  - `latent_4x8`: `[batch_size, 4, height/8, width/8]` for SD/SDXL/Flux-style latents
+  - `latent_128x16`: `[batch_size, 128, height/16, width/16]` for Flux.2-style latents
   - Connect directly to KSampler or other sampling nodes
   - Eliminates the need for a separate "Empty Latent Image" node
 
@@ -586,7 +569,7 @@ The rescale_factor **always reflects your active scaling mode**, not the drag op
 ## Tips & Best Practices
 
 1. **Start with Presets**: Use category presets as starting points, then fine-tune
-2. **Enable Custom Calc**: For SDXL, Flux, and WAN models to ensure compatibility
+2. **Enable Custom Calc**: For SDXL, Flux, Flux.2, WAN, HiDream Dev, and Qwen-Image workflows to keep dimensions model-friendly
 3. **Use Snap for Clean Values**: Helps avoid odd dimensions that may cause issues
 4. **Monitor Info Messages**: Pay attention to mode-specific recommendations
 5. **Leverage Rescale Factor**: Connect to upscaling nodes for resolution-independent workflows

@@ -39,7 +39,7 @@ export const tooltips = {
     detectedInfo: "Click to apply detected image resolution directly",
     
     // Preset controls
-    categoryDropdown: "Select preset category (Standard, SDXL, Flux, HiDream Dev, Qwen-Image, etc.)",
+    categoryDropdown: "Select preset category (Standard, SDXL, Flux, Flux.2, WAN, HiDream Dev, Qwen-Image, etc.)",
     presetDropdown: "Choose specific preset from selected category",
     customCalcCheckbox: "Automatically apply model-specific optimizations for the new detected image resolution",
     autoCalcBtn: "Apply model-specific optimizations for current resolution",
