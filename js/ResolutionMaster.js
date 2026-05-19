@@ -42,6 +42,7 @@ class ResolutionMasterCanvas {
         this.showTooltip = false;
         this.tooltipMousePos = null; 
         this.detectedDimensions = null;
+        this.lastBackendDimensionsTimestamp = null;
         this.dimensionCheckInterval = null;
         this.manuallySetByAutoFit = false;
         this.canvasDragAspectLock = null;
@@ -173,6 +174,10 @@ class ResolutionMasterCanvas {
             rescaleValue: 1.0,
             preserveScalingRatio: false,
             autoDetect: false,
+            autoDetectSource: "backend",
+            autoDetectWidth: 0,
+            autoDetectHeight: 0,
+            autoDetectPresetsJSON: "{}",
             autoFitOnChange: false,
             autoResizeOnChange: false,
             autoSnapOnChange: false,
@@ -313,6 +318,20 @@ class ResolutionMasterCanvas {
         const modeWidget = node.widgets?.find(w => w.name === 'mode');
         const latentTypeWidget = node.widgets?.find(w => w.name === 'latent_type');
         const autoDetectWidget = node.widgets?.find(w => w.name === 'auto_detect');
+        const autoDetectSourceWidget = node.widgets?.find(w => w.name === 'auto_detect_source');
+        const autoDetectWidthWidget = node.widgets?.find(w => w.name === 'auto_detect_width');
+        const autoDetectHeightWidget = node.widgets?.find(w => w.name === 'auto_detect_height');
+        const autoFitOnChangeWidget = node.widgets?.find(w => w.name === 'auto_fit_on_change');
+        const autoResizeOnChangeWidget = node.widgets?.find(w => w.name === 'auto_resize_on_change');
+        const autoSnapOnChangeWidget = node.widgets?.find(w => w.name === 'auto_snap_on_change');
+        const useCustomCalcWidget = node.widgets?.find(w => w.name === 'use_custom_calc');
+        const preserveScalingRatioWidget = node.widgets?.find(w => w.name === 'preserve_scaling_ratio');
+        const selectedCategoryWidget = node.widgets?.find(w => w.name === 'selected_category');
+        const snapValueWidget = node.widgets?.find(w => w.name === 'snap_value');
+        const upscaleValueWidget = node.widgets?.find(w => w.name === 'upscale_value');
+        const targetResolutionWidget = node.widgets?.find(w => w.name === 'target_resolution');
+        const targetMegapixelsWidget = node.widgets?.find(w => w.name === 'target_megapixels');
+        const autoDetectPresetsJSONWidget = node.widgets?.find(w => w.name === 'auto_detect_presets_json');
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
         const batchSizeWidget = node.widgets?.find(w => w.name === 'batch_size');
@@ -321,6 +340,15 @@ class ResolutionMasterCanvas {
         }
         if (rescaleValueWidget) {
             rescaleValueWidget.value = node.properties.rescaleValue;
+        }
+        if (autoDetectSourceWidget) {
+            autoDetectSourceWidget.value = node.properties.autoDetectSource || "backend";
+        }
+        if (autoDetectWidthWidget) {
+            autoDetectWidthWidget.value = node.properties.autoDetectWidth || 0;
+        }
+        if (autoDetectHeightWidget) {
+            autoDetectHeightWidget.value = node.properties.autoDetectHeight || 0;
         }
         if (widthWidget && heightWidget) {
             node.properties.valueX = widthWidget.value;
@@ -334,6 +362,22 @@ class ResolutionMasterCanvas {
         this.widthWidget = widthWidget;
         this.heightWidget = heightWidget;
         this.latentTypeWidget = latentTypeWidget;
+        this.autoDetectSourceWidget = autoDetectSourceWidget;
+        this.autoDetectWidthWidget = autoDetectWidthWidget;
+        this.autoDetectHeightWidget = autoDetectHeightWidget;
+        this.backendFallbackWidgets = {
+            autoFitOnChange: autoFitOnChangeWidget,
+            autoResizeOnChange: autoResizeOnChangeWidget,
+            autoSnapOnChange: autoSnapOnChangeWidget,
+            useCustomCalc: useCustomCalcWidget,
+            preserveScalingRatio: preserveScalingRatioWidget,
+            selectedCategory: selectedCategoryWidget,
+            snapValue: snapValueWidget,
+            upscaleValue: upscaleValueWidget,
+            targetResolution: targetResolutionWidget,
+            targetMegapixels: targetMegapixelsWidget,
+            autoDetectPresetsJSON: autoDetectPresetsJSONWidget
+        };
         this.rescaleModeWidget = rescaleModeWidget;
         this.rescaleValueWidget = rescaleValueWidget;
         this.batchSizeWidget = batchSizeWidget;
@@ -373,6 +417,11 @@ class ResolutionMasterCanvas {
         
         node.onPropertyChanged = function(property) {
             self.handlePropertyChange(property);
+        };
+        const origOnSerialize = node.onSerialize;
+        node.onSerialize = function() {
+            self.syncBackendFallbackWidgets();
+            if (origOnSerialize) return origOnSerialize.apply(this, arguments);
         };
         node.onResize = function() {
             if (!self._isApplyingAutoSize) {
@@ -426,13 +475,27 @@ class ResolutionMasterCanvas {
                 }
             });
         };
-        [widthWidget, heightWidget, modeWidget, latentTypeWidget, autoDetectWidget, rescaleModeWidget, rescaleValueWidget, batchSizeWidget].forEach(widget => {
+        [
+            widthWidget,
+            heightWidget,
+            modeWidget,
+            latentTypeWidget,
+            autoDetectWidget,
+            autoDetectSourceWidget,
+            autoDetectWidthWidget,
+            autoDetectHeightWidget,
+            ...Object.values(this.backendFallbackWidgets),
+            rescaleModeWidget,
+            rescaleValueWidget,
+            batchSizeWidget
+        ].forEach(widget => {
             if (widget) {
                 widget.hidden = true;
                 widget.type = "hidden";
                 widget.computeSize = () => [0, -4];
             }
         });
+        this.syncBackendFallbackWidgets();
     }
     
     drawInterface(ctx) {
@@ -907,20 +970,26 @@ class ResolutionMasterCanvas {
             buttonControl: 'scaleBtn', mainControl: 'scaleSlider', radioControl: 'upscaleRadio',
             controlType: 'slider', icon: this.icons.upscale, valueProperty: 'upscaleValue',
             min: props.scaling_slider_min, max: props.scaling_slider_max, step: props.scaling_slider_step,
-            displayValue: props.upscaleValue.toFixed(1) + "x", scaleFactor: props.upscaleValue, rescaleMode: 'manual'
+            displayValue: props.upscaleValue.toFixed(1) + "x",
+            previewDimensions: this.calculateScalingPreview('manual'),
+            rescaleMode: 'manual'
         });
-        const resScale = this.calculateResolutionScale(props.targetResolution);
+        const resScale = this.calculateScaleFactor('resolution');
         this.drawScalingRowBase(ctx, margin, y + 35, {
             buttonControl: 'resolutionBtn', mainControl: 'resolutionDropdown', radioControl: 'resolutionRadio',
             controlType: 'dropdown', icon: this.icons.resolution, selectedText: `${props.targetResolution}p`,
-            displayValue: `×${resScale.toFixed(2)}`, scaleFactor: resScale, rescaleMode: 'resolution'
+            displayValue: `×${resScale.toFixed(2)}`,
+            previewDimensions: this.calculateScalingPreview('resolution'),
+            rescaleMode: 'resolution'
         });
-        const mpScale = this.calculateMegapixelsScale(props.targetMegapixels);
+        const mpScale = this.calculateScaleFactor('megapixels');
         this.drawScalingRowBase(ctx, margin, y + 70, {
             buttonControl: 'megapixelsBtn', mainControl: 'megapixelsSlider', radioControl: 'megapixelsRadio',
             controlType: 'slider', icon: this.icons.megapixels, valueProperty: 'targetMegapixels',
             min: props.megapixels_slider_min, max: props.megapixels_slider_max, step: props.megapixels_slider_step,
-            displayValue: `${props.targetMegapixels.toFixed(1)}MP`, scaleFactor: mpScale, rescaleMode: 'megapixels'
+            displayValue: `${props.targetMegapixels.toFixed(1)}MP`,
+            previewDimensions: this.calculateScalingPreview('megapixels'),
+            rescaleMode: 'megapixels'
         });
 
         const checkboxSize = 18;
@@ -1732,10 +1801,12 @@ class ResolutionMasterCanvas {
         const props = this.node.properties;
         if (toggleName === 'autoDetectToggle') {
             props.autoDetect = !props.autoDetect;
+            this.setAutoDetectSource('backend');
             if (props.autoDetect) this.startAutoDetect();
             else this.stopAutoDetect();
             const widget = this.node.widgets?.find(w => w.name === 'auto_detect');
             if (widget) widget.value = props.autoDetect;
+            this.syncBackendFallbackWidgets();
             app.graph.setDirtyCanvas(true);
         } else if (toggleName === 'calcInfoToggle' && props.selectedCategory) {
             props.showCalcInfo = !props.showCalcInfo;
@@ -1756,6 +1827,8 @@ class ResolutionMasterCanvas {
         } else if (checkboxName === 'preserveScalingRatioCheckbox') {
             props.preserveScalingRatio = !props.preserveScalingRatio;
         }
+        this.syncBackendFallbackWidgets();
+        this.updateRescaleValue();
         app.graph.setDirtyCanvas(true);
     }
 
@@ -1789,25 +1862,167 @@ class ResolutionMasterCanvas {
     getAllPresets() {
         return this.customPresetsManager.getMergedPresets(this.presetCategories);
     }
+
+    getCategoryPresetsJSON(category = this.node.properties.selectedCategory) {
+        const categoryPresets = category ? (this.getAllPresets()[category] || {}) : {};
+        try {
+            return JSON.stringify(categoryPresets);
+        } catch (error) {
+            log.warn('Failed to serialize calculation presets:', error);
+            return "{}";
+        }
+    }
+
+    buildCalculationPayload(action, overrides = {}) {
+        const props = this.node.properties;
+        const get = (snakeName, camelName, fallback) =>
+            overrides[snakeName] ?? overrides[camelName] ?? fallback;
+        const selectedCategory = get('selected_category', 'selectedCategory', props.selectedCategory || "");
+
+        return {
+            action,
+            width: Math.max(1, Math.round(Number(get('width', 'width', this.widthWidget?.value ?? props.valueX ?? 512)) || 1)),
+            height: Math.max(1, Math.round(Number(get('height', 'height', this.heightWidget?.value ?? props.valueY ?? 512)) || 1)),
+            auto_fit_on_change: !!get('auto_fit_on_change', 'autoFitOnChange', props.autoFitOnChange),
+            auto_resize_on_change: !!get('auto_resize_on_change', 'autoResizeOnChange', props.autoResizeOnChange),
+            auto_snap_on_change: !!get('auto_snap_on_change', 'autoSnapOnChange', props.autoSnapOnChange),
+            use_custom_calc: !!get('use_custom_calc', 'useCustomCalc', props.useCustomCalc),
+            preserve_scaling_ratio: !!get('preserve_scaling_ratio', 'preserveScalingRatio', props.preserveScalingRatio),
+            selected_category: selectedCategory,
+            snap_value: Math.max(1, Math.round(Number(get('snap_value', 'snapValue', props.snapValue)) || 64)),
+            upscale_value: Math.max(0, Number(get('upscale_value', 'upscaleValue', props.upscaleValue)) || 0),
+            target_resolution: Math.max(1, Math.round(Number(get('target_resolution', 'targetResolution', props.targetResolution)) || 1080)),
+            target_megapixels: Math.max(0, Number(get('target_megapixels', 'targetMegapixels', props.targetMegapixels)) || 0),
+            rescale_mode: get('rescale_mode', 'rescaleMode', props.rescaleMode || "resolution"),
+            presets_json: get('presets_json', 'presetsJSON', this.getCategoryPresetsJSON(selectedCategory))
+        };
+    }
+
+    async requestBackendCalculation(action, overrides = {}, options = {}) {
+        try {
+            const response = await fetch('/resolutionmaster/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(this.buildCalculationPayload(action, overrides)),
+                cache: 'no-store'
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
+                throw new Error(data?.error || `Calculation request failed with HTTP ${response.status}`);
+            }
+            return data;
+        } catch (error) {
+            if (!options.silent) {
+                log.error(`Backend calculation failed for ${action}:`, error);
+            }
+            return null;
+        }
+    }
+
+    applyRescaleResult(result) {
+        const value = Number(result?.rescale_factor);
+        if (!Number.isFinite(value)) return;
+
+        const props = this.node.properties;
+        props.rescaleValue = value;
+        if (this.rescaleValueWidget) {
+            this.rescaleValueWidget.value = value;
+        }
+        if (this.rescaleModeWidget) {
+            this.rescaleModeWidget.value = props.rescaleMode;
+        }
+    }
+
+    getScaleFactor(mode) {
+        return this.calculateScaleFactor(mode);
+    }
+
+    calculateScaleFactor(mode = this.node.properties.rescaleMode) {
+        const props = this.node.properties;
+        const width = Math.max(1, Number(this.widthWidget?.value ?? props.valueX) || 1);
+        const height = Math.max(1, Number(this.heightWidget?.value ?? props.valueY) || 1);
+        const currentPixels = Math.max(1, width * height);
+
+        if (mode === 'manual') {
+            return Math.max(0, Number(props.upscaleValue) || 0);
+        }
+        if (mode === 'megapixels') {
+            return Math.sqrt(Math.max(0, Number(props.targetMegapixels) || 0) * 1000000 / currentPixels);
+        }
+
+        const targetResolution = Math.max(1, Number(props.targetResolution) || 1080);
+        const targetPixels = (targetResolution * (16 / 9)) * targetResolution;
+        return Math.sqrt(targetPixels / currentPixels);
+    }
+
+    calculateScalingPreview(mode) {
+        return this.calculateLocalScaledDimensions(this.calculateScaleFactor(mode));
+    }
+
+    calculateLocalScaledDimensions(scale) {
+        const props = this.node.properties;
+        const width = Math.max(1, Math.round(Number(this.widthWidget?.value ?? props.valueX) || 1));
+        const height = Math.max(1, Math.round(Number(this.heightWidget?.value ?? props.valueY) || 1));
+
+        if (!props.preserveScalingRatio) {
+            return {
+                width: Math.max(1, Math.round(width * scale)),
+                height: Math.max(1, Math.round(height * scale))
+            };
+        }
+
+        const divisor = ResolutionMasterCanvas.gcd(width, height);
+        const ratioX = width / divisor;
+        const ratioY = height / divisor;
+        const targetPixels = width * height * scale * scale;
+        const ratioPixels = ratioX * ratioY;
+        const ratioScale = Math.max(1, Math.round(Math.sqrt(targetPixels / ratioPixels)));
+
+        return {
+            width: ratioX * ratioScale,
+            height: ratioY * ratioScale
+        };
+    }
+
+    applyBackendCalculationResult(result, options = {}) {
+        if (!result) return false;
+
+        const width = Number(result.width);
+        const height = Number(result.height);
+        if (options.updatePreset !== false && result.selected_preset) {
+            this.node.properties.selectedPreset = result.selected_preset;
+        }
+        if (options.applyDimensions !== false && Number.isFinite(width) && Number.isFinite(height)) {
+            this.setDimensions(Math.round(width), Math.round(height), { updateBackend: false });
+        }
+        if (options.applyRescale !== false) {
+            this.applyRescaleResult(result);
+        }
+        this.syncBackendFallbackWidgets();
+        this.requestCanvasUpdate();
+        return true;
+    }
     
     validateWidgets() {
         return this.widthWidget && this.heightWidget;
     }
     
-    setDimensions(width, height) {
+    setDimensions(width, height, options = {}) {
         if (!this.validateWidgets()) return;
         this.node.properties.valueX = width;
         this.node.properties.valueY = height;
         this.widthWidget.value = width;
         this.heightWidget.value = height;
         this.handlePropertyChange();
-        this.updateRescaleValue();
+        if (options.updateBackend !== false) {
+            this.updateRescaleValue();
+        }
 
-        this.updateCanvasFromWidgets();
+        this.updateCanvasFromWidgets({ updateBackend: options.updateBackend });
         app.graph.setDirtyCanvas(true);
     }
     
-    updateCanvasFromWidgets() {
+    updateCanvasFromWidgets(options = {}) {
         if (!this.validateWidgets()) return;
         
         const node = this.node;
@@ -1818,7 +2033,9 @@ class ResolutionMasterCanvas {
         node.intpos.y = (this.heightWidget.value - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
         node.intpos.x = Math.max(0, Math.min(1, node.intpos.x));
         node.intpos.y = Math.max(0, Math.min(1, node.intpos.y));
-        this.updateRescaleValue();
+        if (options.updateBackend !== false) {
+            this.updateRescaleValue();
+        }
         app.graph.setDirtyCanvas(true);
     }
     
@@ -1863,10 +2080,9 @@ class ResolutionMasterCanvas {
         });
         ctx.fillText(config.displayValue, currentX + layout.valueWidth / 2, y + 14);
         currentX += layout.valueWidth + layout.gap;
-        if (this.validateWidgets() && config.scaleFactor) {
-            const dimensions = this.calculateScaledDimensions(config.scaleFactor);
-            const newW = dimensions.width;
-            const newH = dimensions.height;
+        if (this.validateWidgets() && config.previewDimensions) {
+            const newW = Math.round(Number(config.previewDimensions.width) || 0);
+            const newH = Math.round(Number(config.previewDimensions.height) || 0);
             this.setCanvasTextStyle(ctx, { fillStyle: "#888", font: "11px Arial", textAlign: "left" });
             ctx.fillText(`${newW}×${newH}`, currentX, y + 14);
         }
@@ -2076,7 +2292,7 @@ class ResolutionMasterCanvas {
                  props[config.prop] = parseFloat(props[config.prop].toFixed(1));
             }
 
-            if (config.updateOn && props.rescaleMode === config.updateOn) {
+            if (config.updateOn) {
                 this.updateRescaleValue();
             }
 
@@ -2205,6 +2421,8 @@ class ResolutionMasterCanvas {
                 props.selectedCategory = value;
                 props.selectedPreset = null;
                 // Latent type is now manually controlled via LAT selector - no automatic change
+                this.syncBackendFallbackWidgets();
+                this.updateRescaleValue();
                 app.graph.setDirtyCanvas(true);
             };
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
@@ -2221,7 +2439,7 @@ class ResolutionMasterCanvas {
                     resolutionValue = resolutionValue + 'p';
                 }
                 props.targetResolution = parseInt(resolutionValue);
-                if (props.rescaleMode === 'resolution') this.updateRescaleValue();
+                this.updateRescaleValue();
                 app.graph.setDirtyCanvas(true);
             };
         }
@@ -2247,71 +2465,34 @@ class ResolutionMasterCanvas {
         this.setDimensions(newWidth, newHeight);
     }
     
-    handleSnap() {
+    async handleSnap() {
         if (!this.validateWidgets()) return;
-        
-        const props = this.node.properties;
-        const snap = Math.max(1, Number(props.snapValue) || 1);
-        const minWidth = Math.max(1, snap, Number(props.manual_slider_min_w) || 1, Number(props.canvas_min_x) || 0);
-        const minHeight = Math.max(1, snap, Number(props.manual_slider_min_h) || 1, Number(props.canvas_min_y) || 0);
-        const snapDimension = (value, minValue) => Math.max(minValue, Math.round(value / snap) * snap);
-        const newWidth = snapDimension(this.widthWidget.value, minWidth);
-        const newHeight = snapDimension(this.heightWidget.value, minHeight);
-        this.setDimensions(newWidth, newHeight);
+        const result = await this.requestBackendCalculation('auto_snap');
+        this.applyBackendCalculationResult(result, { updatePreset: false });
+    }
+
+    async handleScale() {
+        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'manual' });
+        if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
+            this.updateRescaleValue();
+        }
+    }
+
+    async handleResolutionScale() {
+        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'resolution' });
+        if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
+            this.updateRescaleValue();
+        }
+    }
+
+    async handleMegapixelsScale() {
+        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'megapixels' });
+        if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
+            this.updateRescaleValue();
+        }
     }
     
-    applyScaling(scaleCalculator, resetValue = null) {
-        if (!this.validateWidgets()) return;
-        
-        const scale = scaleCalculator();
-        const dimensions = this.calculateScaledDimensions(scale);
-        if (resetValue) {
-            resetValue();
-        }
-        
-        this.setDimensions(dimensions.width, dimensions.height);
-    }
-
-    calculateScaledDimensions(scale) {
-        if (this.node.properties.preserveScalingRatio) {
-            return this.calculateRatioPreservingScaledDimensions(scale);
-        }
-
-        return {
-            width: Math.round(this.widthWidget.value * scale),
-            height: Math.round(this.heightWidget.value * scale)
-        };
-    }
-
-    calculateRatioPreservingScaledDimensions(scale) {
-        const currentWidth = Math.max(1, Math.round(Number(this.widthWidget.value) || 1));
-        const currentHeight = Math.max(1, Math.round(Number(this.heightWidget.value) || 1));
-        const divisor = ResolutionMasterCanvas.gcd(currentWidth, currentHeight);
-        const ratioX = currentWidth / divisor;
-        const ratioY = currentHeight / divisor;
-        const targetPixels = currentWidth * currentHeight * scale * scale;
-        const ratioPixels = ratioX * ratioY;
-        const ratioScale = Math.max(1, Math.round(Math.sqrt(targetPixels / ratioPixels)));
-
-        return {
-            width: ratioX * ratioScale,
-            height: ratioY * ratioScale
-        };
-    }
-
-    handleScale() {
-        this.applyScaling(() => this.node.properties.upscaleValue);
-    }
-
-    handleResolutionScale() {
-        this.applyScaling(() => this.calculateResolutionScale(this.node.properties.targetResolution));
-    }
-
-    handleMegapixelsScale() {
-        this.applyScaling(() => this.calculateMegapixelsScale(this.node.properties.targetMegapixels));
-    }
-    
-    handleAutoFit() {
+    async handleAutoFit() {
         const props = this.node.properties;
         const category = props.selectedCategory;
         if (!category) return;
@@ -2320,47 +2501,15 @@ class ResolutionMasterCanvas {
             log.debug("Auto-fit: Width or height widget not found");
             return;
         }
-        const currentWidth = this.widthWidget.value;
-        const currentHeight = this.heightWidget.value;
-        this.applyAutoFit(currentWidth, currentHeight, props.useCustomCalc, category, 'current');
+        const result = await this.requestBackendCalculation('auto_fit', {
+            width: this.widthWidget.value,
+            height: this.heightWidget.value,
+            selected_category: category,
+            use_custom_calc: props.useCustomCalc
+        });
+        this.applyBackendCalculationResult(result);
     }
-    applyAutoFit(width, height, useCalc, category, source = 'detected') {
-        const props = this.node.properties;
-        
-        if (!this.widthWidget || !this.heightWidget) return;
-        
-        const closestPreset = this.findClosestPreset(width, height, category);
-        
-        if (!closestPreset) return;
-        
-        let finalWidth, finalHeight;
-        
-        if (useCalc) {
-            const presetAspect = closestPreset.width / closestPreset.height;
-            const currentAspect = width / height;
-            if (Math.abs(currentAspect - presetAspect) < 0.01) {
-                const result = this.applyCustomCalculation(width, height, category);
-                finalWidth = result.width;
-                finalHeight = result.height;
-                log.debug(`Auto-fit with calc (${source}): ${closestPreset.name} has matching aspect ratio. Using ${finalWidth}x${finalHeight} (from ${width}x${height})`);
-            } else {
-                const scaledDimensions = this.scaleToPresetAspectRatio(width, height, presetAspect);
-                const result = this.applyCustomCalculation(scaledDimensions.width, scaledDimensions.height, category);
-                finalWidth = result.width;
-                finalHeight = result.height;
-                log.debug(`Auto-fit with calc (${source}): ${closestPreset.name} different aspect. Scaled to ${finalWidth}x${finalHeight} (from ${width}x${height})`);
-            }
-        } else {
-            finalWidth = closestPreset.width;
-            finalHeight = closestPreset.height;
-            log.debug(`Auto-fit preset only (${source}): ${closestPreset.name} (${finalWidth}x${finalHeight}) for input ${width}x${height}`);
-        }
-        
-        props.selectedPreset = closestPreset.name;
-        this.setDimensions(finalWidth, finalHeight);
-    }
-    
-    handleAutoCalc() {
+    async handleAutoCalc() {
         const props = this.node.properties;
         
         if (!props.selectedCategory) {
@@ -2372,31 +2521,26 @@ class ResolutionMasterCanvas {
             log.debug("Auto-calc: Width or height widget not found");
             return;
         }
-        const currentWidth = this.widthWidget.value;
-        const currentHeight = this.heightWidget.value;
-        const result = this.applyCustomCalculation(currentWidth, currentHeight, props.selectedCategory);
-        this.setDimensions(result.width, result.height);
+        const result = await this.requestBackendCalculation('custom_calc', {
+            width: this.widthWidget.value,
+            height: this.heightWidget.value,
+            selected_category: props.selectedCategory
+        });
+        this.applyBackendCalculationResult(result, { updatePreset: false });
         
-        log.debug(`Auto-calc applied: ${currentWidth}x${currentHeight} → ${result.width}x${result.height} (${props.selectedCategory})`);
     }
     
-    handleAutoResize() {
+    async handleAutoResize() {
         const props = this.node.properties;
         
         if (!this.widthWidget || !this.heightWidget) {
             log.debug("Auto-Resize: Width or height widget not found");
             return;
         }
-        if (props.rescaleMode === 'manual') {
-            this.handleScale();
-            log.debug(`Auto-Resize: Applied manual scaling with factor ${props.upscaleValue}`);
-        } else if (props.rescaleMode === 'resolution') {
-            this.handleResolutionScale();
-            log.debug(`Auto-Resize: Applied resolution scaling to ${props.targetResolution}p`);
-        } else if (props.rescaleMode === 'megapixels') {
-            this.handleMegapixelsScale();
-            log.debug(`Auto-Resize: Applied megapixels scaling to ${props.targetMegapixels}MP`);
-        }
+        const result = await this.requestBackendCalculation('auto_resize', {
+            rescale_mode: props.rescaleMode
+        });
+        this.applyBackendCalculationResult(result, { updatePreset: false });
     }
     
     handleDetectedClick() {
@@ -2419,20 +2563,28 @@ class ResolutionMasterCanvas {
         this.presetManagerDialog.show();
     }
     
-    applyDimensionChange() {
+    async applyDimensionChange() {
         const props = this.node.properties;
         let { value: width } = this.widthWidget;
         let { value: height } = this.heightWidget;
 
         if (props.useCustomCalc && props.selectedCategory) {
-            ({ width, height } = this.applyCustomCalculation(width, height, props.selectedCategory));
+            const result = await this.requestBackendCalculation('custom_calc', {
+                width,
+                height,
+                selected_category: props.selectedCategory
+            });
+            if (result) {
+                ({ width, height } = result);
+                this.applyRescaleResult(result);
+            }
         }
 
         // Removed canvas min/max clamping - allow presets to set any resolution
         this.setDimensions(width, height);
     }
 
-    applyPreset(category, presetName) {
+    async applyPreset(category, presetName) {
         const props = this.node.properties;
         const allPresets = this.getAllPresets();
         const preset = allPresets[category]?.[presetName];
@@ -2442,230 +2594,25 @@ class ResolutionMasterCanvas {
             this.widthWidget.value = preset.width;
             this.heightWidget.value = preset.height;
             props.selectedPreset = presetName;
-            this.applyDimensionChange();
+            await this.applyDimensionChange();
             this.updateCanvasFromWidgets();
         }
     }
-    applyCustomCalculation(width, height, category) {
-        const calculations = {
-            Flux: () => this.applyFluxCalculation(width, height),
-            'Flux.2': () => this.applyFlux2Calculation(width, height),
-            WAN: () => this.applyWANCalculation(width, height),
-            'Qwen-Image': () => this.applyQwenCalculation(width, height),
-            'SDXL': () => this.findBestPresetForCategory(width, height, 'SDXL'),
-            'HiDream Dev': () => this.findBestPresetForCategory(width, height, 'HiDream Dev'),
-            'Standard': () => this.scaleToNearestPresetAspectRatio(width, height, 'Standard'),
-            'Social Media': () => this.scaleToNearestPresetAspectRatio(width, height, 'Social Media'),
-            'Print': () => this.scaleToNearestPresetAspectRatio(width, height, 'Print'),
-            'Cinema': () => this.scaleToNearestPresetAspectRatio(width, height, 'Cinema'),
-            'Display Resolutions': () => this.scaleToNearestPresetAspectRatio(width, height, 'Display Resolutions')
-        };
-        return calculations[category] ? calculations[category]() : { width, height };
-    }
-    
-    findBestPresetForCategory(width, height, category) {
-        const closestPreset = this.findClosestPreset(width, height, category);
-        
-        if (closestPreset) {
-            log.debug(`${category} Calc: Found best preset ${closestPreset.name} (${closestPreset.width}x${closestPreset.height}) for input ${width}x${height}`);
-            return { width: closestPreset.width, height: closestPreset.height };
-        }
-        
-        return { width, height };
-    }
-
-    scaleToNearestPresetAspectRatio(width, height, category) {
-        const closestPreset = this.findClosestPreset(width, height, category);
-
-        if (closestPreset) {
-            const presetAspect = closestPreset.width / closestPreset.height;
-            const currentAspect = width / height;
-            if (Math.abs(currentAspect - presetAspect) < 0.01) {
-                log.debug(`Calc for ${category}: Preset ${closestPreset.name} has matching aspect ratio (${presetAspect.toFixed(2)}). Keeping current size ${width}x${height}`);
-                return { width, height };
-            }
-            const result = this.scaleToPresetAspectRatio(width, height, presetAspect);
-            
-            log.debug(`Calc for ${category}: Found preset ${closestPreset.name}. Scaling ${width}x${height} -> ${result.width}x${result.height} with aspect ${presetAspect.toFixed(2)}`);
-            return result;
-        }
-        
-        return { width, height };
-    }
-    findClosestPreset(width, height, category, options = {}) {
-        const allPresets = this.getAllPresets();
-        const presets = allPresets[category];
-        if (!presets) return null;
-
-        let closestPreset = null;
-        let closestAspectDiff = Infinity;
-        let closestPixelDiff = Infinity;
-        
-        const inputAspect = width / height;
-        const inputPixels = width * height;
-        
-        Object.entries(presets).forEach(([presetName, preset]) => {
-            const orientations = [
-                { width: preset.width, height: preset.height, flipped: false },
-                { width: preset.height, height: preset.width, flipped: true }
-            ];
-            
-            orientations.forEach(orientation => {
-                const presetAspect = orientation.width / orientation.height;
-                const presetPixels = orientation.width * orientation.height;
-                const aspectDiff = Math.abs(inputAspect - presetAspect);
-                if (aspectDiff < closestAspectDiff || (Math.abs(aspectDiff - closestAspectDiff) < 0.01)) {
-                    if (aspectDiff < 0.01 || aspectDiff < closestAspectDiff) {
-                        const pixelDiff = Math.abs(Math.log(inputPixels / presetPixels));
-                        if (aspectDiff < closestAspectDiff ||
-                            (Math.abs(aspectDiff - closestAspectDiff) < 0.01 && pixelDiff < closestPixelDiff)) {
-                            closestAspectDiff = aspectDiff;
-                            closestPixelDiff = pixelDiff;
-                            closestPreset = {
-                                name: presetName,
-                                width: orientation.width,
-                                height: orientation.height,
-                                originalPreset: preset
-                            };
-                        }
-                    }
-                }
-            });
-        });
-        
-        log.debug(`findClosestPreset: Input ${width}x${height} (aspect ${inputAspect.toFixed(2)}) → Selected "${closestPreset?.name}" ${closestPreset?.width}x${closestPreset?.height} (aspect ${(closestPreset?.width/closestPreset?.height)?.toFixed(2)})`);
-        
-        return closestPreset;
-    }
-    chooseBestScalingOption(currentPixels, option1Pixels, option2Pixels, option1Dims, option2Dims) {
-        const option1Diff = Math.abs(option1Pixels - currentPixels);
-        const option2Diff = Math.abs(option2Pixels - currentPixels);
-        
-        if (option1Diff <= option2Diff) {
-            return option1Dims;
-        } else {
-            return option2Dims;
-        }
-    }
-
-    scaleToPresetAspectRatio(currentWidth, currentHeight, presetAspect) {
-        const currentPixels = currentWidth * currentHeight;
-        const option1Width = currentWidth;
-        const option1Height = Math.round(currentWidth / presetAspect);
-        const option1Pixels = option1Width * option1Height;
-        const option2Height = currentHeight;
-        const option2Width = Math.round(currentHeight * presetAspect);
-        const option2Pixels = option2Width * option2Height;
-        
-        return this.chooseBestScalingOption(
-            currentPixels,
-            option1Pixels,
-            option2Pixels,
-            { width: option1Width, height: option1Height },
-            { width: option2Width, height: option2Height }
-        );
-    }
-
     getClosestPResolution(width, height) {
         const pValue = Math.sqrt(width * height * 9 / 16);
         return `(${Math.round(pValue)}p)`;
     }
-    applyFluxLikeCalculation(width, height, maxMP, maxDim, minDim, multiple) {
-        const currentMP = (width * height) / 1000000;
-        let w = width, h = height;
-        if (currentMP > maxMP) {
-            const scale = Math.sqrt(maxMP / currentMP);
-            w *= scale; h *= scale;
-        }
-        const maxD = Math.max(w, h);
-        if (maxD > maxDim) { const s = maxDim / maxD; w *= s; h *= s; }
-        
-        const minD = Math.min(w, h);
-        if (minD < minDim) { const s = minDim / minD; w *= s; h *= s; }
-        return {
-            width: Math.max(minDim, Math.min(maxDim, Math.round(w / multiple) * multiple)),
-            height: Math.max(minDim, Math.min(maxDim, Math.round(h / multiple) * multiple))
-        };
-    }
-    
-    applyFluxCalculation(width, height) {
-        return this.applyFluxLikeCalculation(width, height, 4.0, 2560, 320, 32);
-    }
-    
-    applyFlux2Calculation(width, height) {
-        return this.applyFluxLikeCalculation(width, height, 6.0, 3840, 320, 16);
-    }
-    
-    applyWANCalculation(width, height) {
-        const targetPixels = Math.max(182080, Math.min(1195560, width * height));
-        const aspect = width / height;
-        let targetHeight = Math.sqrt(targetPixels / aspect);
-        let targetWidth = targetHeight * aspect;
-        
-        return { 
-            width: Math.round(targetWidth / 16) * 16,
-            height: Math.round(targetHeight / 16) * 16
-        };
-    }
-    
-    applyQwenCalculation(width, height) {
-        const currentPixels = width * height;
-        const minPixels = 589824;  
-        const maxPixels = 4194304; 
-        if (currentPixels >= minPixels && currentPixels <= maxPixels) {
-            return { width, height };
-        } else {
-            let targetPixels;
-            
-            if (currentPixels < minPixels) {
-                targetPixels = minPixels;
-            } else {
-                targetPixels = maxPixels;
-            }
-            const aspect = width / height;
-            let targetHeight = Math.sqrt(targetPixels / aspect);
-            let targetWidth = targetHeight * aspect;
-            
-            return {
-                width: Math.round(targetWidth),
-                height: Math.round(targetHeight)
-            };
-        }
-    }
-    
-    calculateResolutionScale(targetP) {
-        const targetPixels = (targetP * (16 / 9)) * targetP;
-        return this.calculateScaleFromPixels(targetPixels);
-    }
-    
-    calculateMegapixelsScale(targetMP) {
-        const targetPixels = targetMP * 1000000;
-        return this.calculateScaleFromPixels(targetPixels);
-    }
-    
-    calculateScaleFromPixels(targetPixels) {
-        if (!this.widthWidget || !this.heightWidget) return 1.0;
-        const currentPixels = this.widthWidget.value * this.heightWidget.value;
-        return Math.sqrt(targetPixels / currentPixels);
-    }
-    
     updateRescaleValue() {
         const props = this.node.properties;
-        const modeCalculations = {
-            manual: () => props.upscaleValue,
-            resolution: () => this.calculateResolutionScale(props.targetResolution),
-            megapixels: () => this.calculateMegapixelsScale(props.targetMegapixels),
-        };
-        const value = modeCalculations[props.rescaleMode]?.() || 1.0;
-        
-        props.rescaleValue = value;
-        const rescaleValueWidget = this.node.widgets?.find(w => w.name === 'rescale_value');
-        if (rescaleValueWidget) {
-            rescaleValueWidget.value = value;
+        const cachedValue = this.getScaleFactor(props.rescaleMode);
+        if (Number.isFinite(cachedValue)) {
+            props.rescaleValue = cachedValue;
+            if (this.rescaleValueWidget) {
+                this.rescaleValueWidget.value = cachedValue;
+            }
         }
-        const rescaleModeWidget = this.node.widgets?.find(w => w.name === 'rescale_mode');
-        if (rescaleModeWidget) {
-            rescaleModeWidget.value = props.rescaleMode;
+        if (this.rescaleModeWidget) {
+            this.rescaleModeWidget.value = props.rescaleMode;
         }
     }
     startAutoDetect() {
@@ -2680,49 +2627,147 @@ class ResolutionMasterCanvas {
             this.dimensionCheckInterval = null;
         }
     }
+
+    setAutoDetectSource(source) {
+        const normalizedSource = source === 'frontend' ? 'frontend' : 'backend';
+        this.node.properties.autoDetectSource = normalizedSource;
+        if (this.autoDetectSourceWidget) {
+            this.autoDetectSourceWidget.value = normalizedSource;
+        }
+    }
+
+    setRawAutoDetectDimensions(dimensions) {
+        const width = dimensions ? Math.round(Number(dimensions.width) || 0) : 0;
+        const height = dimensions ? Math.round(Number(dimensions.height) || 0) : 0;
+        this.node.properties.autoDetectWidth = width;
+        this.node.properties.autoDetectHeight = height;
+        if (this.autoDetectWidthWidget) {
+            this.autoDetectWidthWidget.value = width;
+        }
+        if (this.autoDetectHeightWidget) {
+            this.autoDetectHeightWidget.value = height;
+        }
+    }
+
+    setBackendFallbackWidgetValue(propertyName, value) {
+        this.node.properties[propertyName] = value;
+        const widget = this.backendFallbackWidgets?.[propertyName];
+        if (widget) {
+            widget.value = value;
+        }
+    }
+
+    syncBackendFallbackWidgets() {
+        if (!this.backendFallbackWidgets) return;
+
+        const props = this.node.properties;
+        const presetsJSON = this.getCategoryPresetsJSON(props.selectedCategory);
+
+        this.setBackendFallbackWidgetValue('autoFitOnChange', !!props.autoFitOnChange);
+        this.setBackendFallbackWidgetValue('autoResizeOnChange', !!props.autoResizeOnChange);
+        this.setBackendFallbackWidgetValue('autoSnapOnChange', !!props.autoSnapOnChange);
+        this.setBackendFallbackWidgetValue('useCustomCalc', !!props.useCustomCalc);
+        this.setBackendFallbackWidgetValue('preserveScalingRatio', !!props.preserveScalingRatio);
+        this.setBackendFallbackWidgetValue('selectedCategory', props.selectedCategory || "");
+        this.setBackendFallbackWidgetValue('snapValue', Math.max(1, Math.round(Number(props.snapValue) || 64)));
+        this.setBackendFallbackWidgetValue('upscaleValue', Math.max(0, Number(props.upscaleValue) || 0));
+        this.setBackendFallbackWidgetValue('targetResolution', Math.max(1, Math.round(Number(props.targetResolution) || 1080)));
+        this.setBackendFallbackWidgetValue('targetMegapixels', Math.max(0, Number(props.targetMegapixels) || 0));
+        this.setBackendFallbackWidgetValue('autoDetectPresetsJSON', presetsJSON);
+    }
     
     async checkForImageDimensions() {
         const node = this.node;
         try {
-            const inputLink = node.inputs?.[0]?.link;
-            if (!inputLink) {
+            const previewDimensions = this.getConnectedPreviewDimensions();
+            const backendDimensions = previewDimensions ? null : await this.getBackendDetectedDimensions();
+            const dimensions = previewDimensions || backendDimensions;
+            if (!dimensions) {
                 this.detectedDimensions = null;
+                this.setAutoDetectSource('backend');
+                this.setRawAutoDetectDimensions(null);
                 return;
             }
-            
-            const link = app.graph.links[inputLink];
-            if (link) {
-                const sourceNode = app.graph.getNodeById(link.origin_id);
-                const img = sourceNode?.imgs?.[0];
-                if (img && (!this.detectedDimensions || this.detectedDimensions.width !== img.naturalWidth || this.detectedDimensions.height !== img.naturalHeight)) {
-                    this.detectedDimensions = { width: img.naturalWidth, height: img.naturalHeight };
-                    this.manuallySetByAutoFit = false;
-                    
-                    const props = node.properties;
-                    if (props.autoFitOnChange && props.selectedCategory) {
-                        this.applyAutoFit(this.detectedDimensions.width, this.detectedDimensions.height, false, props.selectedCategory, 'detected');
-                    }
-                    else if (props.autoDetect && this.widthWidget && this.heightWidget) {
-                        this.widthWidget.value = this.detectedDimensions.width;
-                        this.heightWidget.value = this.detectedDimensions.height;
-                        this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
-                    }
 
-                    if (props.autoResizeOnChange) {
-                        this.handleAutoResize();
-                    }
-                    if (props.autoSnapOnChange) {
-                        this.handleSnap();
-                    }
-                    if (props.useCustomCalc && props.selectedCategory) {
-                        this.handleAutoCalc();
-                    }
-                    
-                    app.graph.setDirtyCanvas(true);
+            this.setAutoDetectSource(previewDimensions ? 'frontend' : 'backend');
+            this.setRawAutoDetectDimensions(dimensions);
+
+            if (!this.detectedDimensions || this.detectedDimensions.width !== dimensions.width || this.detectedDimensions.height !== dimensions.height) {
+                this.detectedDimensions = dimensions;
+                this.manuallySetByAutoFit = false;
+                
+                const props = node.properties;
+                const result = await this.requestBackendCalculation('auto_detect', {
+                    width: this.detectedDimensions.width,
+                    height: this.detectedDimensions.height
+                });
+                if (result) {
+                    this.applyBackendCalculationResult(result);
+                } else if (props.autoDetect && this.widthWidget && this.heightWidget) {
+                    this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
                 }
+                
+                app.graph.setDirtyCanvas(true);
             }
         } catch (error) {
             log.error('Error checking for image dimensions:', error);
+        }
+    }
+
+    getConnectedPreviewDimensions() {
+        const inputLink = this.node.inputs?.[0]?.link;
+        if (!inputLink || !app.graph?.links) return null;
+
+        const link = app.graph.links[inputLink];
+        if (!link) return null;
+
+        const sourceNode = app.graph.getNodeById(link.origin_id);
+        // Best-effort live UI hint: ComfyUI exposes preview images on many source nodes,
+        // but the backend tensor remains the source of truth when the workflow executes.
+        const preview = sourceNode?.imgs?.[0];
+        const width = Number(preview?.naturalWidth || preview?.width || preview?.videoWidth);
+        const height = Number(preview?.naturalHeight || preview?.height || preview?.videoHeight);
+
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            return null;
+        }
+
+        return {
+            width: Math.round(width),
+            height: Math.round(height)
+        };
+    }
+
+    async getBackendDetectedDimensions() {
+        if (this.node.id == null) return null;
+
+        try {
+            const response = await fetch(`/resolutionmaster/dimensions/${encodeURIComponent(this.node.id)}`, {
+                cache: 'no-store'
+            });
+            if (!response.ok) return null;
+
+            const data = await response.json();
+            if (!data?.found) return null;
+
+            const width = Number(data.width);
+            const height = Number(data.height);
+            const timestamp = Number(data.timestamp);
+            if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+                return null;
+            }
+
+            if (Number.isFinite(timestamp)) {
+                this.lastBackendDimensionsTimestamp = timestamp;
+            }
+
+            return {
+                width: Math.round(width),
+                height: Math.round(height)
+            };
+        } catch (error) {
+            log.debug('Backend dimensions unavailable:', error);
+            return null;
         }
     }
     

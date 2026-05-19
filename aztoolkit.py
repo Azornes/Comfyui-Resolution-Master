@@ -1,27 +1,32 @@
 # ComfyUI - azToolkit - Azornes 2025
 
-import time
 import torch
 import comfy.model_management
 
-
-class AnyType(str):
-    __slots__ = ()
-
-    def __ne__(self, __value: object) -> bool:
-        return False
-
-
-any_type = AnyType("*")
+try:
+    from .core.auto_detect import (
+        apply_backend_auto_detect_fallback,
+        calculate_rescale_factor,
+        safe_float,
+        safe_int,
+    )
+    from .core.calculation_api import register_calculation_routes
+    from .core.dimension_cache import register_dimension_routes, store_detected_dimensions
+except ImportError:
+    from core.auto_detect import (
+        apply_backend_auto_detect_fallback,
+        calculate_rescale_factor,
+        safe_float,
+        safe_int,
+    )
+    from core.calculation_api import register_calculation_routes
+    from core.dimension_cache import register_dimension_routes, store_detected_dimensions
 
 
 class ResolutionMaster:
-    # Class variable to store image dimensions for auto-detection
-    _image_dimensions_cache = {}
-    
     def __init__(self):
         self.device = comfy.model_management.intermediate_device()
-    
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -37,8 +42,22 @@ class ResolutionMaster:
                 "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Output width in pixels. This value is controlled by the Resolution Master canvas and preset tools."}),
                 "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Output height in pixels. This value is controlled by the Resolution Master canvas and preset tools."}),
                 "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual", "tooltip": "When enabled, reads the connected input image dimensions for auto-detect and auto-fit workflows."}),
+                "auto_detect_source": ("STRING", {"default": "backend", "tooltip": "Internal auto-detect source marker used to distinguish backend tensor fallback from frontend preview-derived dimensions."}),
+                "auto_detect_width": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Internal raw width detected by the frontend before auto-fit or resize transforms."}),
+                "auto_detect_height": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Internal raw height detected by the frontend before auto-fit or resize transforms."}),
+                "auto_fit_on_change": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Auto-Fit on change."}),
+                "auto_resize_on_change": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Auto-Resize on change."}),
+                "auto_snap_on_change": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Auto-Snap on change."}),
+                "use_custom_calc": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Calc mode."}),
+                "preserve_scaling_ratio": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of preserve-ratio scaling."}),
+                "selected_category": ("STRING", {"default": "", "tooltip": "Internal backend fallback mirror of the selected preset category."}),
+                "snap_value": ("INT", {"default": 64, "min": 1, "max": 32768, "tooltip": "Internal backend fallback mirror of the snap value."}),
+                "upscale_value": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "tooltip": "Internal backend fallback mirror of the manual upscale value."}),
+                "target_resolution": ("INT", {"default": 1080, "min": 1, "max": 32768, "tooltip": "Internal backend fallback mirror of target p-resolution."}),
+                "target_megapixels": ("FLOAT", {"default": 2.0, "min": 0.0, "max": 1000.0, "tooltip": "Internal backend fallback mirror of target megapixels."}),
+                "auto_detect_presets_json": ("STRING", {"default": "{}", "tooltip": "Internal backend fallback preset data for the selected category."}),
                 "rescale_mode": ("STRING", {"default": "resolution", "tooltip": "Frontend-selected scaling intent used for the rescale_factor output: manual, resolution, or megapixels."}),
-                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0, "tooltip": "Calculated scale factor passed from the frontend. This becomes the rescale_factor output."}),
+                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0, "tooltip": "Internal UI cache for the visible scale factor. The backend recalculates the rescale_factor output from the current settings."}),
                 "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."}),
             },
             "optional": {
@@ -62,53 +81,87 @@ class ResolutionMaster:
     FUNCTION = "main"
     CATEGORY = "utils/azToolkit"
 
-    def main(self, mode, latent_type, width, height, auto_detect, rescale_mode, rescale_value, batch_size=1, input_image=None, unique_id=None):
-        detected_width = width
-        detected_height = height
+    @staticmethod
+    def detect_image_dimensions(input_image):
+        if input_image.dim() == 4:  # [batch, height, width, channels]
+            return int(input_image.shape[2]), int(input_image.shape[1])
+        if input_image.dim() == 3:  # [height, width, channels]
+            return int(input_image.shape[1]), int(input_image.shape[0])
+        return None
 
-        # If auto_detect is enabled and we have an input image
+    def main(
+        self,
+        mode,
+        latent_type,
+        width,
+        height,
+        auto_detect,
+        auto_detect_source,
+        auto_detect_width,
+        auto_detect_height,
+        auto_fit_on_change,
+        auto_resize_on_change,
+        auto_snap_on_change,
+        use_custom_calc,
+        preserve_scaling_ratio,
+        selected_category,
+        snap_value,
+        upscale_value,
+        target_resolution,
+        target_megapixels,
+        auto_detect_presets_json,
+        rescale_mode,
+        rescale_value,
+        batch_size=1,
+        input_image=None,
+        unique_id=None,
+    ):
         if auto_detect and input_image is not None:
-            try:
-                # Detect dimensions from image tensor
-                if input_image.dim() == 4:  # [batch, height, width, channels]
-                    detected_height = int(input_image.shape[1])
-                    detected_width = int(input_image.shape[2])
-                elif input_image.dim() == 3:  # [height, width, channels]
-                    detected_height = int(input_image.shape[0])
-                    detected_width = int(input_image.shape[1])
+            detected_dimensions = self.detect_image_dimensions(input_image)
+            if detected_dimensions is not None:
+                detected_width, detected_height = detected_dimensions
+                store_detected_dimensions(unique_id, detected_width, detected_height)
 
-                # Store dimensions in cache for frontend access
-                if unique_id:
-                    ResolutionMaster._image_dimensions_cache[str(unique_id)] = {
-                        'width': detected_width,
-                        'height': detected_height,
-                        'timestamp': time.time()
-                    }
+                frontend_matches_tensor = (
+                    auto_detect_source == "frontend"
+                    and safe_int(auto_detect_width) == detected_width
+                    and safe_int(auto_detect_height) == detected_height
+                )
 
-                # Only override with detected dimensions if the widget values match the detected values
-                # This allows manually set values (like from auto-fit) to take precedence
-                if width == detected_width and height == detected_height:
-                    # Widget values match detected values, use detected dimensions
-                    width = detected_width
-                    height = detected_height
-                    print(f"[ResolutionMaster] Using auto-detected dimensions: {width}x{height}")
-                else:
-                    # Widget values differ from detected values, use widget values (manually set)
-                    print(f"[ResolutionMaster] Using manual dimensions: {width}x{height} (detected: {detected_width}x{detected_height})")
+                if not frontend_matches_tensor:
+                    width, height = apply_backend_auto_detect_fallback(
+                        detected_width,
+                        detected_height,
+                        auto_fit_on_change,
+                        auto_resize_on_change,
+                        auto_snap_on_change,
+                        use_custom_calc,
+                        preserve_scaling_ratio,
+                        selected_category,
+                        safe_int(snap_value, 64),
+                        safe_float(upscale_value, 1.0),
+                        safe_int(target_resolution, 1080),
+                        safe_float(target_megapixels, 2.0),
+                        rescale_mode,
+                        auto_detect_presets_json,
+                    )
 
-            except Exception as e:
-                print(f"[ResolutionMaster] Error detecting dimensions: {str(e)}")
-                # Fall back to manual dimensions
+        rescale_factor = calculate_rescale_factor(
+            width,
+            height,
+            rescale_mode,
+            safe_float(upscale_value, 1.0),
+            safe_int(target_resolution, 1080),
+            safe_float(target_megapixels, 2.0),
+        )
 
-        # The rescale_factor is calculated on the frontend and passed here
-        rescale_factor = rescale_value
-
-        # Generate latent tensor based on selected latent type
         if latent_type == "latent_128x16":
-            # Flux 2 uses 128 channels and divides by 16
             latent = torch.zeros([batch_size, 128, height // 16, width // 16], device=self.device)
         else:
-            # SD1.5/SDXL uses 4 channels and divides by 8
             latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
 
         return (width, height, rescale_factor, batch_size, {"samples": latent})
+
+
+register_dimension_routes()
+register_calculation_routes()

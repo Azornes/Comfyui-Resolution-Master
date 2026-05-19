@@ -31,7 +31,7 @@ export class DialogManager {
             propertyName = 'upscaleValue';
         } else if (valueAreaKey === 'resolutionValueArea') {
             valueType = 'Resolution Scale';
-            currentValue = this.rm.calculateResolutionScale(this.rm.node.properties.targetResolution);
+            currentValue = this.rm.getScaleFactor('resolution');
             propertyName = 'targetResolution';
         } else if (valueAreaKey === 'megapixelsValueArea') {
             valueType = 'Megapixels';
@@ -255,7 +255,7 @@ export class DialogManager {
      * @param {number} value - The value to apply
      * @param {string} valueType - The type of value
      */
-    applyCustomValue(propertyName, value, valueType) {
+    async applyCustomValue(propertyName, value, valueType) {
         const props = this.rm.node.properties;
         
         if (propertyName === 'upscaleValue') {
@@ -264,14 +264,15 @@ export class DialogManager {
                 this.rm.updateRescaleValue();
             }
         } else if (propertyName === 'targetResolution') {
-            // For resolution, we need to reverse-calculate the target resolution from the scale factor
             if (this.rm.validateWidgets()) {
-                const currentPixels = this.rm.widthWidget.value * this.rm.heightWidget.value;
-                const targetPixels = currentPixels * (value * value);
-                const targetP = Math.sqrt(targetPixels / (16/9));
-                props.targetResolution = Math.round(targetP);
-                if (props.rescaleMode === 'resolution') {
-                    this.rm.updateRescaleValue();
+                const result = await this.rm.requestBackendCalculation('target_resolution_from_scale', {
+                    scale_value: value
+                });
+                if (result?.target_resolution) {
+                    props.targetResolution = Math.round(Number(result.target_resolution));
+                    if (props.rescaleMode === 'resolution') {
+                        this.rm.updateRescaleValue();
+                    }
                 }
             }
         } else if (propertyName === 'targetMegapixels') {
