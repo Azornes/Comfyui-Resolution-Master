@@ -4,7 +4,7 @@
  */
 
 import { addStylesheet, getUrl } from "./utils/resource_manager.js";
-import { createModuleLogger } from "./utils/logger_utils.js";
+import { createModuleLogger } from "./log_system/log_funcs.js";
 
 const log = createModuleLogger('css_loader');
 let stylesLoaded = false;

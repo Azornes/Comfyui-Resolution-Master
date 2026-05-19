@@ -1,5 +1,5 @@
 // searchable_dropdown.js - A searchable dropdown component for better UX with large lists
-import { createModuleLogger } from "./utils/logger_utils.js";
+import { createModuleLogger } from "./log_system/log_funcs.js";
 import { loadIcons } from "./utils/icon_utils.js";
 
 const log = createModuleLogger('searchable_dropdown');

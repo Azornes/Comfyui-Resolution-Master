@@ -1,5 +1,5 @@
 // aspect_ratio_selector.js - Visual aspect ratio selector for presets
-import { createModuleLogger } from "./utils/logger_utils.js";
+import { createModuleLogger } from "./log_system/log_funcs.js";
 import { AspectRatioUtils } from "./utils/aspect_ratio_utils.js";
 import { loadIcons, getIconHtml } from "./utils/icon_utils.js";
 

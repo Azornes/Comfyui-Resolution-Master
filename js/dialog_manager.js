@@ -1,5 +1,5 @@
 // dialog_manager.js - Manages custom input dialogs for ResolutionMaster
-import { createModuleLogger } from "./utils/logger_utils.js";
+import { createModuleLogger } from "./log_system/log_funcs.js";
 import { app } from "../../scripts/app.js";
 
 const log = createModuleLogger('dialog_manager');

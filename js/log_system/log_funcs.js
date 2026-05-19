@@ -1,9 +1,16 @@
 /**
- * logger_utils - Centralized logger initialization
- * Removes repetitive logger initialization code from each module
- */
-import { logger, LogLevel } from "../logger.js";
-import { LOG_LEVEL } from '../config.js';
+author: Azornes
+title: AzLogs
+version: 1.5.1
+description: Logging Initializator
+
+Features:
+log_funcs - Centralization of logger initialization
+Eliminates repetitive logger initialization code in each module
+*/
+
+import { logger, LogLevel } from "./logger.js";
+import { LOG_LEVEL } from './config.js';
 /**
  * Creates a logger object for a module with predefined methods
  * @param {string} moduleName - Module name
@@ -19,7 +26,7 @@ export function createModuleLogger(moduleName) {
     };
 }
 /**
- * Creates a logger with automatic module name detection from the URL
+ * Creates a logger with automatic module name detection from URL
  * @returns {Logger} Object with logging methods
  */
 export function createAutoLogger() {

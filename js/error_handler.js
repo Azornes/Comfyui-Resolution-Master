@@ -2,7 +2,7 @@
  * error_handler - Centralized error handling
  * Removes repetitive error handling patterns across the project
  */
-import { createModuleLogger } from "./utils/logger_utils.js";
+import { createModuleLogger } from "./log_system/log_funcs.js";
 const log = createModuleLogger('error_handler');
 /**
  * Application error types

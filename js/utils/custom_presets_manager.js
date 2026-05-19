@@ -1,5 +1,5 @@
 // custom_presets_manager.js - Manages custom user presets with persistence
-import { createModuleLogger } from "./logger_utils.js";
+import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('custom_presets_manager');
 

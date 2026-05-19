@@ -1,5 +1,5 @@
 import { app } from "../../scripts/app.js";
-import { createModuleLogger } from "./utils/logger_utils.js";
+import { createModuleLogger } from "./log_system/log_funcs.js";
 import { loadIcons } from "./utils/icon_utils.js";
 import { tooltips, presetCategories } from "./utils/resolution_master_config.js";
 import { DialogManager } from "./dialog_manager.js";

@@ -6,7 +6,7 @@
 // Load CSS styles
 import "../css_loader.js";
 
-import { createModuleLogger } from "./logger_utils.js";
+import { createModuleLogger } from "../log_system/log_funcs.js";
 import { SearchableDropdown } from "../searchable_dropdown.js";
 import { AspectRatioUtils } from "./aspect_ratio_utils.js";
 import { loadIcons, getIconHtml } from "./icon_utils.js";
