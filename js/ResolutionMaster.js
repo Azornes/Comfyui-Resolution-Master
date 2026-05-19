@@ -1141,7 +1141,7 @@ class ResolutionMasterCanvas {
         const category = props.selectedCategory;
 
         if (category === "SDXL") {
-            return "💡 SDXL Mode: Only using presets!";
+            return "💡 SDXL Mode: Uses the closest SDXL preset size.";
         } else if (category === "Flux") {
             return "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
         } else if (category === "Flux.2") {
@@ -1151,11 +1151,11 @@ class ResolutionMasterCanvas {
             const model = pixels < 600000 ? "480p" : "720p";
             return `💡 WAN Mode: Suggesting ${model} model | Round to: 16px | Resolution range: 320p-820p`;
         } else if (category === "HiDream Dev") {
-            return "💡 HiDream Dev: Only using presets!";
+            return "💡 HiDream Dev: Uses the closest HiDream Dev preset size.";
         } else if (category === "Qwen-Image") {
             return "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
-        } else if (['Standard', 'Social Media', 'Print', 'Cinema'].includes(category)) {
-            return "💡 Calc Mode: Scales the selected preset to the closest current resolution, maintaining the preset's aspect ratio.";
+        } else if (['Standard', 'Social Media', 'Print', 'Cinema', 'Display Resolutions'].includes(category)) {
+            return "💡 Calc Mode: Uses the closest preset aspect ratio while keeping the size close to your current resolution.";
         }
         return "⚠️ Calc Mode: Custom calculation not available for this category)";
     }
