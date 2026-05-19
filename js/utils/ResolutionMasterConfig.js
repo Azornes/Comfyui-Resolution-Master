@@ -37,6 +37,7 @@ export const tooltips = {
     autoSnapBtn: "Snap current resolution to the nearest snap value",
     autoSnapCheckbox: "Automatically snap after Auto-Resize when a new image is detected",
     detectedInfo: "Click to apply detected image resolution directly",
+    autoDetectLiveStatus: "Shows whether detected size updates immediately when the connected image changes. Some nodes update only after you run the workflow.",
     
     // Preset controls
     categoryDropdown: "Select preset category (Standard, SDXL, Flux, Flux.2, WAN, HiDream Dev, Qwen-Image, etc.)",

@@ -1025,19 +1025,35 @@ class ResolutionMasterCanvas {
                        props.autoDetect ? "Auto-detect ON" : "Auto-detect OFF",
                        this.hoverElement === 'autoDetectToggle');
 
+        const liveStatus = this.getAutoDetectLiveStatus();
+        const infoX = margin + toggleWidth + gap;
+        const infoWidth = availableWidth - toggleWidth - gap;
+        const statusOnly = !(props.autoDetect && this.detectedDimensions);
+        this.controls.autoDetectLiveStatus = {
+            x: infoX,
+            y: currentY + 2,
+            w: infoWidth,
+            h: statusOnly ? 24 : 11
+        };
+        ctx.fillStyle = liveStatus.textColor;
+        ctx.font = statusOnly ? "11px Arial" : "10px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(liveStatus.text, infoX + infoWidth / 2, currentY + (statusOnly ? 14 : 8));
+
         if (props.autoDetect && this.detectedDimensions) {
             const detectedText = `Detected: ${this.detectedDimensions.width}x${this.detectedDimensions.height}`;
-            const detectedX = margin + toggleWidth + gap;
-            const detectedWidth = availableWidth - toggleWidth - gap;
-            this.controls.detectedInfo = { x: detectedX, y: currentY + 2, w: detectedWidth, h: 24 };
+            const detectedX = infoX;
+            const detectedWidth = infoWidth;
+            this.controls.detectedInfo = { x: detectedX, y: currentY + 13, w: detectedWidth, h: 13 };
 
-            this.drawValueAreaHoverBackground(ctx, 'detectedInfo', detectedX, currentY + 2, detectedWidth, 20, [95, 255, 95]);
+            this.drawValueAreaHoverBackground(ctx, 'detectedInfo', detectedX, currentY + 13, detectedWidth, 12, [95, 255, 95], 3);
 
             ctx.fillStyle = this.hoverElement === 'detectedInfo' ? "#7f7" : "#5f5";
-            ctx.font = "12px Arial";
+            ctx.font = "11px Arial";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(detectedText, detectedX + detectedWidth / 2, currentY + 14);
+            ctx.fillText(detectedText, detectedX + detectedWidth / 2, currentY + 21);
         }
 
         currentY += 35;
@@ -2675,6 +2691,44 @@ class ResolutionMasterCanvas {
         this.setBackendFallbackWidgetValue('targetMegapixels', Math.max(0, Number(props.targetMegapixels) || 0));
         this.setBackendFallbackWidgetValue('autoDetectPresetsJSON', presetsJSON);
     }
+
+    getAutoDetectLiveStatus() {
+        if (!this.node.inputs?.[0]?.link) {
+            return {
+                text: "Live: no input",
+                color: [150, 150, 150],
+                textColor: "#999"
+            };
+        }
+
+        const previewDimensions = this.getConnectedPreviewDimensions();
+        if (previewDimensions?.liveChangeTracking) {
+            return {
+                text: "Live: supported",
+                color: [95, 255, 95],
+                textColor: "#5f5"
+            };
+        }
+        if (previewDimensions) {
+            return {
+                text: "Live: size only",
+                color: [255, 205, 95],
+                textColor: "#fc5"
+            };
+        }
+        if (this.detectedDimensions?.source === "backend") {
+            return {
+                text: "Live: backend cache",
+                color: [120, 190, 255],
+                textColor: "#8cf"
+            };
+        }
+        return {
+            text: "Live: after run",
+            color: [150, 150, 150],
+            textColor: "#aaa"
+        };
+    }
     
     async checkForImageDimensions() {
         const node = this.node;
@@ -2722,7 +2776,17 @@ class ResolutionMasterCanvas {
         }
     }
 
-    getPreviewSourceSignature(sourceNode, preview, width, height) {
+    getConnectedSourceNode() {
+        const inputLink = this.node.inputs?.[0]?.link;
+        if (!inputLink || !app.graph?.links) return null;
+
+        const link = app.graph.links[inputLink];
+        if (!link) return null;
+
+        return app.graph.getNodeById(link.origin_id) || null;
+    }
+
+    getPreviewSourceSignatureInfo(sourceNode, preview, width, height) {
         const nodeId = sourceNode?.id ?? "unknown";
         const relevantWidgetNames = new Set([
             "image",
@@ -2750,17 +2814,15 @@ class ResolutionMasterCanvas {
             preview?.title
         ].filter(Boolean).join("|");
 
-        return `frontend:${nodeId}:${widgetParts}:${previewParts}:${Math.round(width)}x${Math.round(height)}`;
+        return {
+            signature: `frontend:${nodeId}:${widgetParts}:${previewParts}:${Math.round(width)}x${Math.round(height)}`,
+            hasChangeSignal: !!(widgetParts || previewParts)
+        };
     }
 
     getConnectedPreviewDimensions() {
-        const inputLink = this.node.inputs?.[0]?.link;
-        if (!inputLink || !app.graph?.links) return null;
-
-        const link = app.graph.links[inputLink];
-        if (!link) return null;
-
-        const sourceNode = app.graph.getNodeById(link.origin_id);
+        const sourceNode = this.getConnectedSourceNode();
+        if (!sourceNode) return null;
         // Best-effort live UI hint: ComfyUI exposes preview images on many source nodes,
         // but the backend tensor remains the source of truth when the workflow executes.
         const preview = sourceNode?.imgs?.[0];
@@ -2771,11 +2833,13 @@ class ResolutionMasterCanvas {
             return null;
         }
 
+        const signatureInfo = this.getPreviewSourceSignatureInfo(sourceNode, preview, width, height);
         return {
             width: Math.round(width),
             height: Math.round(height),
             source: "frontend",
-            signature: this.getPreviewSourceSignature(sourceNode, preview, width, height)
+            signature: signatureInfo.signature,
+            liveChangeTracking: signatureInfo.hasChangeSignal
         };
     }
 
