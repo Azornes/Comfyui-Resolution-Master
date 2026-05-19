@@ -1,7 +1,7 @@
-// CustomPresetsManager.js - Manages custom user presets with persistence
-import { createModuleLogger } from "./LoggerUtils.js";
+// custom_presets_manager.js - Manages custom user presets with persistence
+import { createModuleLogger } from "./logger_utils.js";
 
-const log = createModuleLogger('CustomPresetsManager');
+const log = createModuleLogger('custom_presets_manager');
 
 export class CustomPresetsManager {
     constructor(resolutionMasterInstance) {

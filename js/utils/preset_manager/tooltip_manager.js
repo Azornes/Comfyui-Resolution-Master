@@ -1,8 +1,8 @@
-// TooltipManager.js - DOM-based tooltip system adapted from ResolutionMaster.js
+// tooltip_manager.js - DOM-based tooltip system adapted from resolution_master.js
 
 /**
  * Manager for displaying tooltips on DOM elements
- * Adapted from the canvas-based tooltip system in ResolutionMaster.js
+ * Adapted from the canvas-based tooltip system in resolution_master.js
  */
 export class TooltipManager {
     constructor(options = {}) {

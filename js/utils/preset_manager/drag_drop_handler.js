@@ -1,4 +1,4 @@
-// DragDropHandler.js - Drag & Drop handling for PresetManagerDialog
+// drag_drop_handler.js - Drag & Drop handling for preset_manager_dialog
 
 /**
  * Helper class for handling drag & drop operations

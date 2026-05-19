@@ -1,4 +1,4 @@
-// IconUtils.js - Utility for loading SVG icons
+// icon_utils.js - Utility for loading SVG icons
 import { app } from "../../../scripts/app.js";
 
 /**

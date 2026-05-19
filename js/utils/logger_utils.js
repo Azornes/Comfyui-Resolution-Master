@@ -1,5 +1,5 @@
 /**
- * LoggerUtils - Centralized logger initialization
+ * logger_utils - Centralized logger initialization
  * Removes repetitive logger initialization code from each module
  */
 import { logger, LogLevel } from "../logger.js";

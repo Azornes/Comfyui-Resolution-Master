@@ -1,7 +1,7 @@
-// JSONEditorDialog.js - JSON editor using JSONEditor library
+// json_editor_dialog.js - JSON editor using JSONEditor library
 
-import { TooltipManager } from './TooltipManager.js';
-import { presetManagerTooltips } from '../ResolutionMasterConfig.js';
+import { TooltipManager } from './tooltip_manager.js';
+import { presetManagerTooltips } from '../resolution_master_config.js';
 
 /**
  * JSON Editor Dialog with JSONEditor library

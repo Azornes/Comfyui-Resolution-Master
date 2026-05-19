@@ -1,7 +1,7 @@
-// PresetUIComponents.js - UI component creation helpers for PresetManagerDialog
+// preset_ui_components.js - UI component creation helpers for preset_manager_dialog
 
 /**
- * Helper class for creating UI components used in PresetManagerDialog
+ * Helper class for creating UI components used in preset_manager_dialog
  */
 export class PresetUIComponents {
     /**
@@ -76,7 +76,7 @@ export class PresetUIComponents {
         } else {
             btn.textContent = icon;
         }
-        // Tooltip handled by TooltipManager (tooltip parameter kept for compatibility)
+        // Tooltip handled by tooltip_manager (tooltip parameter kept for compatibility)
 
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -125,7 +125,7 @@ export class PresetUIComponents {
         const nameDiv = document.createElement('div');
         nameDiv.className = 'resolution-master-preset-ui-card-name';
         nameDiv.textContent = name;
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
 
         // Dimensions
         const dimsDiv = document.createElement('div');
@@ -135,7 +135,7 @@ export class PresetUIComponents {
         // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'resolution-master-preset-ui-card-delete-btn';
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         
         if (deleteIcon) {
             deleteBtn.innerHTML = `<img src="${deleteIcon.src}" class="resolution-master-preset-ui-card-delete-icon">`;

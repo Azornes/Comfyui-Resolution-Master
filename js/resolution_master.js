@@ -1,13 +1,13 @@
 import { app } from "../../scripts/app.js";
-import { createModuleLogger } from "./utils/LoggerUtils.js";
-import { loadIcons } from "./utils/IconUtils.js";
-import { tooltips, presetCategories } from "./utils/ResolutionMasterConfig.js";
-import { DialogManager } from "./DialogManager.js";
-import { SearchableDropdown } from "./SearchableDropdown.js";
-import { AspectRatioSelector } from "./AspectRatioSelector.js";
-import { CustomPresetsManager } from "./utils/CustomPresetsManager.js";
-import { PresetManagerDialog } from "./utils/PresetManagerDialog.js";
-const log = createModuleLogger('ResolutionMaster');
+import { createModuleLogger } from "./utils/logger_utils.js";
+import { loadIcons } from "./utils/icon_utils.js";
+import { tooltips, presetCategories } from "./utils/resolution_master_config.js";
+import { DialogManager } from "./dialog_manager.js";
+import { SearchableDropdown } from "./searchable_dropdown.js";
+import { AspectRatioSelector } from "./aspect_ratio_selector.js";
+import { CustomPresetsManager } from "./utils/custom_presets_manager.js";
+import { PresetManagerDialog } from "./utils/preset_manager_dialog.js";
+const log = createModuleLogger('resolution_master');
 
 class ResolutionMasterCanvas {    
     constructor(node) {
@@ -55,7 +55,7 @@ class ResolutionMasterCanvas {
         this.presetCategories = presetCategories;
         
         this.setupNode();
-        import('./css-loader.js').then(module => {
+        import('./css_loader.js').then(module => {
             module.loadStylesWhenNeeded();
         }).catch(error => {
             log.error('Failed to load CSS:', error);

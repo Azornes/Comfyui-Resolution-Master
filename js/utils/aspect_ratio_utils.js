@@ -1,8 +1,8 @@
-// AspectRatioUtils.js - Shared utilities for aspect ratio calculations and rendering
+// aspect_ratio_utils.js - Shared utilities for aspect ratio calculations and rendering
 
 /**
  * Utility class for aspect ratio calculations and icon generation
- * Used by AspectRatioSelector and PresetManagerDialog
+ * Used by aspect_ratio_selector and preset_manager_dialog
  */
 export class AspectRatioUtils {
     /**
@@ -128,7 +128,7 @@ export class AspectRatioUtils {
 
     /**
      * Creates a preset column with list of presets for a given aspect ratio
-     * Unified method used by both AspectRatioSelector and PresetAddViewRenderer
+     * Unified method used by both aspect_ratio_selector and preset_add_view_renderer
      * @param {string} ratio - Aspect ratio string (e.g., "16:9")
      * @param {Array} presetList - Array of preset objects
      * @param {Object} options - Configuration options
@@ -169,7 +169,7 @@ export class AspectRatioUtils {
     }
 
     /**
-     * Creates a default preset item (used by AspectRatioSelector)
+     * Creates a default preset item (used by aspect_ratio_selector)
      * @param {Object} preset - Preset object
      * @param {Object} options - Configuration options
      * @returns {HTMLElement} Preset item element

@@ -1,7 +1,7 @@
-// PresetAddViewRenderer.js - Renders the add/edit preset view
+// preset_add_view_renderer.js - Renders the add/edit preset view
 
-import { AspectRatioUtils } from "../AspectRatioUtils.js";
-import { getIconHtml } from "../IconUtils.js";
+import { AspectRatioUtils } from "../aspect_ratio_utils.js";
+import { getIconHtml } from "../icon_utils.js";
 
 /**
  * Renderer for the add/edit preset view
@@ -105,7 +105,7 @@ export class PresetAddViewRenderer {
         const renameCategoryBtn = document.createElement('button');
         renameCategoryBtn.className = 'resolution-master-preset-add-rename-category-btn';
         renameCategoryBtn.innerHTML = getIconHtml(this.parentDialog.editIcon, '✏️');
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
 
         renameCategoryBtn.addEventListener('click', () => {
             this.parentDialog.renameDialogManager.showRenameCategoryDialog(this.parentDialog.selectedCategory);
@@ -514,7 +514,7 @@ export class PresetAddViewRenderer {
         const addButton = document.createElement('button');
         addButton.id = 'quick-add-button';
         addButton.textContent = isEditMode ? 'OK' : '+';
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         const buttonFontSize = isEditMode ? '14px' : '20px';
         
         addButton.style.cssText = `
@@ -545,7 +545,7 @@ export class PresetAddViewRenderer {
         if (this.parentDialog.editingPresetName) {
             const cancelButton = document.createElement('button');
             cancelButton.textContent = '✕';
-            // Tooltip handled by TooltipManager
+            // Tooltip handled by tooltip_manager
             cancelButton.style.cssText = `
                 padding: 4px 12px;
                 border: 1px solid #666;
@@ -621,13 +621,13 @@ export class PresetAddViewRenderer {
     }
 
     /**
-     * Creates a column for one aspect ratio (using unified AspectRatioUtils method)
+     * Creates a column for one aspect ratio (using unified aspect_ratio_utils method)
      * @param {string} ratio - Aspect ratio string
      * @param {Array} presetList - List of presets for this ratio
      * @returns {HTMLElement} Column element
      */
     createRatioColumn(ratio, presetList) {
-        // Use unified method from AspectRatioUtils with custom preset item renderer
+        // Use unified method from aspect_ratio_utils with custom preset item renderer
         return AspectRatioUtils.createPresetColumn(ratio, presetList, {
             renderPresetItem: (preset) => this.createPresetItemForColumn(preset)
         });
@@ -693,7 +693,7 @@ export class PresetAddViewRenderer {
     createDeleteButton(preset) {
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'resolution-master-aspect-ratio-preset-action-btn delete';
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         
         if (this.parentDialog.deleteIcon) {
             deleteBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="resolution-master-aspect-ratio-preset-action-icon">`;
@@ -721,7 +721,7 @@ export class PresetAddViewRenderer {
         
         const toggleBtn = document.createElement('button');
         toggleBtn.className = 'resolution-master-aspect-ratio-preset-action-btn' + (isHidden ? ' unhide' : ' hide');
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         
         if (this.parentDialog.deleteIcon) {
             toggleBtn.innerHTML = `<img src="${this.parentDialog.deleteIcon.src}" class="resolution-master-aspect-ratio-preset-action-icon">`;

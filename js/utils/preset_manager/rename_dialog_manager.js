@@ -1,6 +1,6 @@
-// RenameDialogManager.js - Rename dialogs for categories and presets
+// rename_dialog_manager.js - Rename dialogs for categories and presets
 
-import { getIconHtml } from "../IconUtils.js";
+import { getIconHtml } from "../icon_utils.js";
 
 /**
  * Manager for rename dialogs (categories and presets)
@@ -242,7 +242,7 @@ export class RenameDialogManager {
         const newTitle = document.createElement('div');
         newTitle.className = 'resolution-master-rename-category-title';
         newTitle.textContent = text;
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         newTitle.addEventListener('dblclick', () => {
             this.startRenamingCategory(newTitle, categoryName);
         });
@@ -357,7 +357,7 @@ export class RenameDialogManager {
         const newNameElement = document.createElement('strong');
         newNameElement.className = 'resolution-master-rename-preset-name';
         newNameElement.textContent = text;
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         newNameElement.addEventListener('dblclick', (e) => {
             e.stopPropagation();
             this.startRenamingPreset(newNameElement, category, presetName, dims);

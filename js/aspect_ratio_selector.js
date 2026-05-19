@@ -1,9 +1,9 @@
-// AspectRatioSelector.js - Visual aspect ratio selector for presets
-import { createModuleLogger } from "./utils/LoggerUtils.js";
-import { AspectRatioUtils } from "./utils/AspectRatioUtils.js";
-import { loadIcons, getIconHtml } from "./utils/IconUtils.js";
+// aspect_ratio_selector.js - Visual aspect ratio selector for presets
+import { createModuleLogger } from "./utils/logger_utils.js";
+import { AspectRatioUtils } from "./utils/aspect_ratio_utils.js";
+import { loadIcons, getIconHtml } from "./utils/icon_utils.js";
 
-const log = createModuleLogger('AspectRatioSelector');
+const log = createModuleLogger('aspect_ratio_selector');
 
 export class AspectRatioSelector {
     constructor() {
@@ -286,7 +286,7 @@ export class AspectRatioSelector {
             }
         `;
 
-        // Use unified scroll indicators from AspectRatioUtils
+        // Use unified scroll indicators from aspect_ratio_utils
         AspectRatioUtils.updateColumnScrollIndicators(columns);
 
         // Function to reposition container (center on screen)
@@ -315,7 +315,7 @@ export class AspectRatioSelector {
         // Initial positioning
         repositionContainer();
 
-        // Use unified horizontal scroll manager from AspectRatioUtils
+        // Use unified horizontal scroll manager from aspect_ratio_utils
         const horizontalScrollState = { indicator: null };
         const updateHorizontalScrollIndicator = AspectRatioUtils.createHorizontalScrollManager(
             scrollWrapper, 
@@ -344,10 +344,10 @@ export class AspectRatioSelector {
     }
 
     /**
-     * Create a column for one aspect ratio (using unified AspectRatioUtils method)
+     * Create a column for one aspect ratio (using unified aspect_ratio_utils method)
      */
     createRatioColumn(ratio, presetList) {
-        // Use unified method from AspectRatioUtils with AspectRatioSelector-specific options
+        // Use unified method from aspect_ratio_utils with aspect_ratio_selector-specific options
         return AspectRatioUtils.createPresetColumn(ratio, presetList, {
             selectedPreset: this.selectedPreset,
             customPresetIcon: this.customPresetIcon,
@@ -357,7 +357,7 @@ export class AspectRatioSelector {
 
     /**
      * DEPRECATED: Old implementation kept for reference
-     * This code has been moved to AspectRatioUtils.createPresetColumn()
+     * This code has been moved to aspect_ratio_utils.createPresetColumn()
      */
     _oldCreateRatioColumn_DEPRECATED(ratio, presetList) {
         const column = document.createElement('div');

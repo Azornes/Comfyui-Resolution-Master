@@ -1,25 +1,25 @@
 /**
- * PresetManagerDialog.js
+ * preset_manager_dialog.js
  * Main dialog coordinator for managing custom presets
  */
 
 // Load CSS styles
-import "../css-loader.js";
+import "../css_loader.js";
 
-import { createModuleLogger } from "./LoggerUtils.js";
-import { SearchableDropdown } from "../SearchableDropdown.js";
-import { AspectRatioUtils } from "./AspectRatioUtils.js";
-import { loadIcons, getIconHtml } from "./IconUtils.js";
-import { presetManagerTooltips } from "./ResolutionMasterConfig.js";
-import { PresetUIComponents } from './preset-manager/PresetUIComponents.js';
-import { DragDropHandler } from './preset-manager/DragDropHandler.js';
-import { RenameDialogManager } from './preset-manager/RenameDialogManager.js';
-import { JSONEditorDialog } from './preset-manager/JSONEditorDialog.js';
-import { PresetListRenderer } from './preset-manager/PresetListRenderer.js';
-import { PresetAddViewRenderer } from './preset-manager/PresetAddViewRenderer.js';
-import { TooltipManager } from './preset-manager/TooltipManager.js';
+import { createModuleLogger } from "./logger_utils.js";
+import { SearchableDropdown } from "../searchable_dropdown.js";
+import { AspectRatioUtils } from "./aspect_ratio_utils.js";
+import { loadIcons, getIconHtml } from "./icon_utils.js";
+import { presetManagerTooltips } from "./resolution_master_config.js";
+import { PresetUIComponents } from './preset_manager/preset_ui_components.js';
+import { DragDropHandler } from './preset_manager/drag_drop_handler.js';
+import { RenameDialogManager } from './preset_manager/rename_dialog_manager.js';
+import { JSONEditorDialog } from './preset_manager/json_editor_dialog.js';
+import { PresetListRenderer } from './preset_manager/preset_list_renderer.js';
+import { PresetAddViewRenderer } from './preset_manager/preset_add_view_renderer.js';
+import { TooltipManager } from './preset_manager/tooltip_manager.js';
 
-const log = createModuleLogger('PresetManagerDialog');
+const log = createModuleLogger('preset_manager_dialog');
 
 export class PresetManagerDialog {
     constructor(customPresetsManager) {
@@ -53,7 +53,7 @@ export class PresetManagerDialog {
         this.presetPreviewResizeHandler = null;
         this.horizontalScrollState = { indicator: null }; // Persistent state for horizontal scroll indicator
         
-        // SearchableDropdown instance
+        // searchable_dropdown instance
         this.searchableDropdown = new SearchableDropdown();
         
         // Icons container
@@ -100,7 +100,7 @@ export class PresetManagerDialog {
      * Registers all tooltips for the dialog
      */
     registerTooltips() {
-        // Use tooltips from ResolutionMasterConfig.js
+        // Use tooltips from resolution_master_config.js
         this.tooltipManager.registerTooltips(presetManagerTooltips);
     }
 
@@ -284,7 +284,7 @@ export class PresetManagerDialog {
             leftButtons.appendChild(editJsonBtn);
         } else if (this.currentView === 'add') {
             const backBtn = PresetUIComponents.createFooterButton('← Back to List', 'secondary', () => {
-                // Close SearchableDropdown if it's open
+                // Close searchable_dropdown if it's open
                 if (this.searchableDropdown) {
                     this.searchableDropdown.hide();
                 }
@@ -477,7 +477,7 @@ export class PresetManagerDialog {
     }
 
     /**
-     * Updates the preset preview for the selected category (using AspectRatioSelector style columns)
+     * Updates the preset preview for the selected category (using aspect_ratio_selector style columns)
      * Shows ALL presets (built-in + custom) for the selected category
      */
     updatePresetPreview() {
@@ -503,7 +503,7 @@ export class PresetManagerDialog {
 
         presetsGrid.innerHTML = '';
         
-        // Change to flex layout for columns (matching AspectRatioSelector structure)
+        // Change to flex layout for columns (matching aspect_ratio_selector structure)
         presetsGrid.style.cssText = `
             display: flex;
             gap: 4px;
@@ -540,7 +540,7 @@ export class PresetManagerDialog {
         // Group presets by aspect ratio
         const groupedPresets = AspectRatioUtils.groupPresetsByAspectRatio(categoryPresets);
 
-        // Add custom scrollbar styling for better visibility (matching AspectRatioSelector)
+        // Add custom scrollbar styling for better visibility (matching aspect_ratio_selector)
         if (!document.getElementById('presets-grid-scrollbar-style')) {
             const style = document.createElement('style');
             style.id = 'presets-grid-scrollbar-style';
@@ -605,7 +605,7 @@ export class PresetManagerDialog {
             );
             updateHorizontalScrollIndicator();
 
-            // Add resize listener to update indicators dynamically (matching AspectRatioSelector)
+            // Add resize listener to update indicators dynamically (matching aspect_ratio_selector)
             this.presetPreviewResizeHandler = () => {
                 updateHorizontalScrollIndicator();
                 AspectRatioUtils.updateColumnScrollIndicators(columns);
@@ -785,28 +785,28 @@ export class PresetManagerDialog {
     }
 
     /**
-     * Shows a dialog to rename the category (delegated to RenameDialogManager)
+     * Shows a dialog to rename the category (delegated to rename_dialog_manager)
      */
     showRenameCategoryDialog(currentCategoryName) {
         this.renameDialogManager.showRenameCategoryDialog(currentCategoryName);
     }
 
     /**
-     * Starts renaming a category (delegated to RenameDialogManager)
+     * Starts renaming a category (delegated to rename_dialog_manager)
      */
     startRenamingCategory(titleElement, categoryName) {
         this.renameDialogManager.startRenamingCategory(titleElement, categoryName);
     }
 
     /**
-     * Starts renaming a preset (delegated to RenameDialogManager)
+     * Starts renaming a preset (delegated to rename_dialog_manager)
      */
     startRenamingPreset(nameElement, category, presetName, dims) {
         this.renameDialogManager.startRenamingPreset(nameElement, category, presetName, dims);
     }
 
     /**
-     * Shows JSON editor dialog (delegated to JSONEditorDialog)
+     * Shows JSON editor dialog (delegated to json_editor_dialog)
      */
     showJSONEditor() {
         this.jsonEditor.show();
@@ -830,7 +830,7 @@ export class PresetManagerDialog {
             this.horizontalScrollState.indicator = null;
         }
 
-        // Close SearchableDropdown if it's open
+        // Close searchable_dropdown if it's open
         if (this.searchableDropdown) {
             this.searchableDropdown.hide();
         }

@@ -1,9 +1,9 @@
-// PresetListRenderer.js - Renders the preset list view
+// preset_list_renderer.js - Renders the preset list view
 
-import { AspectRatioUtils } from "../AspectRatioUtils.js";
-import { getIconHtml } from "../IconUtils.js";
-import { DragDropHandler } from "./DragDropHandler.js";
-import { PresetUIComponents } from "./PresetUIComponents.js";
+import { AspectRatioUtils } from "../aspect_ratio_utils.js";
+import { getIconHtml } from "../icon_utils.js";
+import { DragDropHandler } from "./drag_drop_handler.js";
+import { PresetUIComponents } from "./preset_ui_components.js";
 
 /**
  * Renderer for the preset list view
@@ -324,7 +324,7 @@ export class PresetListRenderer {
         const editCategoryBtn = document.createElement('button');
         editCategoryBtn.className = 'resolution-master-preset-list-edit-category-btn';
         editCategoryBtn.innerHTML = getIconHtml(this.parentDialog.editIcon, '✏️');
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
         
         editCategoryBtn.addEventListener('click', () => {
             this.parentDialog.currentView = 'add';
@@ -604,7 +604,7 @@ export class PresetListRenderer {
         const nameElement = document.createElement('strong');
         nameElement.className = 'resolution-master-preset-list-name';
         nameElement.textContent = name;
-        // Tooltip handled by TooltipManager
+        // Tooltip handled by tooltip_manager
 
         nameElement.addEventListener('dblclick', (e) => {
             e.stopPropagation();
