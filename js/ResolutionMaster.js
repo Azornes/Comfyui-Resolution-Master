@@ -2692,7 +2692,15 @@ class ResolutionMasterCanvas {
             this.setAutoDetectSource(previewDimensions ? 'frontend' : 'backend');
             this.setRawAutoDetectDimensions(dimensions);
 
-            if (!this.detectedDimensions || this.detectedDimensions.width !== dimensions.width || this.detectedDimensions.height !== dimensions.height) {
+            const previousSignature = this.detectedDimensions?.signature || null;
+            const nextSignature = dimensions.signature || null;
+            const hasNewDimensions =
+                !this.detectedDimensions ||
+                this.detectedDimensions.width !== dimensions.width ||
+                this.detectedDimensions.height !== dimensions.height ||
+                (nextSignature && previousSignature !== nextSignature);
+
+            if (hasNewDimensions) {
                 this.detectedDimensions = dimensions;
                 this.manuallySetByAutoFit = false;
                 
@@ -2712,6 +2720,37 @@ class ResolutionMasterCanvas {
         } catch (error) {
             log.error('Error checking for image dimensions:', error);
         }
+    }
+
+    getPreviewSourceSignature(sourceNode, preview, width, height) {
+        const nodeId = sourceNode?.id ?? "unknown";
+        const relevantWidgetNames = new Set([
+            "image",
+            "upload",
+            "file",
+            "filename",
+            "path",
+            "url",
+            "image_path"
+        ]);
+        const widgetParts = (sourceNode?.widgets || [])
+            .filter(widget => {
+                const name = String(widget?.name || "").toLowerCase();
+                const value = widget?.value;
+                return relevantWidgetNames.has(name) || typeof value === "string";
+            })
+            .map(widget => `${widget?.name || ""}:${String(widget?.value ?? "")}`)
+            .join("|");
+        const previewParts = [
+            preview?.currentSrc,
+            preview?.src,
+            preview?.dataset?.filename,
+            preview?.dataset?.name,
+            preview?.alt,
+            preview?.title
+        ].filter(Boolean).join("|");
+
+        return `frontend:${nodeId}:${widgetParts}:${previewParts}:${Math.round(width)}x${Math.round(height)}`;
     }
 
     getConnectedPreviewDimensions() {
@@ -2734,7 +2773,9 @@ class ResolutionMasterCanvas {
 
         return {
             width: Math.round(width),
-            height: Math.round(height)
+            height: Math.round(height),
+            source: "frontend",
+            signature: this.getPreviewSourceSignature(sourceNode, preview, width, height)
         };
     }
 
@@ -2763,7 +2804,10 @@ class ResolutionMasterCanvas {
 
             return {
                 width: Math.round(width),
-                height: Math.round(height)
+                height: Math.round(height),
+                source: "backend",
+                timestamp: Number.isFinite(timestamp) ? timestamp : null,
+                signature: `backend:${this.node.id}:${Number.isFinite(timestamp) ? timestamp : "no-ts"}:${Math.round(width)}x${Math.round(height)}`
             };
         } catch (error) {
             log.debug('Backend dimensions unavailable:', error);
