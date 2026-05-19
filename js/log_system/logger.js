@@ -1,11 +1,11 @@
 /**
 author: Azornes
 title: AzLogs
-version: 1.5.1
+version: 1.5.3
 description: Logging Setup - Central logging system
 
 Features:
-logger - Central logging system for ResolutionMaster
+logger - Central logging system
 - Multiple log levels (DEBUG, INFO, WARN, ERROR)
 - Ability to enable/disable logging globally or per module
 - Colorful logs in the console
@@ -164,12 +164,14 @@ class Logger {
             return;
         const timestamp = this.formatTimestamp();
         const levelName = LEVEL_NAMES[level];
+        const callsite = this.getCallsite();
         const logData = {
             timestamp,
             module,
             level,
             levelName,
             args,
+            callsite,
             time: new Date()
         };
         if (this.config.saveToStorage) {
@@ -186,7 +188,7 @@ class Logger {
      * @param {LogData} logData - Log data
      */
     printToConsole(logData) {
-        const { timestamp, module, level, levelName, args } = logData;
+        const { timestamp, module, level, levelName, args, callsite } = logData;
         const consoleMethod = CONSOLE_METHODS[level] || 'log';
         const consoleFn = typeof console[consoleMethod] === 'function'
             ? console[consoleMethod].bind(console)
@@ -195,7 +197,7 @@ class Logger {
             const color = COLORS[level] || '#000000';
             const { root, detail } = this.splitModuleName(module);
             const message = this.stringifyArgs(args);
-            const suffix = detail ? ` (${detail})` : '';
+            const suffix = this.formatSuffix(detail, callsite);
             consoleFn(
                 `%c ${levelName.padEnd(LEVEL_WIDTH, ' ')} %c ${timestamp} %c %c ${root} %c %c ${message}%c${suffix}`,
                 `background:${color};color:#fff;font-weight:bold;`,
@@ -209,7 +211,7 @@ class Logger {
             return;
         }
         const { root, detail } = this.splitModuleName(module);
-        const suffix = detail ? ` (${detail})` : '';
+        const suffix = this.formatSuffix(detail, callsite);
         consoleFn(`${levelName.padEnd(LEVEL_WIDTH, ' ')} ${timestamp} ${root} ${this.stringifyArgs(args)}${suffix}`);
     }
 
@@ -248,6 +250,55 @@ class Logger {
             return String(arg);
         }).join(' ');
     }
+
+    getCallsite() {
+        const stack = new Error().stack;
+        if (!stack) {
+            return '';
+        }
+
+        const lines = stack.split('\n').slice(1);
+        for (const line of lines) {
+            const parsed = this.parseStackLine(line);
+            if (!parsed) {
+                continue;
+            }
+
+            const normalizedUrl = parsed.url.replace(/\\/g, '/');
+            if (normalizedUrl.includes('/log_system/')) {
+                continue;
+            }
+
+            return this.formatCallsite(parsed);
+        }
+
+        return '';
+    }
+
+    parseStackLine(line) {
+        const match = String(line).trim().match(/(?:at\s+(?:.+?\s+\()?)?(.+?\.(?:mjs|js|tsx?|jsx)(?:[?#][^:)]*)?):(\d+):(\d+)\)?$/);
+        if (!match) {
+            return null;
+        }
+
+        const source = match[1];
+        const atIndex = source.lastIndexOf('@');
+        return {
+            url: atIndex >= 0 ? source.slice(atIndex + 1) : source,
+            line: match[2],
+            column: match[3],
+        };
+    }
+
+    formatCallsite(callsite) {
+        return `${callsite.url}:${callsite.line}:${callsite.column}`;
+    }
+
+    formatSuffix(detail, callsite) {
+        const suffixDetail = callsite || detail;
+        return suffixDetail ? ` (${suffixDetail})` : '';
+    }
+
     serializeLogEntry(log) {
         return {
             timestamp: log.timestamp,
@@ -265,6 +316,7 @@ class Logger {
                 }
                 return arg;
             }),
+            callsite: log.callsite || '',
             time: log.time instanceof Date ? log.time.toISOString() : log.time
         };
     }
@@ -279,6 +331,7 @@ class Logger {
                 level: log.level,
                 levelName: log.levelName || LEVEL_NAMES[log.level] || 'INFO',
                 args: Array.isArray(log.args) ? log.args : [],
+                callsite: log.callsite || '',
                 time: log.time ? new Date(log.time) : new Date()
             };
         }
@@ -289,6 +342,7 @@ class Logger {
                 level: log.l,
                 levelName: LEVEL_NAMES[log.l] || 'INFO',
                 args: Array.isArray(log.a) ? log.a : [],
+                callsite: log.c || '',
                 time: new Date()
             };
         }
@@ -383,7 +437,11 @@ class Logger {
             extension = 'json';
         }
         else {
-            content = this.logs.map((log) => `${log.levelName.padEnd(LEVEL_WIDTH, ' ')} ${log.timestamp} ${log.module} ${this.stringifyArgs(log.args)}`).join('\n');
+            content = this.logs.map((log) => {
+                const { root, detail } = this.splitModuleName(log.module);
+                const suffix = this.formatSuffix(detail, log.callsite);
+                return `${log.levelName.padEnd(LEVEL_WIDTH, ' ')} ${log.timestamp} ${root} ${this.stringifyArgs(log.args)}${suffix}`;
+            }).join('\n');
             mimeType = 'text/plain';
             extension = 'txt';
         }
