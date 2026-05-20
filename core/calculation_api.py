@@ -6,8 +6,10 @@ except Exception:
     PromptServer = None
 
 from .auto_detect import calculate_resolution, safe_float, safe_int
+from .log_system import create_module_logger
 
 
+log = create_module_logger()
 _routes_registered = False
 
 
@@ -44,8 +46,10 @@ def _normalize_payload(payload):
 def register_calculation_routes():
     global _routes_registered
     if _routes_registered:
+        log.debug("Calculation routes already registered")
         return
     if PromptServer is None or getattr(PromptServer, "instance", None) is None or web is None:
+        log.warning("Calculation routes unavailable because PromptServer or aiohttp is missing")
         return
 
     @PromptServer.instance.routes.post("/resolutionmaster/calculate")
@@ -56,11 +60,22 @@ def register_calculation_routes():
                 raise ValueError("Request body must be a JSON object.")
 
             normalized = _normalize_payload(payload)
+            log.debug(
+                "Calculation request",
+                "action=",
+                normalized["action"],
+                "input=",
+                f"{normalized['width']}x{normalized['height']}",
+            )
             result = calculate_resolution(**normalized)
+            log.debug("Calculation response", result)
             return web.json_response({"ok": True, **result})
         except ValueError as error:
+            log.warning("Invalid calculation request", error)
             return web.json_response({"ok": False, "error": str(error)}, status=400)
         except Exception as error:
+            log.exception("Unhandled calculation request error")
             return web.json_response({"ok": False, "error": str(error)}, status=500)
 
     _routes_registered = True
+    log.info("Registered calculation route", "/resolutionmaster/calculate")

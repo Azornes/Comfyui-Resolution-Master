@@ -12,6 +12,7 @@ try:
     )
     from .core.calculation_api import register_calculation_routes
     from .core.dimension_cache import register_dimension_routes, store_detected_dimensions
+    from .core.log_system import create_module_logger
 except ImportError:
     from core.auto_detect import (
         apply_backend_auto_detect_fallback,
@@ -21,11 +22,16 @@ except ImportError:
     )
     from core.calculation_api import register_calculation_routes
     from core.dimension_cache import register_dimension_routes, store_detected_dimensions
+    from core.log_system import create_module_logger
+
+
+log = create_module_logger()
 
 
 class ResolutionMaster:
     def __init__(self):
         self.device = comfy.model_management.intermediate_device()
+        log.debug("Initialized node on device", self.device)
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -87,6 +93,7 @@ class ResolutionMaster:
             return int(input_image.shape[2]), int(input_image.shape[1])
         if input_image.dim() == 3:  # [height, width, channels]
             return int(input_image.shape[1]), int(input_image.shape[0])
+        log.warning("Unsupported input image tensor dimensions", input_image.dim())
         return None
 
     def main(
@@ -116,11 +123,33 @@ class ResolutionMaster:
         input_image=None,
         unique_id=None,
     ):
+        log.debug(
+            "Executing",
+            "mode=",
+            mode,
+            "latent_type=",
+            latent_type,
+            "width=",
+            width,
+            "height=",
+            height,
+            "auto_detect=",
+            auto_detect,
+        )
+
         if auto_detect and input_image is not None:
             detected_dimensions = self.detect_image_dimensions(input_image)
             if detected_dimensions is not None:
                 detected_width, detected_height = detected_dimensions
                 store_detected_dimensions(unique_id, detected_width, detected_height)
+                log.debug(
+                    "Detected input dimensions",
+                    detected_width,
+                    "x",
+                    detected_height,
+                    "unique_id=",
+                    unique_id,
+                )
 
                 frontend_matches_tensor = (
                     auto_detect_source == "frontend"
@@ -129,6 +158,7 @@ class ResolutionMaster:
                 )
 
                 if not frontend_matches_tensor:
+                    previous_width, previous_height = width, height
                     width, height = apply_backend_auto_detect_fallback(
                         detected_width,
                         detected_height,
@@ -145,6 +175,12 @@ class ResolutionMaster:
                         rescale_mode,
                         auto_detect_presets_json,
                     )
+                    log.info(
+                        "Applied backend auto-detect fallback",
+                        f"{previous_width}x{previous_height}",
+                        "->",
+                        f"{width}x{height}",
+                    )
 
         rescale_factor = calculate_rescale_factor(
             width,
@@ -160,6 +196,17 @@ class ResolutionMaster:
         else:
             latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
 
+        log.debug(
+            "Returning result",
+            "width=",
+            width,
+            "height=",
+            height,
+            "rescale_factor=",
+            rescale_factor,
+            "batch_size=",
+            batch_size,
+        )
         return (width, height, rescale_factor, batch_size, {"samples": latent})
 
 

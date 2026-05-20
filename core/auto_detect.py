@@ -1,6 +1,11 @@
 import json
 import math
 
+from .log_system import create_module_logger
+
+
+log = create_module_logger()
+
 
 def safe_int(value, default=0):
     try:
@@ -19,8 +24,12 @@ def safe_float(value, default=0.0):
 def load_presets(presets_json):
     try:
         presets = json.loads(presets_json or "{}")
-        return presets if isinstance(presets, dict) else {}
-    except (TypeError, ValueError):
+        if isinstance(presets, dict):
+            return presets
+        log.warning("Ignoring presets JSON because decoded value is not an object")
+        return {}
+    except (TypeError, ValueError) as error:
+        log.warning("Failed to parse presets JSON", error)
         return {}
 
 
@@ -220,6 +229,14 @@ def apply_backend_auto_detect_fallback(
     rescale_mode,
     auto_detect_presets_json,
 ):
+    log.debug(
+        "Applying backend auto-detect fallback",
+        f"{width}x{height}",
+        "category=",
+        selected_category,
+        "rescale_mode=",
+        rescale_mode,
+    )
     result = calculate_resolution(
         "auto_detect",
         width,
@@ -237,6 +254,7 @@ def apply_backend_auto_detect_fallback(
         rescale_mode=rescale_mode,
         presets_json=auto_detect_presets_json,
     )
+    log.debug("Backend auto-detect fallback result", result)
     return result["width"], result["height"]
 
 
@@ -272,6 +290,16 @@ def calculate_resolution(
     selected_category = selected_category or ""
     presets = load_presets(presets_json)
     selected_preset = None
+
+    log.debug(
+        "Calculating resolution",
+        "action=",
+        action,
+        "input=",
+        f"{width}x{height}",
+        "category=",
+        selected_category,
+    )
 
     if action == "auto_fit":
         if selected_category:
@@ -330,6 +358,7 @@ def calculate_resolution(
         pass
 
     else:
+        log.warning("Unsupported calculation action", action)
         raise ValueError(f"Unsupported calculation action: {action}")
 
     width = max(1, int(width))
@@ -356,4 +385,5 @@ def calculate_resolution(
             height,
             safe_float(scale_value, 1.0),
         )
+    log.debug("Calculation result", result)
     return result
