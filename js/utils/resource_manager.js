@@ -1,5 +1,5 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
-import { withErrorHandling, createValidationError, createNetworkError } from "../error_handler.js";
+import { withErrorHandling, createValidationError, createNetworkError } from "./error_handler.js";
 const log = createModuleLogger('resource_manager');
 export const addStylesheet = withErrorHandling(function (url) {
     if (!url) {

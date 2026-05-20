@@ -1,12 +1,13 @@
 import { app } from "../../scripts/app.js";
 import { createModuleLogger } from "./log_system/log_funcs.js";
 import { loadIcons } from "./utils/icon_utils.js";
-import { tooltips, presetCategories } from "./utils/resolution_master_config.js";
-import { DialogManager } from "./dialog_manager.js";
-import { SearchableDropdown } from "./searchable_dropdown.js";
-import { AspectRatioSelector } from "./aspect_ratio_selector.js";
-import { CustomPresetsManager } from "./utils/custom_presets_manager.js";
-import { PresetManagerDialog } from "./utils/preset_manager_dialog.js";
+import { tooltips } from "./config/resolution_master_tooltips.js";
+import { presetCategories } from "./presets/preset_categories.js";
+import { CustomValueDialogManager } from "./dialogs/custom_value_dialog_manager.js";
+import { SearchableDropdown } from "./components/searchable_dropdown.js";
+import { AspectRatioSelector } from "./components/aspect_ratio_selector.js";
+import { CustomPresetsManager } from "./presets/custom_presets_manager.js";
+import { PresetManagerDialog } from "./presets/preset_manager/preset_manager_dialog.js";
 const log = createModuleLogger('resolution_master');
 
 class ResolutionMasterCanvas {    
@@ -31,7 +32,7 @@ class ResolutionMasterCanvas {
         this.hoverElement = null;
         this.scrollOffset = 0;
         this.dropdownOpen = null;
-        this.dialogManager = new DialogManager(this);
+        this.customValueDialogManager = new CustomValueDialogManager(this);
         this.searchableDropdown = new SearchableDropdown();
         this.aspectRatioSelector = new AspectRatioSelector();
         this.customPresetsManager = new CustomPresetsManager(this);
@@ -56,7 +57,7 @@ class ResolutionMasterCanvas {
         this.presetCategories = presetCategories;
         
         this.setupNode();
-        import('./css_loader.js').then(module => {
+        import('./styles/stylesheet_loader.js').then(module => {
             module.loadStylesWhenNeeded();
         }).catch(error => {
             log.error('Failed to load CSS:', error);
@@ -447,8 +448,8 @@ class ResolutionMasterCanvas {
                 clearTimeout(self.tooltipTimer);
                 self.tooltipTimer = null;
             }
-            if (self.dialogManager.customInputDialog) {
-                self.dialogManager.closeCustomInputDialog();
+            if (self.customValueDialogManager.customInputDialog) {
+                self.customValueDialogManager.closeCustomInputDialog();
             }
             if (origOnRemoved) origOnRemoved.apply(this, arguments);
         };
@@ -1640,7 +1641,7 @@ class ResolutionMasterCanvas {
                     if (key === 'latValueArea') {
                         this.showLatentTypeSelector(e);
                     } else {
-                        this.dialogManager.showCustomValueDialog(key, e);
+                        this.customValueDialogManager.showCustomValueDialog(key, e);
                     }
                     return true;
                 }
