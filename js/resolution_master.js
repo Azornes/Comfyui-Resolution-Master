@@ -46,6 +46,7 @@ class ResolutionMasterCanvas {
         this.dimensionCheckInterval = null;
         this.manuallySetByAutoFit = false;
         this.canvasDragAspectLock = null;
+        this.canvasDotsCache = null;
         this.controls = {};
         this.resolutions = ['144p', '240p', '360p', '480p', '720p', '820p', '1080p', '1440p', '2160p', '4320p'];
 
@@ -826,34 +827,7 @@ class ResolutionMasterCanvas {
         ctx.stroke();
         
         if (props.canvas_dots) {
-            ctx.fillStyle = "rgba(200,200,200,0.5)";
-            ctx.beginPath();
-            const stepX = Math.max(Number(props.canvas_step_x) || 1, 1);
-            const stepY = Math.max(Number(props.canvas_step_y) || 1, 1);
-            const gridXs = [];
-            const gridYs = [];
-            const addUniqueGridPoint = (points, point) => {
-                if (!points.some(existingPoint => Math.abs(existingPoint - point) < 0.5)) {
-                    points.push(point);
-                }
-            };
-
-            for (let valueX = props.canvas_min_x; valueX <= props.canvas_max_x; valueX += stepX) {
-                const ratioX = (valueX - props.canvas_min_x) / rangeX;
-                addUniqueGridPoint(gridXs, offsetX + canvasW * ratioX);
-            }
-
-            for (let valueY = props.canvas_min_y; valueY <= props.canvas_max_y; valueY += stepY) {
-                const ratioY = (valueY - props.canvas_min_y) / rangeY;
-                addUniqueGridPoint(gridYs, offsetY + canvasH * (1 - ratioY));
-            }
-
-            for (const dotX of gridXs) {
-                for (const dotY of gridYs) {
-                    ctx.rect(dotX - 0.5, dotY - 0.5, 1, 1);
-                }
-            }
-            ctx.fill();
+            this.drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY);
         }
         
         if (props.canvas_frame) {
@@ -910,6 +884,76 @@ class ResolutionMasterCanvas {
         ctx.stroke();
     }
 
+    drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY) {
+        const cache = this.getCanvasDotsCache(canvasW, canvasH, rangeX, rangeY);
+        if (!cache?.path) return;
+
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.fillStyle = "rgba(200,200,200,0.5)";
+        ctx.fill(cache.path);
+        ctx.restore();
+    }
+
+    getCanvasDotsCache(canvasW, canvasH, rangeX, rangeY) {
+        const props = this.node.properties;
+        if (![canvasW, canvasH, rangeX, rangeY].every(value => Number.isFinite(value) && value > 0)) {
+            return null;
+        }
+
+        const cacheW = Math.max(1, canvasW);
+        const cacheH = Math.max(1, canvasH);
+        const stepX = Math.max(Number(props.canvas_step_x) || 1, 1);
+        const stepY = Math.max(Number(props.canvas_step_y) || 1, 1);
+        const signature = [
+            cacheW.toFixed(3),
+            cacheH.toFixed(3),
+            props.canvas_min_x,
+            props.canvas_max_x,
+            props.canvas_min_y,
+            props.canvas_max_y,
+            stepX,
+            stepY
+        ].join("|");
+
+        if (this.canvasDotsCache?.signature === signature) {
+            return this.canvasDotsCache;
+        }
+
+        if (typeof Path2D === "undefined") {
+            return null;
+        }
+
+        const gridXs = [];
+        const gridYs = [];
+        const addUniqueGridPoint = (points, point) => {
+            const previousPoint = points[points.length - 1];
+            if (previousPoint === undefined || Math.abs(previousPoint - point) >= 0.5) {
+                points.push(point);
+            }
+        };
+
+        for (let valueX = props.canvas_min_x; valueX <= props.canvas_max_x; valueX += stepX) {
+            const ratioX = (valueX - props.canvas_min_x) / rangeX;
+            addUniqueGridPoint(gridXs, cacheW * ratioX);
+        }
+
+        for (let valueY = props.canvas_min_y; valueY <= props.canvas_max_y; valueY += stepY) {
+            const ratioY = (valueY - props.canvas_min_y) / rangeY;
+            addUniqueGridPoint(gridYs, cacheH * (1 - ratioY));
+        }
+
+        const dotPath = new Path2D();
+        for (const dotX of gridXs) {
+            for (const dotY of gridYs) {
+                dotPath.rect(dotX - 0.5, dotY - 0.5, 1, 1);
+            }
+        }
+
+        this.canvasDotsCache = { signature, path: dotPath };
+        return this.canvasDotsCache;
+    }
+    
     static gcd(a, b) {
         a = Math.abs(Math.floor(Number(a))) || 1;
         b = Math.abs(Math.floor(Number(b))) || 1;
