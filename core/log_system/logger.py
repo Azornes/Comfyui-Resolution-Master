@@ -85,12 +85,14 @@ class ColoredFormatter(logging.Formatter):
         level_field_width=DEFAULT_CONFIG["level_field_width"],
         source_field_width=DEFAULT_CONFIG["source_field_width"],
         include_milliseconds=True,
+        include_brackets=True,
     ):
         super().__init__(fmt, datefmt)
         self.use_colors = use_colors
         self.level_field_width = self._field_width(level_field_width)
         self.source_field_width = self._field_width(source_field_width)
         self.include_milliseconds = include_milliseconds
+        self.include_brackets = include_brackets
 
     def format(self, record):
         # Get the formatted message from the record
@@ -110,9 +112,12 @@ class ColoredFormatter(logging.Formatter):
         if self.source_field_width:
             source = source.ljust(self.source_field_width)
 
-        timestamp = f"[{self._format_time(record)}]"
+        timestamp = self._format_time(record)
         separator = " "
-        root_label = f"[{logger_root}]"
+        root_label = logger_root
+        if self.include_brackets:
+            timestamp = f"[{timestamp}]"
+            root_label = f"[{root_label}]"
         if self.use_colors:
             level = self._color_level_badge(levelname, level)
             timestamp = self._color_timestamp(timestamp)
@@ -142,8 +147,10 @@ class ColoredFormatter(logging.Formatter):
         return "WARN" if levelname == "WARNING" else str(levelname or "")
 
     def _format_level(self, levelname):
-        width = self.level_field_width + 2
-        return f"[{levelname}]".ljust(width)
+        if self.include_brackets:
+            width = self.level_field_width + 2
+            return f"[{levelname}]".ljust(width)
+        return levelname.ljust(self.level_field_width)
 
     def _format_time(self, record):
         timestamp = time.strftime(
@@ -381,6 +388,7 @@ class AzLogsLogger:
             use_colors=self.config["use_colors"],
             level_field_width=self.config["level_field_width"],
             source_field_width=self.config["source_field_width"],
+            include_brackets=False,
         )
         console_handler.setFormatter(console_formatter)
         logger.addHandler(console_handler)
