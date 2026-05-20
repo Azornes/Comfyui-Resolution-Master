@@ -2,6 +2,9 @@
 
 import { TooltipManager } from './tooltip_manager.js';
 import { presetManagerTooltips } from '../../config/resolution_master_tooltips.js';
+import { createModuleLogger } from "../../log_system/log_funcs.js";
+
+const log = createModuleLogger('json_editor_dialog');
 
 /**
  * JSON Editor Dialog with JSONEditor library
@@ -18,6 +21,9 @@ export class JSONEditorDialog {
     async show() {
         // Get current JSON
         const currentJSON = this.parentDialog.manager.exportToJSON();
+        log.debug('Opening JSON editor dialog', {
+            jsonLength: currentJSON.length
+        });
         
         // Create overlay
         const overlay = document.createElement('div');
@@ -77,7 +83,12 @@ export class JSONEditorDialog {
         
         // Load JSONEditor JS dynamically
         if (!window.JSONEditor) {
-            await this.loadJSONEditorScript();
+            try {
+                await this.loadJSONEditorScript();
+            } catch (error) {
+                log.error('Failed to load JSONEditor script:', error);
+                throw error;
+            }
         }
         
         // Editor container
@@ -121,6 +132,7 @@ export class JSONEditorDialog {
             this.editor.set(JSON.parse(currentJSON));
         } catch (e) {
             // If parsing fails, set as text
+            log.warn('Stored preset JSON could not be parsed; opening as raw text', e);
             this.editor.setText(currentJSON);
         }
         
@@ -211,6 +223,9 @@ export class JSONEditorDialog {
             
             // Check if it's a JSON file
             if (!file.name.endsWith('.json')) {
+                log.warn('Rejected non-JSON file in JSON editor drop zone', {
+                    fileName: file.name
+                });
                 validationMsg.style.color = '#f55';
                 validationMsg.textContent = '❌ Please drop a .json file';
                 return;
@@ -228,15 +243,26 @@ export class JSONEditorDialog {
                     this.editor.set(jsonObject);
                     
                     validationMsg.style.color = '#5f5';
+                    log.info('Loaded JSON file into JSON editor', {
+                        fileName: file.name,
+                        fileSize: file.size
+                    });
                     validationMsg.textContent = `✓ Loaded: ${file.name}`;
                 } catch (error) {
                     validationMsg.style.color = '#f55';
+                    log.warn('Invalid JSON file dropped into JSON editor', {
+                        fileName: file.name,
+                        error: error.message
+                    });
                     validationMsg.textContent = `❌ Invalid JSON in ${file.name}: ${error.message}`;
                 }
             };
             
             reader.onerror = () => {
                 validationMsg.style.color = '#f55';
+                log.error('Failed to read dropped JSON file', {
+                    fileName: file.name
+                });
                 validationMsg.textContent = `❌ Error reading file: ${file.name}`;
             };
             
@@ -349,6 +375,7 @@ export class JSONEditorDialog {
                 
                 if (success) {
                     validationMsg.style.color = '#5f5';
+                    log.info('JSON editor changes applied');
                     validationMsg.textContent = '✓ Changes applied successfully!';
                     
                     // Close dialog immediately and refresh main dialog
@@ -356,10 +383,14 @@ export class JSONEditorDialog {
                     this.parentDialog.renderDialog();
                 } else {
                     validationMsg.style.color = '#f55';
+                    log.warn('JSON editor import returned false');
                     validationMsg.textContent = '❌ Failed to apply changes. Check console for details.';
                 }
             } catch (error) {
                 validationMsg.style.color = '#f55';
+                log.warn('Failed to apply JSON editor changes', {
+                    error: error.message
+                });
                 validationMsg.textContent = `❌ Invalid JSON: ${error.message}`;
             }
         });

@@ -63,6 +63,11 @@ class ResolutionMasterCanvas {
         loadIcons(this.icons);
         this.tooltips = tooltips;
         this.presetCategories = presetCategories;
+
+        log.debug('Creating ResolutionMaster node UI', {
+            nodeId: this.node.id ?? null,
+            widgetCount: this.node.widgets?.length || 0
+        });
         
         this.setupNode();
         import('./styles/stylesheet_loader.js').then(module => {
@@ -77,6 +82,12 @@ class ResolutionMasterCanvas {
             if (this._pendingCanvasUpdate) {
                 this.requestCanvasUpdate(true);
             }
+            log.debug('ResolutionMaster node UI ready', {
+                nodeId: this.node.id ?? null,
+                mode: this.node.properties.mode,
+                width: this.node.properties.valueX,
+                height: this.node.properties.valueY
+            });
         });
     }
     
@@ -88,6 +99,7 @@ app.registerExtension({
     name: "azResolutionMaster",
     async beforeRegisterNodeDef(nodeType, nodeData, _app) {
         if (nodeData.name === "ResolutionMaster") {
+            log.debug('Registering ResolutionMaster node extension');
             const onNodeCreated = nodeType.prototype.onNodeCreated;
             nodeType.prototype.onNodeCreated = function() {
                 onNodeCreated?.apply(this, []);

@@ -91,11 +91,17 @@ export const nodeLifecycleMethods = {
             return;
         }
 
+        const inputCount = this.node.inputs.length;
         const keepIndex = this.node.inputs.findIndex(input => input?.link != null);
         const canonicalInput = this.node.inputs[keepIndex >= 0 ? keepIndex : 0];
         canonicalInput.name = canonicalInput.localized_name = "input_image";
         canonicalInput.hidden = false;
         this.node.inputs = [canonicalInput];
+        log.warn('Normalized duplicate ResolutionMaster input slots', {
+            nodeId: this.node.id ?? null,
+            inputCount,
+            keptIndex: keepIndex >= 0 ? keepIndex : 0
+        });
     },
 
     applyCompactSlotLabels() {
@@ -177,6 +183,14 @@ export const nodeLifecycleMethods = {
         const rescaleModeWidget = node.widgets?.find(w => w.name === 'rescale_mode');
         const rescaleValueWidget = node.widgets?.find(w => w.name === 'rescale_value');
         const batchSizeWidget = node.widgets?.find(w => w.name === 'batch_size');
+        if (!widthWidget || !heightWidget) {
+            log.error('ResolutionMaster required dimension widgets were not found', {
+                nodeId: node.id ?? null,
+                hasWidthWidget: !!widthWidget,
+                hasHeightWidget: !!heightWidget,
+                widgetNames: node.widgets?.map(widget => widget.name) || []
+            });
+        }
         if (rescaleModeWidget) {
             rescaleModeWidget.value = node.properties.rescaleMode;
         }
@@ -344,6 +358,12 @@ export const nodeLifecycleMethods = {
             }
         });
         this.syncBackendFallbackWidgets();
+        log.debug('ResolutionMaster node lifecycle hooks installed', {
+            nodeId: node.id ?? null,
+            hasAutoDetectWidget: !!autoDetectWidget,
+            hasLatentTypeWidget: !!latentTypeWidget,
+            hiddenWidgetCount: node.widgets?.filter(widget => widget.hidden).length || 0
+        });
     },
 
     getPreferredHeightPropertyKey(isCompact = this.collapsedSections?.extraControls) {

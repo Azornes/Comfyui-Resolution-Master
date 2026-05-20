@@ -1,4 +1,7 @@
 import { createAspectLock, getAspectLockedDimensions } from "./aspect_ratio_math.js";
+import { createModuleLogger } from "../log_system/log_funcs.js";
+
+const log = createModuleLogger('resolution_master_canvas_methods');
 
 export const canvasMethods = {
     /**
@@ -31,6 +34,16 @@ export const canvasMethods = {
         return this.widthWidget && this.heightWidget;
     },
 
+    reportMissingDimensionWidgets(context) {
+        if (this._loggedMissingDimensionWidgets) return;
+        this._loggedMissingDimensionWidgets = true;
+        log.warn(`${context}: width/height widgets are unavailable`, {
+            nodeId: this.node?.id ?? null,
+            hasWidthWidget: !!this.widthWidget,
+            hasHeightWidget: !!this.heightWidget
+        });
+    },
+
     syncCanvasPositionFromDimensions(width = this.node.properties.valueX, height = this.node.properties.valueY) {
         const props = this.node.properties;
         const rangeX = props.canvas_max_x - props.canvas_min_x;
@@ -47,7 +60,10 @@ export const canvasMethods = {
     },
 
     setDimensions(width, height, options = {}) {
-        if (!this.validateWidgets()) return;
+        if (!this.validateWidgets()) {
+            this.reportMissingDimensionWidgets('setDimensions');
+            return;
+        }
         this.node.properties.valueX = width;
         this.node.properties.valueY = height;
         this.widthWidget.value = width;
@@ -65,7 +81,10 @@ export const canvasMethods = {
     },
 
     updateCanvasFromWidgets(options = {}) {
-        if (!this.validateWidgets()) return;
+        if (!this.validateWidgets()) {
+            this.reportMissingDimensionWidgets('updateCanvasFromWidgets');
+            return;
+        }
 
         const node = this.node;
         const props = node.properties;

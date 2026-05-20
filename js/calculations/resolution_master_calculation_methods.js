@@ -48,16 +48,31 @@ export const calculationMethods = {
 
     async requestBackendCalculation(action, overrides = {}, options = {}) {
         try {
+            const payload = this.buildCalculationPayload(action, overrides);
+            log.debug('Requesting backend calculation', {
+                action,
+                width: payload.width,
+                height: payload.height,
+                selectedCategory: payload.selected_category,
+                rescaleMode: payload.rescale_mode
+            });
             const response = await fetch('/resolutionmaster/calculate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.buildCalculationPayload(action, overrides)),
+                body: JSON.stringify(payload),
                 cache: 'no-store'
             });
             const data = await response.json().catch(() => null);
             if (!response.ok || !data?.ok) {
                 throw new Error(data?.error || `Calculation request failed with HTTP ${response.status}`);
             }
+            log.debug('Backend calculation completed', {
+                action,
+                width: data.width ?? null,
+                height: data.height ?? null,
+                rescaleFactor: data.rescale_factor ?? null,
+                selectedPreset: data.selected_preset ?? null
+            });
             return data;
         } catch (error) {
             if (!options.silent) {
@@ -124,11 +139,20 @@ export const calculationMethods = {
 
     async handleSnap() {
         if (!this.validateWidgets()) return;
+        log.info('Auto-snap requested', {
+            nodeId: this.node?.id ?? null,
+            width: this.widthWidget.value,
+            height: this.heightWidget.value
+        });
         const result = await this.requestBackendCalculation('auto_snap');
         this.applyBackendCalculationResult(result, { updatePreset: false });
     },
 
     async handleScale() {
+        log.info('Manual scale requested', {
+            nodeId: this.node?.id ?? null,
+            rescaleMode: 'manual'
+        });
         const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'manual' });
         if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
             this.updateRescaleValue();
@@ -158,6 +182,12 @@ export const calculationMethods = {
             log.debug("Auto-fit: Width or height widget not found");
             return;
         }
+        log.info('Auto-fit requested', {
+            nodeId: this.node?.id ?? null,
+            category,
+            width: this.widthWidget.value,
+            height: this.heightWidget.value
+        });
         const result = await this.requestBackendCalculation('auto_fit', {
             width: this.widthWidget.value,
             height: this.heightWidget.value,
@@ -179,6 +209,12 @@ export const calculationMethods = {
             log.debug("Auto-calc: Width or height widget not found");
             return;
         }
+        log.info('Custom calculation requested', {
+            nodeId: this.node?.id ?? null,
+            category: props.selectedCategory,
+            width: this.widthWidget.value,
+            height: this.heightWidget.value
+        });
         const result = await this.requestBackendCalculation('custom_calc', {
             width: this.widthWidget.value,
             height: this.heightWidget.value,
@@ -194,6 +230,12 @@ export const calculationMethods = {
             log.debug("Auto-Resize: Width or height widget not found");
             return;
         }
+        log.info('Auto-resize requested', {
+            nodeId: this.node?.id ?? null,
+            rescaleMode: props.rescaleMode,
+            width: this.widthWidget.value,
+            height: this.heightWidget.value
+        });
         const result = await this.requestBackendCalculation('auto_resize', {
             rescale_mode: props.rescaleMode
         });
@@ -224,7 +266,14 @@ export const calculationMethods = {
         const props = this.node.properties;
         const allPresets = this.getAllPresets();
         const preset = allPresets[category]?.[presetName];
-        if (!preset) return;
+        if (!preset) {
+            log.warn('Preset not found while applying preset', {
+                nodeId: this.node?.id ?? null,
+                category,
+                presetName
+            });
+            return;
+        }
 
         if (this.widthWidget && this.heightWidget) {
             this.widthWidget.value = preset.width;
@@ -232,6 +281,13 @@ export const calculationMethods = {
             props.selectedPreset = presetName;
             await this.applyDimensionChange();
             this.updateCanvasFromWidgets();
+            log.info('Preset applied', {
+                nodeId: this.node?.id ?? null,
+                category,
+                presetName,
+                width: preset.width,
+                height: preset.height
+            });
         }
     },
 

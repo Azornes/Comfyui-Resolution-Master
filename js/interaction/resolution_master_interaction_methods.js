@@ -19,6 +19,12 @@ export const interactionMethods = {
             return;
         }
 
+        if (!this._loggedLegacyCaptureFallback) {
+            this._loggedLegacyCaptureFallback = true;
+            log.warn('Canvas pointer API unavailable; falling back to deprecated captureInput', {
+                nodeId: this.node?.id ?? null
+            });
+        }
         this.node.captureInput?.(true);
     },
 
@@ -32,6 +38,12 @@ export const interactionMethods = {
             return;
         }
 
+        if (!this._loggedLegacyCaptureFallback) {
+            this._loggedLegacyCaptureFallback = true;
+            log.warn('Canvas pointer API unavailable; falling back to deprecated captureInput', {
+                nodeId: this.node?.id ?? null
+            });
+        }
         this.node.captureInput?.(false);
         this._capturedPointerCanvas = null;
     },

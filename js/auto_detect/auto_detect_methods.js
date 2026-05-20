@@ -5,6 +5,10 @@ const log = createModuleLogger('auto_detect_methods');
 export const autoDetectMethods = {
     startAutoDetect() {
         if (this.dimensionCheckInterval) return;
+        log.info('Auto-detect started', {
+            nodeId: this.node?.id ?? null,
+            source: this.node?.properties?.autoDetectSource || 'backend'
+        });
         this.checkForImageDimensions();
         this.dimensionCheckInterval = setInterval(() => this.checkForImageDimensions(), 1000);
     },
@@ -13,6 +17,9 @@ export const autoDetectMethods = {
         if (this.dimensionCheckInterval) {
             clearInterval(this.dimensionCheckInterval);
             this.dimensionCheckInterval = null;
+            log.info('Auto-detect stopped', {
+                nodeId: this.node?.id ?? null
+            });
         }
     },
 
@@ -109,6 +116,11 @@ export const autoDetectMethods = {
             const backendDimensions = previewDimensions ? null : await this.getBackendDetectedDimensions();
             const dimensions = previewDimensions || backendDimensions;
             if (!dimensions) {
+                if (this.detectedDimensions) {
+                    log.debug('Auto-detect dimensions cleared', {
+                        nodeId: node.id ?? null
+                    });
+                }
                 this.detectedDimensions = null;
                 this.setAutoDetectSource('backend');
                 this.setRawAutoDetectDimensions(null);
@@ -129,6 +141,13 @@ export const autoDetectMethods = {
             if (hasNewDimensions) {
                 this.detectedDimensions = dimensions;
                 this.manuallySetByAutoFit = false;
+                log.info('Auto-detected image dimensions changed', {
+                    nodeId: node.id ?? null,
+                    source: dimensions.source,
+                    width: dimensions.width,
+                    height: dimensions.height,
+                    liveChangeTracking: !!dimensions.liveChangeTracking
+                });
 
                 const props = node.properties;
                 const result = await this.requestBackendCalculation('auto_detect', {
@@ -246,7 +265,11 @@ export const autoDetectMethods = {
                 signature: `backend:${this.node.id}:${Number.isFinite(timestamp) ? timestamp : "no-ts"}:${Math.round(width)}x${Math.round(height)}`
             };
         } catch (error) {
-            log.debug('Backend dimensions unavailable:', error);
+            const message = error?.message || String(error);
+            if (this._lastBackendDimensionError !== message) {
+                this._lastBackendDimensionError = message;
+                log.debug('Backend dimensions unavailable:', error);
+            }
             return null;
         }
     }
