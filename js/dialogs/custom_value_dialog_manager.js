@@ -1,12 +1,12 @@
 // custom_value_dialog_manager.js - Manages custom value input dialogs for ResolutionMaster
 import { createModuleLogger } from "../log_system/log_funcs.js";
-import { app } from "../../../scripts/app.js";
 
 const log = createModuleLogger('custom_value_dialog_manager');
 
 export class CustomValueDialogManager {
-    constructor(resolutionMasterInstance) {
+    constructor(resolutionMasterInstance, appInstance) {
         this.rm = resolutionMasterInstance;
+        this.app = appInstance;
         this.customInputDialog = null;
         this.customInputOverlay = null;
         this.inputDialogActive = false;
@@ -299,7 +299,7 @@ export class CustomValueDialogManager {
         }
         
         this.closeCustomInputDialog();
-        app.graph.setDirtyCanvas(true);
+        this.app?.graph?.setDirtyCanvas(true);
         
         log.debug(`Applied custom ${valueType}: ${value}`);
     }
