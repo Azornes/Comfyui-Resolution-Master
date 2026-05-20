@@ -6,16 +6,44 @@ export const interactionMethods = {
     getCanvasPointer(canvas) {
         return canvas?.pointer
             || this._capturedPointerCanvas?.pointer
+            || this.node?.graph?.list_of_graphcanvas?.find((graphCanvas) => graphCanvas?.pointer)?.pointer
             || this.node?.graph?.canvas?.pointer
             || this.app?.canvas?.pointer
+            || globalThis.LGraphCanvas?.active_canvas?.pointer
             || null;
     },
 
     captureNodePointer(canvas) {
         const pointer = this.getCanvasPointer(canvas);
-        if (pointer && "capture" in pointer) {
-            pointer.capture = this.node;
-            this._capturedPointerCanvas = canvas || this.node?.graph?.canvas || this.app?.canvas || null;
+        if (pointer && ("onDrag" in pointer || "finally" in pointer)) {
+            const activeCanvas = canvas
+                || this._capturedPointerCanvas
+                || this.node?.graph?.list_of_graphcanvas?.find((graphCanvas) => graphCanvas?.pointer === pointer)
+                || this.node?.graph?.canvas
+                || this.app?.canvas
+                || globalThis.LGraphCanvas?.active_canvas
+                || null;
+
+            pointer.onDrag = (eMove) => {
+                this.handleMouseMove(eMove, null, activeCanvas);
+            };
+            pointer.finally = () => {
+                if (this.node?.capture) {
+                    this.handleMouseUp(pointer.eUp || pointer.eMove || pointer.eDown);
+                }
+                this._usingCanvasPointerCallbacks = false;
+                this._capturedPointerCanvas = null;
+            };
+
+            this._usingCanvasPointerCallbacks = true;
+            this._capturedPointerCanvas = activeCanvas;
+            return;
+        }
+
+        const legacyCanvas = canvas || this.node?.graph?.list_of_graphcanvas?.[0] || null;
+        if (legacyCanvas && "node_capturing_input" in legacyCanvas) {
+            legacyCanvas.node_capturing_input = this.node;
+            this._capturedPointerCanvas = legacyCanvas;
             return;
         }
 
@@ -30,10 +58,15 @@ export const interactionMethods = {
 
     releaseNodePointer(canvas) {
         const pointer = this.getCanvasPointer(canvas);
-        if (pointer && "capture" in pointer) {
-            if (pointer.capture === this.node) {
-                pointer.capture = null;
-            }
+        if (pointer && ("onDrag" in pointer || "finally" in pointer)) {
+            this._usingCanvasPointerCallbacks = false;
+            this._capturedPointerCanvas = null;
+            return;
+        }
+
+        const legacyCanvas = canvas || this._capturedPointerCanvas || this.node?.graph?.list_of_graphcanvas?.[0] || null;
+        if (legacyCanvas?.node_capturing_input === this.node) {
+            legacyCanvas.node_capturing_input = null;
             this._capturedPointerCanvas = null;
             return;
         }
@@ -45,6 +78,7 @@ export const interactionMethods = {
             });
         }
         this.node.captureInput?.(false);
+        this._usingCanvasPointerCallbacks = false;
         this._capturedPointerCanvas = null;
     },
 
@@ -132,6 +166,7 @@ export const interactionMethods = {
         const node = this.node;
 
         if (!node.capture) return false;
+        if (this._usingCanvasPointerCallbacks && pos !== null) return true;
         if (e.buttons === 0) {
             this.handleMouseUp(e);
             return true;
