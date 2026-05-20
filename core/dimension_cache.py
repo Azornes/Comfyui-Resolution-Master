@@ -46,7 +46,6 @@ def register_dimension_routes():
         node_id = request.match_info.get("node_id")
         dimensions = get_detected_dimensions(node_id)
         if dimensions is None:
-            log.debug("Detected dimensions cache miss", node_id)
             return web.json_response({"found": False})
 
         log.debug("Detected dimensions cache hit", node_id, dimensions)
