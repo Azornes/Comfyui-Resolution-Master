@@ -3,6 +3,39 @@ import { createModuleLogger } from "../log_system/log_funcs.js";
 const log = createModuleLogger('resolution_master_interaction_methods');
 
 export const interactionMethods = {
+    getCanvasPointer(canvas) {
+        return canvas?.pointer
+            || this._capturedPointerCanvas?.pointer
+            || this.node?.graph?.canvas?.pointer
+            || this.app?.canvas?.pointer
+            || null;
+    },
+
+    captureNodePointer(canvas) {
+        const pointer = this.getCanvasPointer(canvas);
+        if (pointer && "capture" in pointer) {
+            pointer.capture = this.node;
+            this._capturedPointerCanvas = canvas || this.node?.graph?.canvas || this.app?.canvas || null;
+            return;
+        }
+
+        this.node.captureInput?.(true);
+    },
+
+    releaseNodePointer(canvas) {
+        const pointer = this.getCanvasPointer(canvas);
+        if (pointer && "capture" in pointer) {
+            if (pointer.capture === this.node) {
+                pointer.capture = null;
+            }
+            this._capturedPointerCanvas = null;
+            return;
+        }
+
+        this.node.captureInput?.(false);
+        this._capturedPointerCanvas = null;
+    },
+
     handleMouseDown(e, pos, canvas) {
         const node = this.node;
         const props = node.properties;
@@ -13,20 +46,20 @@ export const interactionMethods = {
         if (props.mode === "Manual") {
             if (this.controls.canvas2dRightHandle && this.isPointInControl(relX, relY, this.controls.canvas2dRightHandle)) {
                 node.capture = 'canvas2dRightHandle';
-                node.captureInput(true);
+                this.captureNodePointer(canvas);
                 return true;
             }
 
             if (this.controls.canvas2dTopHandle && this.isPointInControl(relX, relY, this.controls.canvas2dTopHandle)) {
                 node.capture = 'canvas2dTopHandle';
-                node.captureInput(true);
+                this.captureNodePointer(canvas);
                 return true;
             }
             const c2d = this.controls.canvas2d;
             if (c2d && this.isPointInControl(relX, relY, c2d)) {
                 node.capture = 'canvas2d';
                 this.canvasDragAspectLock = this.createAspectLock();
-                node.captureInput(true);
+                this.captureNodePointer(canvas);
                 this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
                 return true;
             }
@@ -42,7 +75,7 @@ export const interactionMethods = {
                 }
                 if (key.endsWith('Slider')) {
                     node.capture = key;
-                    node.captureInput(true);
+                    this.captureNodePointer(canvas);
                     this.updateSliderValue(key, relX - this.controls[key].x, this.controls[key].w);
                     return true;
                 }
@@ -185,7 +218,7 @@ export const interactionMethods = {
 
         node.capture = false;
         this.canvasDragAspectLock = null;
-        node.captureInput(false);
+        this.releaseNodePointer();
 
         if (this.widthWidget && this.heightWidget) {
             this.widthWidget.value = node.properties.valueX;
