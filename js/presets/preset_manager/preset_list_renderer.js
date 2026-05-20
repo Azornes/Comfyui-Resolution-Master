@@ -1,7 +1,7 @@
 // preset_list_renderer.js - Renders the preset list view
 
 import { AspectRatioUtils } from "../aspect_ratio_utils.js";
-import { getIconHtml } from "../icon_utils.js";
+import { getIconHtml } from "../../utils/icon_utils.js";
 import { DragDropHandler } from "./drag_drop_handler.js";
 import { PresetUIComponents } from "./preset_ui_components.js";
 

@@ -1,6 +1,6 @@
 // rename_dialog_manager.js - Rename dialogs for categories and presets
 
-import { getIconHtml } from "../icon_utils.js";
+import { getIconHtml } from "../../utils/icon_utils.js";
 
 /**
  * Manager for rename dialogs (categories and presets)

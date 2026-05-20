@@ -4,20 +4,20 @@
  */
 
 // Load CSS styles
-import "../css_loader.js";
+import "../../styles/stylesheet_loader.js";
 
-import { createModuleLogger } from "../log_system/log_funcs.js";
-import { SearchableDropdown } from "../searchable_dropdown.js";
-import { AspectRatioUtils } from "./aspect_ratio_utils.js";
-import { loadIcons, getIconHtml } from "./icon_utils.js";
-import { presetManagerTooltips } from "./resolution_master_config.js";
-import { PresetUIComponents } from './preset_manager/preset_ui_components.js';
-import { DragDropHandler } from './preset_manager/drag_drop_handler.js';
-import { RenameDialogManager } from './preset_manager/rename_dialog_manager.js';
-import { JSONEditorDialog } from './preset_manager/json_editor_dialog.js';
-import { PresetListRenderer } from './preset_manager/preset_list_renderer.js';
-import { PresetAddViewRenderer } from './preset_manager/preset_add_view_renderer.js';
-import { TooltipManager } from './preset_manager/tooltip_manager.js';
+import { createModuleLogger } from "../../log_system/log_funcs.js";
+import { SearchableDropdown } from "../../components/searchable_dropdown.js";
+import { AspectRatioUtils } from "../aspect_ratio_utils.js";
+import { loadIcons, getIconHtml } from "../../utils/icon_utils.js";
+import { presetManagerTooltips } from "../../config/resolution_master_tooltips.js";
+import { PresetUIComponents } from './preset_ui_components.js';
+import { DragDropHandler } from './drag_drop_handler.js';
+import { RenameDialogManager } from './rename_dialog_manager.js';
+import { JSONEditorDialog } from './json_editor_dialog.js';
+import { PresetListRenderer } from './preset_list_renderer.js';
+import { PresetAddViewRenderer } from './preset_add_view_renderer.js';
+import { TooltipManager } from './tooltip_manager.js';
 
 const log = createModuleLogger('preset_manager_dialog');
 
@@ -100,7 +100,7 @@ export class PresetManagerDialog {
      * Registers all tooltips for the dialog
      */
     registerTooltips() {
-        // Use tooltips from resolution_master_config.js
+        // Use tooltips from resolution_master_tooltips.js
         this.tooltipManager.registerTooltips(presetManagerTooltips);
     }
 

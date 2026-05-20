@@ -1,7 +1,7 @@
 // preset_add_view_renderer.js - Renders the add/edit preset view
 
 import { AspectRatioUtils } from "../aspect_ratio_utils.js";
-import { getIconHtml } from "../icon_utils.js";
+import { getIconHtml } from "../../utils/icon_utils.js";
 
 /**
  * Renderer for the add/edit preset view

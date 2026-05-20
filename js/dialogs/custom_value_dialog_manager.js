@@ -1,10 +1,10 @@
-// dialog_manager.js - Manages custom input dialogs for ResolutionMaster
-import { createModuleLogger } from "./log_system/log_funcs.js";
-import { app } from "../../scripts/app.js";
+// custom_value_dialog_manager.js - Manages custom value input dialogs for ResolutionMaster
+import { createModuleLogger } from "../log_system/log_funcs.js";
+import { app } from "../../../scripts/app.js";
 
-const log = createModuleLogger('dialog_manager');
+const log = createModuleLogger('custom_value_dialog_manager');
 
-export class DialogManager {
+export class CustomValueDialogManager {
     constructor(resolutionMasterInstance) {
         this.rm = resolutionMasterInstance;
         this.customInputDialog = null;
