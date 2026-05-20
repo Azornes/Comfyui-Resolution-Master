@@ -1,5 +1,3 @@
-// @ts-ignore
-import { $el } from "../../../scripts/ui.js";
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { withErrorHandling, createValidationError, createNetworkError } from "../error_handler.js";
 const log = createModuleLogger('resource_manager');
@@ -20,13 +18,13 @@ export const addStylesheet = withErrorHandling(function (url) {
     }
 
     log.debug('Adding stylesheet:', { url, finalUrl });
-    $el("link", {
-        parent: document.head,
-        rel: "stylesheet",
-        type: "text/css",
-        href: finalUrl,
-    });
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.type = "text/css";
+    link.href = finalUrl;
+    document.head.appendChild(link);
     log.debug('Stylesheet added successfully:', { finalUrl });
+    return link;
 }, 'addStylesheet');
 export function getUrl(path, baseUrl) {
     if (!path) {
