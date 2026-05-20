@@ -48,7 +48,6 @@ def register_dimension_routes():
         if dimensions is None:
             return web.json_response({"found": False})
 
-        log.debug("Detected dimensions cache hit", node_id, dimensions)
         return web.json_response({
             "found": True,
             "width": dimensions["width"],
