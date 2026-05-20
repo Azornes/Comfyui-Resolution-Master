@@ -46,6 +46,7 @@ class ResolutionMasterCanvas {
         this.dimensionCheckInterval = null;
         this.manuallySetByAutoFit = false;
         this.canvasDragAspectLock = null;
+        this.canvasDotsCache = null;
         this.controls = {};
         this.resolutions = ['144p', '240p', '360p', '480p', '720p', '820p', '1080p', '1440p', '2160p', '4320p'];
 
@@ -418,6 +419,12 @@ class ResolutionMasterCanvas {
         node.onPropertyChanged = function(property) {
             self.handlePropertyChange(property);
         };
+        const origOnConnectionsChange = node.onConnectionsChange;
+        node.onConnectionsChange = function() {
+            const result = origOnConnectionsChange?.apply(this, arguments);
+            self.applyCompactSlotLabels();
+            return result;
+        };
         const origOnSerialize = node.onSerialize;
         node.onSerialize = function() {
             self.syncBackendFallbackWidgets();
@@ -508,7 +515,6 @@ class ResolutionMasterCanvas {
         
         if (props.mode === "Manual") {
             this.controls = {};
-            this.applyCompactSlotLabels();
             
             const collapsibleSection = (title, sectionKey, drawContent) => {
                 const contentHeight = drawContent(ctx, currentY + 25, true);
@@ -567,7 +573,6 @@ class ResolutionMasterCanvas {
             this.drawSliderMode(ctx, currentY);
         }
         
-        this.ensureMinimumSize();
         if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
             this.drawTooltip(ctx);
         }
@@ -794,8 +799,8 @@ class ResolutionMasterCanvas {
         
         this.controls.canvas2d = { x, y, w, h };
         
-        const rangeX = props.canvas_max_x - props.canvas_min_x;
-        const rangeY = props.canvas_max_y - props.canvas_min_y;
+        const rangeX = Math.max(1, props.canvas_max_x - props.canvas_min_x);
+        const rangeY = Math.max(1, props.canvas_max_y - props.canvas_min_y);
         const aspectRatio = rangeX / rangeY;
         
         let canvasW = w - padding;
@@ -822,34 +827,7 @@ class ResolutionMasterCanvas {
         ctx.stroke();
         
         if (props.canvas_dots) {
-            ctx.fillStyle = "rgba(200,200,200,0.5)";
-            ctx.beginPath();
-            const stepX = Math.max(Number(props.canvas_step_x) || 1, 1);
-            const stepY = Math.max(Number(props.canvas_step_y) || 1, 1);
-            const gridXs = [];
-            const gridYs = [];
-            const addUniqueGridPoint = (points, point) => {
-                if (!points.some(existingPoint => Math.abs(existingPoint - point) < 0.5)) {
-                    points.push(point);
-                }
-            };
-
-            for (let valueX = props.canvas_min_x; valueX <= props.canvas_max_x; valueX += stepX) {
-                const ratioX = (valueX - props.canvas_min_x) / rangeX;
-                addUniqueGridPoint(gridXs, offsetX + canvasW * ratioX);
-            }
-
-            for (let valueY = props.canvas_min_y; valueY <= props.canvas_max_y; valueY += stepY) {
-                const ratioY = (valueY - props.canvas_min_y) / rangeY;
-                addUniqueGridPoint(gridYs, offsetY + canvasH * (1 - ratioY));
-            }
-
-            for (const dotX of gridXs) {
-                for (const dotY of gridYs) {
-                    ctx.rect(dotX - 0.5, dotY - 0.5, 1, 1);
-                }
-            }
-            ctx.fill();
+            this.drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY);
         }
         
         if (props.canvas_frame) {
@@ -904,6 +882,76 @@ class ResolutionMasterCanvas {
         ctx.arc(topEdgeX, topEdgeY, isHoveringTop ? 7 : 6, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
+    }
+
+    drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY) {
+        const cache = this.getCanvasDotsCache(canvasW, canvasH, rangeX, rangeY);
+        if (!cache?.path) return;
+
+        ctx.save();
+        ctx.translate(offsetX, offsetY);
+        ctx.fillStyle = "rgba(200,200,200,0.5)";
+        ctx.fill(cache.path);
+        ctx.restore();
+    }
+
+    getCanvasDotsCache(canvasW, canvasH, rangeX, rangeY) {
+        const props = this.node.properties;
+        if (![canvasW, canvasH, rangeX, rangeY].every(value => Number.isFinite(value) && value > 0)) {
+            return null;
+        }
+
+        const cacheW = Math.max(1, canvasW);
+        const cacheH = Math.max(1, canvasH);
+        const stepX = Math.max(Number(props.canvas_step_x) || 1, 1);
+        const stepY = Math.max(Number(props.canvas_step_y) || 1, 1);
+        const signature = [
+            cacheW.toFixed(3),
+            cacheH.toFixed(3),
+            props.canvas_min_x,
+            props.canvas_max_x,
+            props.canvas_min_y,
+            props.canvas_max_y,
+            stepX,
+            stepY
+        ].join("|");
+
+        if (this.canvasDotsCache?.signature === signature) {
+            return this.canvasDotsCache;
+        }
+
+        if (typeof Path2D === "undefined") {
+            return null;
+        }
+
+        const gridXs = [];
+        const gridYs = [];
+        const addUniqueGridPoint = (points, point) => {
+            const previousPoint = points[points.length - 1];
+            if (previousPoint === undefined || Math.abs(previousPoint - point) >= 0.5) {
+                points.push(point);
+            }
+        };
+
+        for (let valueX = props.canvas_min_x; valueX <= props.canvas_max_x; valueX += stepX) {
+            const ratioX = (valueX - props.canvas_min_x) / rangeX;
+            addUniqueGridPoint(gridXs, cacheW * ratioX);
+        }
+
+        for (let valueY = props.canvas_min_y; valueY <= props.canvas_max_y; valueY += stepY) {
+            const ratioY = (valueY - props.canvas_min_y) / rangeY;
+            addUniqueGridPoint(gridYs, cacheH * (1 - ratioY));
+        }
+
+        const dotPath = new Path2D();
+        for (const dotX of gridXs) {
+            for (const dotY of gridYs) {
+                dotPath.rect(dotX - 0.5, dotY - 0.5, 1, 1);
+            }
+        }
+
+        this.canvasDotsCache = { signature, path: dotPath };
+        return this.canvasDotsCache;
     }
     
     static gcd(a, b) {
@@ -1727,6 +1775,10 @@ class ResolutionMasterCanvas {
         if (property?.startsWith('section_') && property.endsWith('_collapsed')) {
             const sectionKey = property.replace(/^section_/, '').replace(/_collapsed$/, '');
             this.collapsedSections[sectionKey] = node.properties[property];
+            if (sectionKey === 'extraControls') {
+                this.userPreferredHeight = this.getStoredPreferredHeight(this.collapsedSections.extraControls);
+                this.applyCompactSlotLabels();
+            }
         }
         if (!node.configured) return;
         
@@ -1870,6 +1922,7 @@ class ResolutionMasterCanvas {
         this.node.properties[propertyKey] = this.collapsedSections[sectionKey];
         if (sectionKey === 'extraControls') {
             this.userPreferredHeight = this.getStoredPreferredHeight(this.collapsedSections.extraControls);
+            this.applyCompactSlotLabels();
         }
         app.graph.setDirtyCanvas(true, true);
         
