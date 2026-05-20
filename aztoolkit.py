@@ -39,35 +39,35 @@ class ResolutionMaster:
             "required": {
                 "mode": (
                     ["Manual", "Manual Sliders", "Common Resolutions", "Aspect Ratios"],
-                    {"tooltip": "Frontend control mode for choosing the output resolution. Resolution Master currently uses Manual mode for the custom 2D canvas interface."}
+                    {"tooltip": "Choose how to control the output size. Manual mode uses the Resolution Master canvas."}
                 ),
                 "latent_type": (
                     ["latent_4x8", "latent_128x16"],
-                    {"default": "latent_4x8", "tooltip": "Latent tensor format to create: latent_4x8 for SD/SDXL/Flux-style latents, or latent_128x16 for Flux.2-style latents."}
+                    {"default": "latent_4x8", "tooltip": "Choose the latent type. Use 4x8 for most models, or 128x16 for Flux.2."}
                 ),
-                "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Output width in pixels. This value is controlled by the Resolution Master canvas and preset tools."}),
-                "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Output height in pixels. This value is controlled by the Resolution Master canvas and preset tools."}),
-                "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual", "tooltip": "When enabled, reads the connected input image dimensions for auto-detect and auto-fit workflows."}),
-                "auto_detect_source": ("STRING", {"default": "backend", "tooltip": "Internal auto-detect source marker used to distinguish backend tensor fallback from frontend preview-derived dimensions."}),
-                "auto_detect_width": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Internal raw width detected by the frontend before auto-fit or resize transforms."}),
-                "auto_detect_height": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Internal raw height detected by the frontend before auto-fit or resize transforms."}),
-                "auto_fit_on_change": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Auto-Fit on change."}),
-                "auto_resize_on_change": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Auto-Resize on change."}),
-                "auto_snap_on_change": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Auto-Snap on change."}),
-                "use_custom_calc": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of Calc mode."}),
-                "preserve_scaling_ratio": ("BOOLEAN", {"default": False, "tooltip": "Internal backend fallback mirror of preserve-ratio scaling."}),
-                "selected_category": ("STRING", {"default": "", "tooltip": "Internal backend fallback mirror of the selected preset category."}),
-                "snap_value": ("INT", {"default": 64, "min": 1, "max": 32768, "tooltip": "Internal backend fallback mirror of the snap value."}),
-                "upscale_value": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "tooltip": "Internal backend fallback mirror of the manual upscale value."}),
-                "target_resolution": ("INT", {"default": 1080, "min": 1, "max": 32768, "tooltip": "Internal backend fallback mirror of target p-resolution."}),
-                "target_megapixels": ("FLOAT", {"default": 2.0, "min": 0.0, "max": 1000.0, "tooltip": "Internal backend fallback mirror of target megapixels."}),
-                "auto_detect_presets_json": ("STRING", {"default": "{}", "tooltip": "Internal backend fallback preset data for the selected category."}),
-                "rescale_mode": ("STRING", {"default": "resolution", "tooltip": "Frontend-selected scaling intent used for the rescale_factor output: manual, resolution, or megapixels."}),
-                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0, "tooltip": "Internal UI cache for the visible scale factor. The backend recalculates the rescale_factor output from the current settings."}),
-                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "The number of latent images in the batch."}),
+                "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Final output width in pixels."}),
+                "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Final output height in pixels."}),
+                "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual", "tooltip": "Detect the size from the connected input image."}),
+                "auto_detect_source": ("STRING", {"default": "backend", "tooltip": "Technical setting used by the Resolution Master interface."}),
+                "auto_detect_width": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Detected input width used by auto-detect."}),
+                "auto_detect_height": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Detected input height used by auto-detect."}),
+                "auto_fit_on_change": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, fit it to the closest preset automatically."}),
+                "auto_resize_on_change": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, resize it automatically using the selected scaling mode."}),
+                "auto_snap_on_change": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, round its size to the selected snap step."}),
+                "use_custom_calc": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, apply the selected model or category size rules automatically."}),
+                "preserve_scaling_ratio": ("BOOLEAN", {"default": False, "tooltip": "Keep the image proportions while scaling."}),
+                "selected_category": ("STRING", {"default": "", "tooltip": "Selected preset category."}),
+                "snap_value": ("INT", {"default": 64, "min": 1, "max": 32768, "tooltip": "Snap step used when rounding width and height."}),
+                "upscale_value": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "tooltip": "Manual scale multiplier."}),
+                "target_resolution": ("INT", {"default": 1080, "min": 1, "max": 32768, "tooltip": "Target p-resolution used for scaling."}),
+                "target_megapixels": ("FLOAT", {"default": 2.0, "min": 0.0, "max": 1000.0, "tooltip": "Target megapixels used for scaling."}),
+                "auto_detect_presets_json": ("STRING", {"default": "{}", "tooltip": "Technical preset data used by auto-detect."}),
+                "rescale_mode": ("STRING", {"default": "resolution", "tooltip": "Scaling mode used for the Rescale Factor output."}),
+                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0, "tooltip": "Current Rescale Factor value shown by the interface."}),
+                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "How many latent images to create in one batch."}),
             },
             "optional": {
-                "input_image": ("IMAGE", {"tooltip": "Optional image used for auto-detecting source width and height when auto_detect is enabled."}),
+                "input_image": ("IMAGE", {"tooltip": "Optional image used for auto-detecting width and height."}),
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
@@ -79,9 +79,9 @@ class ResolutionMaster:
     OUTPUT_TOOLTIPS = (
         "Final output width in pixels.",
         "Final output height in pixels.",
-        "Scale factor needed to reach the selected scaling target.",
-        "Batch size forwarded from the node input.",
-        "Empty latent tensor created at the selected resolution, batch size, and latent type.",
+        "Scale factor calculated from the selected scaling mode.",
+        "Number of latent images created in one batch.",
+        "Empty latent created with the selected size, batch size, and latent type.",
     )
     DESCRIPTION = "Interactive resolution, scaling, preset, and latent-size helper with optional input-image auto-detection."
     FUNCTION = "main"
