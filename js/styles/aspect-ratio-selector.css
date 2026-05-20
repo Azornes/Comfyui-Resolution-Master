@@ -1,8 +1,8 @@
 /**
- * Aspect Ratio Columns Styles
+ * Aspect Ratio Selector Styles
  * Shared styles for aspect ratio column rendering
  * Used by aspect_ratio_selector, aspect_ratio_utils, and preset_add_view_renderer
- * Note: Variables are defined in css-variables.css
+ * Note: Design tokens are defined in design-tokens.css
  */
 
 /* ========================================

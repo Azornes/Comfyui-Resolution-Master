@@ -1,8 +1,8 @@
 /**
- * Preset Add View Renderer Styles
+ * Preset Editor View Styles
  * Renders the add/edit preset view with forms and preview
- * Note: Variables are defined in css-variables.css
- * Common styles (form inputs, labels, validation, buttons) are in common-components.css
+ * Note: Design tokens are defined in design-tokens.css
+ * Shared styles (form inputs, labels, validation, buttons) are in shared-components.css
  */
 
 /* Title */

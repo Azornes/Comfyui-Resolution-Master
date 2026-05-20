@@ -1,8 +1,8 @@
 /**
- * Preset List Renderer Styles
+ * Preset List View Styles
  * Renders the preset list view with categories and presets
- * Note: Variables are defined in css-variables.css
- * Common styles (edit category button, preset items, cards) are in common-components.css
+ * Note: Design tokens are defined in design-tokens.css
+ * Shared styles (edit category button, preset items, cards) are in shared-components.css
  */
 
 /* Stats Header */

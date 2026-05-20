@@ -1,8 +1,8 @@
 /**
- * Preset UI Components Styles
+ * Preset Manager Components Styles
  * UI component helpers for preset_manager_dialog
- * Note: Variables are defined in css-variables.css
- * Common styles (form elements, action buttons, footer buttons, cards) are in common-components.css
+ * Note: Design tokens are defined in design-tokens.css
+ * Shared styles (form elements, action buttons, footer buttons, cards) are in shared-components.css
  */
 
 /* Form Group - Component-specific layout */

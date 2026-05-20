@@ -1,8 +1,8 @@
 /**
  * JSON Editor Dialog Styles
  * JSON editor with syntax highlighting and Undo/Redo
- * Note: Variables are defined in css-variables.css
- * Common styles (overlay, dialog, header, title, close button, footer, buttons, validation) are in common-components.css
+ * Note: Design tokens are defined in design-tokens.css
+ * Shared styles (overlay, dialog, header, title, close button, footer, buttons, validation) are in shared-components.css
  */
 
 /* Dialog Container - Component-specific sizing */

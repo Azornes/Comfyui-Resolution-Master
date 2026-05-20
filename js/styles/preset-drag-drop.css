@@ -1,7 +1,7 @@
 /**
- * Drag & Drop Handler Styles
+ * Preset Drag & Drop Styles
  * Visual indicators for drag & drop operations using cascade patterns
- * Note: Variables are defined in css-variables.css
+ * Note: Design tokens are defined in design-tokens.css
  */
 
 /* ===== BASE STYLES - Using attribute selector for automatic inheritance ===== */

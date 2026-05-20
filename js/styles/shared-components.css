@@ -1,8 +1,8 @@
 /**
- * Common Components
+ * Shared Components
  * Shared styles using cascade and descendant selectors
  * Eliminates repetitions across component-specific CSS files
- * Note: Variables are defined in css-variables.css
+ * Note: Design tokens are defined in design-tokens.css
  */
 
 

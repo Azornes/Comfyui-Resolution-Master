@@ -23,17 +23,17 @@ export function loadAllStyles() {
         
         // Load all CSS files using getUrl for proper path resolution
         const cssFiles = [
-            './css/css-variables.css',        // CSS Custom Properties - MUST BE FIRST!
-            './css/common-components.css',    // Shared component styles using cascade
-            './css/aspect-ratio-columns.css', // Shared aspect ratio column styles
-            './css/preset-manager-dialog.css',
-            './css/searchable-dropdown.css',
-            './css/rename-dialog.css',
-            './css/json-editor-dialog.css',
-            './css/preset-ui-components.css',
-            './css/preset-list-renderer.css',
-            './css/preset-add-view.css',
-            './css/drag-drop.css'
+            './styles/design-tokens.css',              // Design tokens - MUST BE FIRST!
+            './styles/shared-components.css',          // Shared component styles using cascade
+            './styles/aspect-ratio-selector.css',
+            './styles/preset-manager-dialog.css',
+            './styles/searchable-dropdown.css',
+            './styles/rename-dialog.css',
+            './styles/json-editor-dialog.css',
+            './styles/preset-manager-components.css',
+            './styles/preset-list-view.css',
+            './styles/preset-editor-view.css',
+            './styles/preset-drag-drop.css'
         ];
         
         cssFiles.forEach(file => {

@@ -1,8 +1,8 @@
 /**
  * Searchable Dropdown Styles
  * A searchable dropdown component for better UX with large lists
- * Note: Variables are defined in css-variables.css
- * Common styles (overlay, container, title, close button, search input) are in common-components.css
+ * Note: Design tokens are defined in design-tokens.css
+ * Shared styles (overlay, container, title, close button, search input) are in shared-components.css
  */
 
 /* Main Container - Component-specific sizing */
