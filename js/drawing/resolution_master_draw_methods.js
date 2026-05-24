@@ -1,80 +1,86 @@
 import { aspectRatioString } from "../canvas/aspect_ratio_math.js";
 import { formatClosestPResolution } from "../scaling/scaling_math.js";
 import { createModuleLogger } from "../log_system/log_funcs.js";
+import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 
 const log = createModuleLogger("resolution_master_draw_methods");
 
 export const drawingMethods = {
     drawInterface(ctx) {
-        const node = this.node;
-        const props = node.properties;
-        const margin = 10;
-        const spacing = this.getManualSpacing();
+        const diagnosticsToken = performanceDiagnostics.start("drawInterface");
+        try {
+            const node = this.node;
+            const props = node.properties;
+            const margin = 10;
+            const spacing = this.getManualSpacing();
 
-        let currentY = this.getManualContentStartY();
+            let currentY = this.getManualContentStartY();
 
-        if (props.mode === "Manual") {
-            this.controls = {};
+            if (props.mode === "Manual") {
+                this.controls = {};
 
-            const collapsibleSection = (title, sectionKey, drawContent) => {
-                const contentHeight = drawContent(ctx, currentY + 25, true);
-                const sectionInfo = this.drawCollapsibleSection(ctx, title, sectionKey, margin, currentY, node.size[0] - margin * 2, contentHeight);
+                const collapsibleSection = (title, sectionKey, drawContent) => {
+                    const contentHeight = drawContent(ctx, currentY + 25, true);
+                    const sectionInfo = this.drawCollapsibleSection(ctx, title, sectionKey, margin, currentY, node.size[0] - margin * 2, contentHeight);
 
-                if (!sectionInfo.isCollapsed) {
-                    drawContent(ctx, sectionInfo.contentStartY, false);
-                }
-
-                currentY += sectionInfo.totalHeight + spacing;
-            };
-
-            const canvasHeight = this.getManualCanvasHeight(currentY);
-            const canvasPadding = this.collapsedSections.extraControls ? 8 : 20;
-            this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
-            currentY += canvasHeight + this.getCanvasInfoGap();
-
-            const infoY = this.lastCanvasBounds
-                ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
-                : currentY;
-            this.drawInfoText(ctx, infoY);
-            currentY += 15 + spacing;
-
-            if (this.collapsedSections.extraControls) {
-            } else {
-                collapsibleSection("Actions", "actions", (ctx, y, preview) => {
-                    if (!preview) this.drawPrimaryControls(ctx, y);
-                    return 30;
-                });
-
-                collapsibleSection("Scaling", "scaling", (ctx, y, preview) => {
-                    if (!preview) return this.drawScalingGrid(ctx, y);
-                    return 130;
-                });
-
-                collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
-                    if (!preview) return this.drawAutoDetectSection(ctx, y);
-                    return 110;
-                });
-
-                collapsibleSection("Presets", "presets", (ctx, y, preview) => {
-                    if (!preview) return this.drawPresetSection(ctx, y);
-                    return 30;
-                });
-                if (props.showCalcInfo && props.selectedCategory) {
-                    const messageHeight = this.drawInfoMessage(ctx, currentY);
-                    if (messageHeight > 0) {
-                        currentY += messageHeight + spacing;
+                    if (!sectionInfo.isCollapsed) {
+                        drawContent(ctx, sectionInfo.contentStartY, false);
                     }
+
+                    currentY += sectionInfo.totalHeight + spacing;
+                };
+
+                const canvasHeight = this.getManualCanvasHeight(currentY);
+                const canvasPadding = this.collapsedSections.extraControls ? 8 : 20;
+                this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
+                currentY += canvasHeight + this.getCanvasInfoGap();
+
+                const infoY = this.lastCanvasBounds
+                    ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
+                    : currentY;
+                this.drawInfoText(ctx, infoY);
+                currentY += 15 + spacing;
+
+                if (this.collapsedSections.extraControls) {
+                } else {
+                    collapsibleSection("Actions", "actions", (ctx, y, preview) => {
+                        if (!preview) this.drawPrimaryControls(ctx, y);
+                        return 30;
+                    });
+
+                    collapsibleSection("Scaling", "scaling", (ctx, y, preview) => {
+                        if (!preview) return this.drawScalingGrid(ctx, y);
+                        return 130;
+                    });
+
+                    collapsibleSection("Auto-Detect", "autoDetect", (ctx, y, preview) => {
+                        if (!preview) return this.drawAutoDetectSection(ctx, y);
+                        return 110;
+                    });
+
+                    collapsibleSection("Presets", "presets", (ctx, y, preview) => {
+                        if (!preview) return this.drawPresetSection(ctx, y);
+                        return 30;
+                    });
+                    if (props.showCalcInfo && props.selectedCategory) {
+                        const messageHeight = this.drawInfoMessage(ctx, currentY);
+                        if (messageHeight > 0) {
+                            currentY += messageHeight + spacing;
+                        }
+                    }
+                    this.drawOutputValues(ctx);
                 }
-                this.drawOutputValues(ctx);
+                this.drawCompactToggleButton(ctx);
+
+            } else if (props.mode === "Manual Sliders") {
+                this.drawSliderMode(ctx, currentY);
             }
-            this.drawCompactToggleButton(ctx);
 
-        } else if (props.mode === "Manual Sliders") {
-            this.drawSliderMode(ctx, currentY);
-        }
-
-        if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
-            this.drawTooltip(ctx);
+            if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
+                this.drawTooltip(ctx);
+            }
+        } finally {
+            performanceDiagnostics.end(diagnosticsToken);
         }
     },
 
@@ -277,94 +283,99 @@ export const drawingMethods = {
     },
 
     draw2DCanvas(ctx, x, y, w, h, padding = 20) {
-        const node = this.node;
-        const props = node.properties;
+        const diagnosticsToken = performanceDiagnostics.start("draw2DCanvas");
+        try {
+            const node = this.node;
+            const props = node.properties;
 
-        this.controls.canvas2d = { x, y, w, h };
+            this.controls.canvas2d = { x, y, w, h };
 
-        const rangeX = Math.max(1, props.canvas_max_x - props.canvas_min_x);
-        const rangeY = Math.max(1, props.canvas_max_y - props.canvas_min_y);
-        const aspectRatio = rangeX / rangeY;
+            const rangeX = Math.max(1, props.canvas_max_x - props.canvas_min_x);
+            const rangeY = Math.max(1, props.canvas_max_y - props.canvas_min_y);
+            const aspectRatio = rangeX / rangeY;
 
-        let canvasW = w - padding;
-        let canvasH = h - padding;
+            let canvasW = w - padding;
+            let canvasH = h - padding;
 
-        if (aspectRatio > canvasW / canvasH) {
-            canvasH = canvasW / aspectRatio;
-        } else {
-            canvasW = canvasH * aspectRatio;
-        }
+            if (aspectRatio > canvasW / canvasH) {
+                canvasH = canvasW / aspectRatio;
+            } else {
+                canvasW = canvasH * aspectRatio;
+            }
 
-        const offsetX = x + (w - canvasW) / 2;
-        const offsetY = y + (h - canvasH) / 2;
+            const offsetX = x + (w - canvasW) / 2;
+            const offsetY = y + (h - canvasH) / 2;
 
-        this.controls.canvas2d = { x: offsetX, y: offsetY, w: canvasW, h: canvasH };
-        this.lastCanvasBounds = this.controls.canvas2d;
+            this.controls.canvas2d = { x: offsetX, y: offsetY, w: canvasW, h: canvasH };
+            this.lastCanvasBounds = this.controls.canvas2d;
 
-        ctx.fillStyle = "rgba(20,20,20,0.8)";
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.roundRect(offsetX - 4, offsetY - 4, canvasW + 8, canvasH + 8, 6);
-        ctx.fill();
-        ctx.stroke();
-
-        if (props.canvas_dots) {
-            this.drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY);
-        }
-
-        if (props.canvas_frame) {
-            ctx.fillStyle = "rgba(150,150,250,0.1)";
-            ctx.strokeStyle = "rgba(150,150,250,0.7)";
-            ctx.lineWidth = 1.5;
+            ctx.fillStyle = "rgba(20,20,20,0.8)";
+            ctx.strokeStyle = "rgba(0,0,0,0.5)";
+            ctx.lineWidth = 1;
             ctx.beginPath();
-            ctx.rect(offsetX, offsetY + canvasH * (1 - node.intpos.y), 
-                    canvasW * node.intpos.x, canvasH * node.intpos.y);
+            ctx.roundRect(offsetX - 4, offsetY - 4, canvasW + 8, canvasH + 8, 6);
             ctx.fill();
             ctx.stroke();
-        }
 
-        const knobX = offsetX + canvasW * node.intpos.x;
-        const knobY = offsetY + canvasH * (1 - node.intpos.y);
-        const rightEdgeX = offsetX + canvasW * node.intpos.x;
-        const rightEdgeY = offsetY + canvasH * (1 - node.intpos.y / 2);
-        const topEdgeX = offsetX + canvasW * node.intpos.x / 2;
-        const topEdgeY = offsetY + canvasH * (1 - node.intpos.y);
-        this.controls.canvas2dRightHandle = { 
-            x: rightEdgeX - 10, 
-            y: rightEdgeY - 10, 
-            w: 20, 
-            h: 20 
-        };
-        this.controls.canvas2dTopHandle = { 
-            x: topEdgeX - 10, 
-            y: topEdgeY - 10, 
-            w: 20, 
-            h: 20 
-        };
-        ctx.fillStyle = "#FFF";
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        const isHoveringRight = this.hoverElement === 'canvas2dRightHandle';
-        ctx.fillStyle = isHoveringRight ? "#5AF" : "#89F";
-        ctx.strokeStyle = isHoveringRight ? "#FFF" : "#000";
-        ctx.lineWidth = isHoveringRight ? 3 : 2;
-        ctx.beginPath();
-        ctx.arc(rightEdgeX, rightEdgeY, isHoveringRight ? 7 : 6, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
-        const isHoveringTop = this.hoverElement === 'canvas2dTopHandle';
-        ctx.fillStyle = isHoveringTop ? "#FAB" : "#F89";
-        ctx.strokeStyle = isHoveringTop ? "#FFF" : "#000";
-        ctx.lineWidth = isHoveringTop ? 3 : 2;
-        ctx.beginPath();
-        ctx.arc(topEdgeX, topEdgeY, isHoveringTop ? 7 : 6, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.stroke();
+            if (props.canvas_dots) {
+                this.drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY);
+            }
+
+            if (props.canvas_frame) {
+                ctx.fillStyle = "rgba(150,150,250,0.1)";
+                ctx.strokeStyle = "rgba(150,150,250,0.7)";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.rect(offsetX, offsetY + canvasH * (1 - node.intpos.y),
+                        canvasW * node.intpos.x, canvasH * node.intpos.y);
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            const knobX = offsetX + canvasW * node.intpos.x;
+            const knobY = offsetY + canvasH * (1 - node.intpos.y);
+            const rightEdgeX = offsetX + canvasW * node.intpos.x;
+            const rightEdgeY = offsetY + canvasH * (1 - node.intpos.y / 2);
+            const topEdgeX = offsetX + canvasW * node.intpos.x / 2;
+            const topEdgeY = offsetY + canvasH * (1 - node.intpos.y);
+            this.controls.canvas2dRightHandle = {
+                x: rightEdgeX - 10,
+                y: rightEdgeY - 10,
+                w: 20,
+                h: 20
+            };
+            this.controls.canvas2dTopHandle = {
+                x: topEdgeX - 10,
+                y: topEdgeY - 10,
+                w: 20,
+                h: 20
+            };
+            ctx.fillStyle = "#FFF";
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            const isHoveringRight = this.hoverElement === 'canvas2dRightHandle';
+            ctx.fillStyle = isHoveringRight ? "#5AF" : "#89F";
+            ctx.strokeStyle = isHoveringRight ? "#FFF" : "#000";
+            ctx.lineWidth = isHoveringRight ? 3 : 2;
+            ctx.beginPath();
+            ctx.arc(rightEdgeX, rightEdgeY, isHoveringRight ? 7 : 6, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            const isHoveringTop = this.hoverElement === 'canvas2dTopHandle';
+            ctx.fillStyle = isHoveringTop ? "#FAB" : "#F89";
+            ctx.strokeStyle = isHoveringTop ? "#FFF" : "#000";
+            ctx.lineWidth = isHoveringTop ? 3 : 2;
+            ctx.beginPath();
+            ctx.arc(topEdgeX, topEdgeY, isHoveringTop ? 7 : 6, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+        } finally {
+            performanceDiagnostics.end(diagnosticsToken);
+        }
     },
 
     drawCachedCanvasDots(ctx, offsetX, offsetY, canvasW, canvasH, rangeX, rangeY) {

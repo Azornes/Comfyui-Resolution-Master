@@ -1,4 +1,5 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
+import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 
 const log = createModuleLogger('resolution_master_interaction_methods');
 const DRAG_ZOOM_BYPASS_PATCH_FLAG = '__resolutionMasterDragZoomBypassInstalled';
@@ -370,51 +371,56 @@ export const interactionMethods = {
     },
 
     handleMouseMove(e, pos, canvas) {
-        const node = this.node;
+        const diagnosticsToken = performanceDiagnostics.start("handleMouseMove");
+        try {
+            const node = this.node;
 
-        if (!node.capture) return false;
-        if (this._usingCanvasPointerCallbacks && pos !== null) return true;
-        if (e.buttons === 0) {
-            this.handleMouseUp(e);
-            return true;
-        }
-
-        const relX = e.canvasX - node.pos[0];
-        const relY = e.canvasY - node.pos[1];
-
-        if (node.capture === 'canvas2d') {
-            const c2d = this.controls.canvas2d;
-            if (c2d) {
-                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
+            if (!node.capture) return false;
+            if (this._usingCanvasPointerCallbacks && pos !== null) return true;
+            if (e.buttons === 0) {
+                this.handleMouseUp(e);
+                return true;
             }
-            return true;
-        }
 
-        if (node.capture === 'canvas2dRightHandle') {
-            const c2d = this.controls.canvas2d;
-            if (c2d) {
-                this.updateCanvasValueWidth(relX - c2d.x, c2d.w, e.ctrlKey);
+            const relX = e.canvasX - node.pos[0];
+            const relY = e.canvasY - node.pos[1];
+
+            if (node.capture === 'canvas2d') {
+                const c2d = this.controls.canvas2d;
+                if (c2d) {
+                    this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
+                }
+                return true;
             }
-            return true;
-        }
 
-        if (node.capture === 'canvas2dTopHandle') {
-            const c2d = this.controls.canvas2d;
-            if (c2d) {
-                this.updateCanvasValueHeight(relY - c2d.y, c2d.h, e.ctrlKey);
+            if (node.capture === 'canvas2dRightHandle') {
+                const c2d = this.controls.canvas2d;
+                if (c2d) {
+                    this.updateCanvasValueWidth(relX - c2d.x, c2d.w, e.ctrlKey);
+                }
+                return true;
             }
-            return true;
-        }
 
-        if (node.capture.endsWith('Slider')) {
-            const control = this.controls[node.capture];
-            if (control) {
-                this.updateSliderValue(node.capture, relX - control.x, control.w);
+            if (node.capture === 'canvas2dTopHandle') {
+                const c2d = this.controls.canvas2d;
+                if (c2d) {
+                    this.updateCanvasValueHeight(relY - c2d.y, c2d.h, e.ctrlKey);
+                }
+                return true;
             }
-            return true;
-        }
 
-        return false;
+            if (node.capture.endsWith('Slider')) {
+                const control = this.controls[node.capture];
+                if (control) {
+                    this.updateSliderValue(node.capture, relX - control.x, control.w);
+                }
+                return true;
+            }
+
+            return false;
+        } finally {
+            performanceDiagnostics.end(diagnosticsToken);
+        }
     },
 
     handleMouseHover(e, pos, canvas) {
