@@ -157,6 +157,8 @@ export const nodeLifecycleMethods = {
     setupNode() {
         const node = this.node;
         const self = this;
+        node.resolutionMaster = this;
+        this.installCanvasDragZoomBypass();
         node.size = [330, 400];
         node.min_size = [330, 200];
         this.applyCompactSlotLabels();

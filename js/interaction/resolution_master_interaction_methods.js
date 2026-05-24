@@ -1,8 +1,214 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('resolution_master_interaction_methods');
+const DRAG_ZOOM_BYPASS_PATCH_FLAG = '__resolutionMasterDragZoomBypassInstalled';
+const DRAG_ZOOM_CAPTURE_PATCH_FLAG = '__resolutionMasterDragZoomCaptureInstalled';
+const ORIGINAL_MOUSE_MODIFIERS_PROP = '__resolutionMasterOriginalMouseModifiers';
+const BYPASSED_DRAG_ZOOM_EVENT_PROP = '__resolutionMasterBypassedDragZoom';
+
+function getMouseModifiers(e) {
+    return {
+        ctrlKey: e?.[ORIGINAL_MOUSE_MODIFIERS_PROP]?.ctrlKey ?? !!e?.ctrlKey,
+        shiftKey: e?.[ORIGINAL_MOUSE_MODIFIERS_PROP]?.shiftKey ?? !!e?.shiftKey,
+        altKey: e?.[ORIGINAL_MOUSE_MODIFIERS_PROP]?.altKey ?? !!e?.altKey,
+        metaKey: e?.[ORIGINAL_MOUSE_MODIFIERS_PROP]?.metaKey ?? !!e?.metaKey
+    };
+}
+
+function isCtrlShiftPrimaryMouseDown(e) {
+    const modifiers = getMouseModifiers(e);
+    return e?.button === 0 && modifiers.ctrlKey && modifiers.shiftKey && !modifiers.altKey;
+}
+
+function getNodeUnderPointer(canvas, e) {
+    if (typeof e.canvasX !== "number" || typeof e.canvasY !== "number") {
+        canvas.adjustMouseEvent?.(e);
+    }
+    const nodes = canvas.visible_nodes?.length ? canvas.visible_nodes : canvas.graph?._nodes;
+    return canvas.graph?.getNodeOnPos?.(e.canvasX, e.canvasY, nodes) || null;
+}
+
+function isOverResolutionMasterCanvas(canvas, e) {
+    try {
+        const node = getNodeUnderPointer(canvas, e);
+        const rm = node?.resolutionMaster;
+        if (!rm || node.flags?.collapsed || node.properties?.mode !== "Manual") {
+            return false;
+        }
+
+        const relX = e.canvasX - node.pos[0];
+        const relY = e.canvasY - node.pos[1];
+        return [
+            rm.controls?.canvas2d,
+            rm.controls?.canvas2dRightHandle,
+            rm.controls?.canvas2dTopHandle
+        ].some(control => control && rm.isPointInControl(relX, relY, control));
+    } catch (error) {
+        log.debug('Could not test ResolutionMaster canvas shortcut target:', error);
+        return false;
+    }
+}
+
+function getKnownGraphCanvases(app) {
+    const canvases = new Set();
+    const addCanvas = (graphCanvas) => {
+        if (graphCanvas?.canvas) {
+            canvases.add(graphCanvas);
+        }
+    };
+
+    addCanvas(app?.canvas);
+    addCanvas(globalThis.LGraphCanvas?.active_canvas);
+
+    const graphs = [
+        app?.graph,
+        app?.canvas?.graph,
+        globalThis.LGraphCanvas?.active_canvas?.graph
+    ];
+    for (const graph of graphs) {
+        graph?.list_of_graphcanvas?.forEach(addCanvas);
+    }
+
+    return [...canvases];
+}
+
+function isPointInsideElement(element, e) {
+    if (!element?.getBoundingClientRect) return false;
+
+    const rect = element.getBoundingClientRect();
+    return e.clientX >= rect.left
+        && e.clientX <= rect.right
+        && e.clientY >= rect.top
+        && e.clientY <= rect.bottom;
+}
+
+function getGraphCanvasFromMouseEvent(app, e) {
+    const path = e.composedPath?.() || [];
+    const target = e.target;
+    const isNodeTarget = globalThis.Node && target instanceof globalThis.Node;
+    const elementAtPoint = globalThis.document?.elementFromPoint?.(e.clientX, e.clientY);
+
+    return getKnownGraphCanvases(app).find((graphCanvas) => {
+        const element = graphCanvas.canvas;
+        return element === target
+            || element === elementAtPoint
+            || path.includes(element)
+            || (isNodeTarget && element?.contains?.(target))
+            || isPointInsideElement(element, e);
+    }) || null;
+}
+
+function temporarilyDisableDragZoom(canvas) {
+    if (!canvas?.dragZoomEnabled) return;
+
+    const previousDragZoomEnabled = canvas.dragZoomEnabled;
+    canvas.dragZoomEnabled = false;
+    globalThis.setTimeout?.(() => {
+        canvas.dragZoomEnabled = previousDragZoomEnabled;
+    }, 0);
+}
+
+function defineEventValue(e, key, value) {
+    try {
+        Object.defineProperty(e, key, {
+            value,
+            configurable: true
+        });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function suppressComfyCanvasShortcutModifiers(e) {
+    if (!e || e[BYPASSED_DRAG_ZOOM_EVENT_PROP]) return;
+
+    const originalModifiers = getMouseModifiers(e);
+    defineEventValue(e, ORIGINAL_MOUSE_MODIFIERS_PROP, originalModifiers);
+    defineEventValue(e, BYPASSED_DRAG_ZOOM_EVENT_PROP, true);
+
+    const ctrlSuppressed = defineEventValue(e, 'ctrlKey', false);
+    const shiftSuppressed = defineEventValue(e, 'shiftKey', false);
+    const originalGetModifierState = typeof e.getModifierState === 'function'
+        ? e.getModifierState.bind(e)
+        : null;
+    if (originalGetModifierState) {
+        defineEventValue(e, 'getModifierState', (key) => {
+            if (key === 'Control' || key === 'Ctrl' || key === 'Shift') {
+                return false;
+            }
+            return originalGetModifierState(key);
+        });
+    }
+
+    if (!ctrlSuppressed || !shiftSuppressed) {
+        log.debug('Could not suppress canvas shortcut modifier on mouse event', {
+            ctrlSuppressed,
+            shiftSuppressed
+        });
+    }
+}
 
 export const interactionMethods = {
+    installCanvasDragZoomBypass() {
+        this.installCanvasDragZoomCaptureBypass();
+        this.installProcessMouseDownDragZoomBypass();
+    },
+
+    installCanvasDragZoomCaptureBypass() {
+        const win = globalThis.window;
+        if (!win || win[DRAG_ZOOM_CAPTURE_PATCH_FLAG]) return;
+
+        Object.defineProperty(win, DRAG_ZOOM_CAPTURE_PATCH_FLAG, {
+            value: true,
+            configurable: false
+        });
+
+        const handlePotentialCanvasShortcut = (e) => {
+            if (!isCtrlShiftPrimaryMouseDown(e)) return;
+
+            const canvas = getGraphCanvasFromMouseEvent(this.app, e);
+            if (!canvas || !isOverResolutionMasterCanvas(canvas, e)) return;
+
+            temporarilyDisableDragZoom(canvas);
+            suppressComfyCanvasShortcutModifiers(e);
+        };
+
+        win.addEventListener('pointerdown', handlePotentialCanvasShortcut, { capture: true });
+        win.addEventListener('mousedown', handlePotentialCanvasShortcut, { capture: true });
+
+        log.debug('Installed ResolutionMaster early canvas drag-zoom bypass');
+    },
+
+    installProcessMouseDownDragZoomBypass() {
+        const prototype = globalThis.LGraphCanvas?.prototype;
+        if (!prototype || prototype[DRAG_ZOOM_BYPASS_PATCH_FLAG]) return;
+
+        const originalProcessMouseDown = prototype.processMouseDown;
+        if (typeof originalProcessMouseDown !== "function") return;
+
+        Object.defineProperty(prototype, DRAG_ZOOM_BYPASS_PATCH_FLAG, {
+            value: true,
+            configurable: false
+        });
+
+        prototype.processMouseDown = function(e) {
+            if (this.dragZoomEnabled && isCtrlShiftPrimaryMouseDown(e) && isOverResolutionMasterCanvas(this, e)) {
+                const previousDragZoomEnabled = this.dragZoomEnabled;
+                this.dragZoomEnabled = false;
+                try {
+                    return originalProcessMouseDown.apply(this, arguments);
+                } finally {
+                    this.dragZoomEnabled = previousDragZoomEnabled;
+                }
+            }
+
+            return originalProcessMouseDown.apply(this, arguments);
+        };
+
+        log.debug('Installed ResolutionMaster canvas drag-zoom bypass');
+    },
+
     getCanvasPointer(canvas) {
         return canvas?.pointer
             || this._capturedPointerCanvas?.pointer
@@ -106,7 +312,8 @@ export const interactionMethods = {
                 node.capture = 'canvas2d';
                 this.canvasDragAspectLock = this.createAspectLock();
                 this.captureNodePointer(canvas);
-                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, e.shiftKey, e.ctrlKey);
+                const modifiers = getMouseModifiers(e);
+                this.updateCanvasValue(relX - c2d.x, relY - c2d.y, c2d.w, c2d.h, modifiers.shiftKey, modifiers.ctrlKey);
                 return true;
             }
         }
