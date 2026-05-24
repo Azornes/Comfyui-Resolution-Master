@@ -42,38 +42,40 @@ export function getAspectLockedDimensions(targetWidth, targetHeight, props, lock
         return createGridAspectCandidate(targetWidth, targetHeight, props, lock, minScale, maxScale);
     }
 
-    const rangeX = Math.max(1, props.canvas_max_x - props.canvas_min_x);
-    const rangeY = Math.max(1, props.canvas_max_y - props.canvas_min_y);
-    const candidates = [
-        createAspectCandidate(targetWidth / lock.ratioX, minScale, maxScale, 1, lock),
-        createAspectCandidate(targetHeight / lock.ratioY, minScale, maxScale, 1, lock)
-    ];
+    return createFreeAspectCandidate(targetWidth, targetHeight, lock, minScale, maxScale);
+}
 
-    return candidates.reduce((best, candidate) => {
-        const distance = Math.hypot(
-            (candidate.width - targetWidth) / rangeX,
-            (candidate.height - targetHeight) / rangeY
-        );
-        if (!best || distance < best.distance) {
-            return { ...candidate, distance };
-        }
-        return best;
-    }, null);
+function createFreeAspectCandidate(targetWidth, targetHeight, lock, minScale, maxScale) {
+    return createAspectCandidate(
+        getAspectTargetScale(targetWidth, targetHeight, lock),
+        minScale,
+        maxScale,
+        1,
+        lock
+    );
 }
 
 function createGridAspectCandidate(targetWidth, targetHeight, props, lock, minScale, maxScale) {
     const stepX = Math.max(1, Math.round(Number(props.canvas_step_x) || 1));
     const stepY = Math.max(1, Math.round(Number(props.canvas_step_y) || 1));
-    const targetAspect = targetWidth / Math.max(1, targetHeight);
-    const widthControls = targetAspect <= lock.aspect;
+    const widthControls = isWidthControlled(targetWidth, targetHeight, lock);
 
-    const targetScale = widthControls
-        ? targetWidth / lock.ratioX
-        : targetHeight / lock.ratioY;
+    const targetScale = getAspectTargetScale(targetWidth, targetHeight, lock);
     const desiredStep = widthControls ? stepX / lock.ratioX : stepY / lock.ratioY;
     const scaleStep = Math.max(1, Math.round(desiredStep));
 
     return createAspectCandidate(targetScale, minScale, maxScale, scaleStep, lock);
+}
+
+function getAspectTargetScale(targetWidth, targetHeight, lock) {
+    return isWidthControlled(targetWidth, targetHeight, lock)
+        ? targetWidth / lock.ratioX
+        : targetHeight / lock.ratioY;
+}
+
+function isWidthControlled(targetWidth, targetHeight, lock) {
+    const targetAspect = targetWidth / Math.max(1, targetHeight);
+    return targetAspect <= lock.aspect;
 }
 
 function createAspectCandidate(targetScale, minScale, maxScale, scaleStep, lock) {
