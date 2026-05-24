@@ -97,11 +97,16 @@ export const nodeLifecycleMethods = {
         canonicalInput.name = canonicalInput.localized_name = "input_image";
         canonicalInput.hidden = false;
         this.node.inputs = [canonicalInput];
-        log.warn('Normalized duplicate ResolutionMaster input slots', {
-            nodeId: this.node.id ?? null,
-            inputCount,
-            keptIndex: keepIndex >= 0 ? keepIndex : 0
-        });
+
+        const nodeId = this.node.id ?? null;
+        if (nodeId !== -1 && !this.node._resolutionMasterLoggedInputSlotNormalization) {
+            this.node._resolutionMasterLoggedInputSlotNormalization = true;
+            log.debug('Normalized duplicate ResolutionMaster input slots', {
+                nodeId,
+                inputCount,
+                keptIndex: keepIndex >= 0 ? keepIndex : 0
+            });
+        }
     },
 
     applyCompactSlotLabels() {
