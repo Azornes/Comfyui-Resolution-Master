@@ -254,6 +254,7 @@ export const drawingMethods = {
         const margin = 20;
         const buttonWidth = 70;
         const gap = 5;
+        const snapSliderGap = 14;
         let x = margin;
 
         this.controls.swapBtn = { x, y, w: buttonWidth, h: 28 };
@@ -262,7 +263,7 @@ export const drawingMethods = {
 
         this.controls.snapBtn = { x, y, w: buttonWidth, h: 28 };
         this.drawButton(ctx, x, y, buttonWidth, 28, this.icons.snap, this.hoverElement === 'snapBtn', false, "Snap", true);
-        x += buttonWidth + gap;
+        x += buttonWidth + snapSliderGap;
 
         const sliderX = x;
         const valueWidth = 35;
