@@ -7,11 +7,21 @@ const STORAGE_KEY = "ResolutionMaster.performanceDiagnostics";
 const REPORT_INTERVAL_MS = 5000;
 const SLOW_SAMPLE_MS = 16;
 const MAX_RECENT_SAMPLES = 20;
+const MAX_LONG_TASKS = 100;
+const MAX_FRAME_GAPS = 100;
+const FRAME_GAP_THRESHOLD_MS = 50;
 
 const operations = new Map();
+const longTasks = [];
+const frameGaps = [];
 
 let enabled = false;
+let autoReport = false;
 let reportTimer = null;
+let longTaskObserver = null;
+let longTaskSupportLogged = false;
+let frameGapMonitorId = null;
+let lastFrameAt = null;
 
 function getNow() {
     return globalThis.performance?.now?.() ?? Date.now();
@@ -86,8 +96,178 @@ function snapshot() {
         .sort((a, b) => b.maxMs - a.maxMs);
 }
 
+function normalizeAttribution(entry) {
+    const attribution = Array.from(entry.attribution || []);
+    if (!attribution.length) return "";
+
+    return attribution
+        .map(item => {
+            const parts = [
+                item.name,
+                item.containerType,
+                item.containerName,
+                item.containerId,
+                item.containerSrc
+            ].filter(Boolean);
+            return parts.join(" | ");
+        })
+        .filter(Boolean)
+        .join("; ");
+}
+
+function longTaskSnapshot() {
+    return longTasks
+        .map(entry => ({
+            startMs: round(entry.startTime),
+            durationMs: round(entry.duration),
+            name: entry.name || "",
+            attribution: entry.attribution || ""
+        }))
+        .sort((a, b) => b.durationMs - a.durationMs);
+}
+
+function recordLongTask(entry) {
+    longTasks.push({
+        startTime: entry.startTime,
+        duration: entry.duration,
+        name: entry.name,
+        attribution: normalizeAttribution(entry)
+    });
+    if (longTasks.length > MAX_LONG_TASKS) {
+        longTasks.shift();
+    }
+}
+
+function supportsLongTaskObserver() {
+    const observer = globalThis.PerformanceObserver;
+    return typeof observer === "function"
+        && Array.isArray(observer.supportedEntryTypes)
+        && observer.supportedEntryTypes.includes("longtask");
+}
+
+function startLongTaskObserver() {
+    if (longTaskObserver || !enabled) return;
+    if (!supportsLongTaskObserver()) {
+        if (!longTaskSupportLogged) {
+            longTaskSupportLogged = true;
+            log.info("Long task diagnostics unavailable in this browser");
+        }
+        return;
+    }
+
+    try {
+        const Observer = globalThis.PerformanceObserver;
+        longTaskObserver = new Observer((list) => {
+            list.getEntries().forEach(recordLongTask);
+        });
+        try {
+            longTaskObserver.observe({ type: "longtask", buffered: true });
+        } catch {
+            longTaskObserver.observe({ entryTypes: ["longtask"] });
+        }
+        log.info("Long task diagnostics enabled");
+    } catch (error) {
+        longTaskObserver = null;
+        log.warn("Failed to enable long task diagnostics", error);
+    }
+}
+
+function stopLongTaskObserver() {
+    if (!longTaskObserver) return;
+
+    try {
+        longTaskObserver.disconnect();
+    } catch {
+        // Some browser implementations can throw during teardown.
+    }
+    longTaskObserver = null;
+}
+
+function getPageState() {
+    const documentRef = globalThis.document;
+    let hasFocus = null;
+    try {
+        hasFocus = typeof documentRef?.hasFocus === "function" ? documentRef.hasFocus() : null;
+    } catch {
+        hasFocus = null;
+    }
+
+    return {
+        visibilityState: documentRef?.visibilityState || "",
+        hidden: typeof documentRef?.hidden === "boolean" ? documentRef.hidden : null,
+        hasFocus
+    };
+}
+
+function recordFrameGap(startTime, endTime) {
+    const duration = endTime - startTime;
+    if (duration < FRAME_GAP_THRESHOLD_MS) return;
+
+    frameGaps.push({
+        startTime,
+        endTime,
+        duration,
+        ...getPageState()
+    });
+    if (frameGaps.length > MAX_FRAME_GAPS) {
+        frameGaps.shift();
+    }
+}
+
+function frameGapSnapshot() {
+    return frameGaps
+        .map(entry => ({
+            startMs: round(entry.startTime),
+            endMs: round(entry.endTime),
+            durationMs: round(entry.duration),
+            visibilityState: entry.visibilityState,
+            hidden: entry.hidden,
+            hasFocus: entry.hasFocus
+        }))
+        .sort((a, b) => b.durationMs - a.durationMs);
+}
+
+function startFrameGapMonitor() {
+    if (frameGapMonitorId !== null || !enabled) return;
+    const requestFrame = globalThis.requestAnimationFrame;
+    if (typeof requestFrame !== "function") return;
+
+    lastFrameAt = null;
+    const tick = (timestamp) => {
+        frameGapMonitorId = null;
+        if (!enabled) return;
+
+        const now = Number.isFinite(timestamp) ? timestamp : getNow();
+        if (lastFrameAt !== null) {
+            recordFrameGap(lastFrameAt, now);
+        }
+        lastFrameAt = now;
+        frameGapMonitorId = requestFrame(tick);
+    };
+    frameGapMonitorId = requestFrame(tick);
+}
+
+function stopFrameGapMonitor() {
+    if (frameGapMonitorId !== null) {
+        globalThis.cancelAnimationFrame?.(frameGapMonitorId);
+    }
+    frameGapMonitorId = null;
+    lastFrameAt = null;
+}
+
+function diagnosticsState() {
+    return {
+        enabled,
+        autoReport,
+        longTaskSupported: supportsLongTaskObserver(),
+        longTaskObserverActive: !!longTaskObserver,
+        frameGapMonitorActive: frameGapMonitorId !== null,
+        ...getPageState()
+    };
+}
+
 function scheduleReport() {
-    if (!enabled || reportTimer) return;
+    if (!enabled || !autoReport || reportTimer) return;
 
     reportTimer = globalThis.setTimeout?.(() => {
         reportTimer = null;
@@ -97,22 +277,42 @@ function scheduleReport() {
 
 function report(reason = "manual") {
     const data = snapshot();
-    if (!data.length) {
+    const longTaskData = longTaskSnapshot();
+    const frameGapData = frameGapSnapshot();
+    const state = diagnosticsState();
+    if (!data.length && !longTaskData.length && !frameGapData.length) {
         log.info("Performance diagnostics: no samples collected yet", { reason });
-        return data;
+        return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, state };
     }
 
-    log.info("Performance diagnostics report", { reason, samples: data.length });
+    log.info("Performance diagnostics report", {
+        reason,
+        samples: data.length,
+        longTasks: longTaskData.length,
+        frameGaps: frameGapData.length,
+        ...state
+    });
     if (typeof console.table === "function") {
-        console.table(data);
+        if (data.length) {
+            console.table(data);
+        }
+        if (longTaskData.length) {
+            console.table(longTaskData);
+        }
+        if (frameGapData.length) {
+            console.table(frameGapData);
+        }
     } else {
-        console.log(data);
+        console.log({ operations: data, longTasks: longTaskData, frameGaps: frameGapData, state });
     }
-    return data;
+    return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, state };
 }
 
 function reset() {
     operations.clear();
+    longTasks.length = 0;
+    frameGaps.length = 0;
+    lastFrameAt = null;
     log.info("Performance diagnostics reset");
 }
 
@@ -167,12 +367,16 @@ function measure(operationName, callback) {
 
 function enable(options = {}) {
     enabled = true;
+    autoReport = !!options.autoReport;
+    startLongTaskObserver();
+    startFrameGapMonitor();
     if (options.persist !== false) {
         setStoredEnabled(true);
     }
     log.info("Performance diagnostics enabled", {
         storageKey: STORAGE_KEY,
-        api: GLOBAL_API_KEY
+        api: GLOBAL_API_KEY,
+        autoReport
     });
 }
 
@@ -181,6 +385,9 @@ function disable(options = {}) {
         report("disabled");
     }
     enabled = false;
+    autoReport = false;
+    stopLongTaskObserver();
+    stopFrameGapMonitor();
     if (options.persist !== false) {
         setStoredEnabled(false);
     }
@@ -195,17 +402,30 @@ function isEnabled() {
     return enabled;
 }
 
+function setAutoReport(nextAutoReport = true) {
+    autoReport = !!nextAutoReport;
+    if (!autoReport && reportTimer) {
+        globalThis.clearTimeout?.(reportTimer);
+        reportTimer = null;
+    }
+    scheduleReport();
+    return autoReport;
+}
+
 export const performanceDiagnostics = {
     enable,
     disable,
     end,
+    frameGaps: frameGapSnapshot,
     isEnabled,
+    longTasks: longTaskSnapshot,
     measure,
     now: getNow,
     record,
     recordSince,
     report,
     reset,
+    setAutoReport,
     snapshot,
     start
 };
