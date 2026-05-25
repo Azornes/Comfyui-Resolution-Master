@@ -222,6 +222,62 @@ export const interactionMethods = {
             || null;
     },
 
+    scheduleCanvasPointerDrag(eMove, activeCanvas) {
+        this._pendingCanvasPointerDragEvent = eMove;
+        this._pendingCanvasPointerDragCanvas = activeCanvas;
+        if (this._pendingCanvasPointerDragFrame !== null) return;
+
+        const runPendingDrag = () => {
+            this._pendingCanvasPointerDragFrame = null;
+            this._pendingCanvasPointerDragCancel = null;
+            const pendingEvent = this._pendingCanvasPointerDragEvent;
+            const pendingCanvas = this._pendingCanvasPointerDragCanvas;
+            this._pendingCanvasPointerDragEvent = null;
+            this._pendingCanvasPointerDragCanvas = null;
+
+            if (!pendingEvent || !this.node?.capture) return;
+            this.handleMouseMove(pendingEvent, null, pendingCanvas);
+        };
+
+        if (globalThis.requestAnimationFrame) {
+            this._pendingCanvasPointerDragFrame = globalThis.requestAnimationFrame(runPendingDrag);
+            this._pendingCanvasPointerDragCancel = globalThis.cancelAnimationFrame?.bind(globalThis) || null;
+            return;
+        }
+
+        if (globalThis.setTimeout) {
+            this._pendingCanvasPointerDragFrame = globalThis.setTimeout(runPendingDrag, 16);
+            this._pendingCanvasPointerDragCancel = globalThis.clearTimeout?.bind(globalThis) || null;
+            return;
+        }
+
+        runPendingDrag();
+    },
+
+    cancelPendingCanvasPointerDragFrame() {
+        if (this._pendingCanvasPointerDragFrame === null) return;
+        this._pendingCanvasPointerDragCancel?.(this._pendingCanvasPointerDragFrame);
+        this._pendingCanvasPointerDragFrame = null;
+        this._pendingCanvasPointerDragCancel = null;
+    },
+
+    flushCanvasPointerDrag() {
+        const pendingEvent = this._pendingCanvasPointerDragEvent;
+        const pendingCanvas = this._pendingCanvasPointerDragCanvas;
+        this.cancelPendingCanvasPointerDragFrame();
+        this._pendingCanvasPointerDragEvent = null;
+        this._pendingCanvasPointerDragCanvas = null;
+
+        if (!pendingEvent || !this.node?.capture) return;
+        this.handleMouseMove(pendingEvent, null, pendingCanvas);
+    },
+
+    clearCanvasPointerDrag() {
+        this.cancelPendingCanvasPointerDragFrame();
+        this._pendingCanvasPointerDragEvent = null;
+        this._pendingCanvasPointerDragCanvas = null;
+    },
+
     captureNodePointer(canvas) {
         const pointer = this.getCanvasPointer(canvas);
         if (pointer && ("onDrag" in pointer || "finally" in pointer)) {
@@ -234,9 +290,10 @@ export const interactionMethods = {
                 || null;
 
             pointer.onDrag = (eMove) => {
-                this.handleMouseMove(eMove, null, activeCanvas);
+                this.scheduleCanvasPointerDrag(eMove, activeCanvas);
             };
             pointer.finally = () => {
+                this.flushCanvasPointerDrag();
                 if (this.node?.capture) {
                     this.handleMouseUp(pointer.eUp || pointer.eMove || pointer.eDown);
                 }
@@ -268,6 +325,7 @@ export const interactionMethods = {
     releaseNodePointer(canvas) {
         const pointer = this.getCanvasPointer(canvas);
         if (pointer && ("onDrag" in pointer || "finally" in pointer)) {
+            this.clearCanvasPointerDrag();
             this._usingCanvasPointerCallbacks = false;
             this._capturedPointerCanvas = null;
             return;
@@ -287,6 +345,7 @@ export const interactionMethods = {
             });
         }
         this.node.captureInput?.(false);
+        this.clearCanvasPointerDrag();
         this._usingCanvasPointerCallbacks = false;
         this._capturedPointerCanvas = null;
     },

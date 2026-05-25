@@ -67,6 +67,10 @@ class ResolutionMasterCanvas {
         this.awaitingLivePreviewReason = null;
         this.manuallySetByAutoFit = false;
         this.canvasDragAspectLock = null;
+        this._pendingCanvasPointerDragEvent = null;
+        this._pendingCanvasPointerDragCanvas = null;
+        this._pendingCanvasPointerDragFrame = null;
+        this._pendingCanvasPointerDragCancel = null;
         this.canvasDotsCache = null;
         this.controls = {};
         this.resolutions = [...RESOLUTION_OPTIONS];

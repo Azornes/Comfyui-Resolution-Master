@@ -8,35 +8,55 @@ const REPORT_INTERVAL_MS = 5000;
 const SLOW_SAMPLE_MS = 16;
 const MAX_RECENT_SAMPLES = 20;
 const MAX_LONG_TASKS = 100;
+const MAX_LONG_ANIMATION_FRAMES = 100;
+const MAX_EVENT_TIMINGS = 100;
 const MAX_FRAME_GAPS = 100;
 const FRAME_GAP_THRESHOLD_MS = 50;
 const MAX_EVENT_LOOP_GAPS = 100;
 const EVENT_LOOP_INTERVAL_MS = 100;
 const EVENT_LOOP_DELAY_THRESHOLD_MS = 100;
+const EVENT_TIMING_THRESHOLD_MS = 16;
 const LITEGRAPH_CANVAS_METHODS = [
     ["draw", "litegraph.draw"],
     ["drawBackCanvas", "litegraph.drawBackCanvas"],
     ["drawFrontCanvas", "litegraph.drawFrontCanvas"],
     ["processMouseMove", "litegraph.processMouseMove"]
 ];
+const GRAPH_CANVAS_HANDLER_EVENTS = [
+    "pointermove",
+    "mousemove",
+    "pointerdown",
+    "pointerup",
+    "pointercancel",
+    "wheel"
+];
 
 const operations = new Map();
 const longTasks = [];
+const longAnimationFrames = [];
+const eventTimings = [];
 const frameGaps = [];
 const eventLoopGaps = [];
 const liteGraphOriginalMethods = new Map();
+const graphCanvasProfiledHandlers = new Set();
 
 let enabled = false;
 let autoReport = false;
 let reportTimer = null;
 let longTaskObserver = null;
 let longTaskSupportLogged = false;
+let longAnimationFrameObserver = null;
+let longAnimationFrameSupportLogged = false;
+let eventTimingObserver = null;
+let eventTimingSupportLogged = false;
 let frameGapMonitorId = null;
 let lastFrameAt = null;
 let eventLoopMonitorId = null;
 let lastEventLoopAt = null;
 let liteGraphProfilerInstalled = false;
 let liteGraphProfilerUnavailableLogged = false;
+let graphCanvasHandlerProfilerInstalled = false;
+let graphCanvasHandlerProfilerUnavailableLogged = false;
 
 function getNow() {
     return globalThis.performance?.now?.() ?? Date.now();
@@ -93,6 +113,24 @@ function getOperationStats(operationName) {
 
 function round(value) {
     return Math.round(value * 1000) / 1000;
+}
+
+function getProfilerFunctionName(operationName) {
+    return `resolutionMasterPerf_${operationName.replace(/[^a-zA-Z0-9_$]+/g, "_")}`;
+}
+
+function tagProfilerWrapper(wrapper, original, operationName) {
+    Object.defineProperty(wrapper, "__resolutionMasterPerfWrapped", { value: true });
+    Object.defineProperty(wrapper, "__resolutionMasterPerfOriginal", { value: original });
+    Object.defineProperty(wrapper, "__resolutionMasterPerfOperation", { value: operationName });
+    try {
+        Object.defineProperty(wrapper, "name", {
+            configurable: true,
+            value: getProfilerFunctionName(operationName)
+        });
+    } catch {
+        // Function names are only a diagnostic hint; older runtimes may keep them read-only.
+    }
 }
 
 function snapshot() {
@@ -160,6 +198,13 @@ function supportsLongTaskObserver() {
         && observer.supportedEntryTypes.includes("longtask");
 }
 
+function supportsPerformanceEntry(entryType) {
+    const observer = globalThis.PerformanceObserver;
+    return typeof observer === "function"
+        && Array.isArray(observer.supportedEntryTypes)
+        && observer.supportedEntryTypes.includes(entryType);
+}
+
 function startLongTaskObserver() {
     if (longTaskObserver || !enabled) return;
     if (!supportsLongTaskObserver()) {
@@ -196,6 +241,183 @@ function stopLongTaskObserver() {
         // Some browser implementations can throw during teardown.
     }
     longTaskObserver = null;
+}
+
+function normalizeScriptTimings(entry) {
+    const scripts = Array.from(entry.scripts || []);
+    if (!scripts.length) return "";
+
+    return scripts
+        .sort((a, b) => b.duration - a.duration)
+        .slice(0, 3)
+        .map(script => {
+            const duration = `${round(script.duration)}ms`;
+            const source = script.sourceURL || script.invoker || script.sourceFunctionName || script.name || "unknown";
+            const details = [
+                script.sourceFunctionName,
+                script.invokerType,
+                script.invoker
+            ].filter(Boolean);
+            return [duration, source, ...details].join(" | ");
+        })
+        .join("; ");
+}
+
+function longAnimationFrameSnapshot() {
+    return longAnimationFrames
+        .map(entry => ({
+            startMs: round(entry.startTime),
+            durationMs: round(entry.duration),
+            blockingMs: round(entry.blockingDuration),
+            scriptCount: entry.scriptCount,
+            scriptTotalMs: round(entry.scriptTotalDuration),
+            forcedStyleLayoutMs: round(entry.forcedStyleLayoutDuration),
+            pauseMs: round(entry.pauseDuration),
+            renderStartMs: entry.renderStart === null ? null : round(entry.renderStart),
+            styleLayoutStartMs: entry.styleAndLayoutStart === null ? null : round(entry.styleAndLayoutStart),
+            scripts: entry.scripts
+        }))
+        .sort((a, b) => b.durationMs - a.durationMs);
+}
+
+function recordLongAnimationFrame(entry) {
+    const scripts = Array.from(entry.scripts || []);
+    longAnimationFrames.push({
+        startTime: entry.startTime,
+        duration: entry.duration,
+        blockingDuration: entry.blockingDuration || 0,
+        scriptCount: scripts.length,
+        scriptTotalDuration: scripts.reduce((total, script) => total + (script.duration || 0), 0),
+        forcedStyleLayoutDuration: scripts.reduce((total, script) => total + (script.forcedStyleAndLayoutDuration || 0), 0),
+        pauseDuration: scripts.reduce((total, script) => total + (script.pauseDuration || 0), 0),
+        renderStart: Number.isFinite(entry.renderStart) ? entry.renderStart : null,
+        styleAndLayoutStart: Number.isFinite(entry.styleAndLayoutStart) ? entry.styleAndLayoutStart : null,
+        scripts: normalizeScriptTimings(entry)
+    });
+    if (longAnimationFrames.length > MAX_LONG_ANIMATION_FRAMES) {
+        longAnimationFrames.shift();
+    }
+}
+
+function startLongAnimationFrameObserver() {
+    if (longAnimationFrameObserver || !enabled) return;
+    if (!supportsPerformanceEntry("long-animation-frame")) {
+        if (!longAnimationFrameSupportLogged) {
+            longAnimationFrameSupportLogged = true;
+            log.info("Long animation frame diagnostics unavailable in this browser");
+        }
+        return;
+    }
+
+    try {
+        const Observer = globalThis.PerformanceObserver;
+        longAnimationFrameObserver = new Observer((list) => {
+            list.getEntries().forEach(recordLongAnimationFrame);
+        });
+        longAnimationFrameObserver.observe({ type: "long-animation-frame", buffered: true });
+        log.info("Long animation frame diagnostics enabled");
+    } catch (error) {
+        longAnimationFrameObserver = null;
+        log.warn("Failed to enable long animation frame diagnostics", error);
+    }
+}
+
+function stopLongAnimationFrameObserver() {
+    if (!longAnimationFrameObserver) return;
+
+    try {
+        longAnimationFrameObserver.disconnect();
+    } catch {
+        // Some browser implementations can throw during teardown.
+    }
+    longAnimationFrameObserver = null;
+}
+
+function describeEventTarget(target) {
+    if (!target) return "";
+
+    const tagName = target.tagName ? String(target.tagName).toLowerCase() : "";
+    const id = target.id ? `#${target.id}` : "";
+    let className = "";
+    if (typeof target.className === "string" && target.className.trim()) {
+        className = `.${target.className.trim().split(/\s+/).slice(0, 3).join(".")}`;
+    }
+    return `${tagName}${id}${className}`;
+}
+
+function eventTimingSnapshot() {
+    return eventTimings
+        .map(entry => ({
+            startMs: round(entry.startTime),
+            durationMs: round(entry.duration),
+            inputDelayMs: round(entry.inputDelay),
+            processingMs: round(entry.processing),
+            presentationDelayMs: round(entry.presentationDelay),
+            name: entry.name,
+            interactionId: entry.interactionId,
+            target: entry.target,
+            cancelable: entry.cancelable
+        }))
+        .sort((a, b) => b.durationMs - a.durationMs);
+}
+
+function recordEventTiming(entry) {
+    const processing = Math.max(0, entry.processingEnd - entry.processingStart);
+    const inputDelay = Math.max(0, entry.processingStart - entry.startTime);
+    const presentationDelay = Math.max(0, entry.duration - inputDelay - processing);
+
+    eventTimings.push({
+        startTime: entry.startTime,
+        duration: entry.duration,
+        inputDelay,
+        processing,
+        presentationDelay,
+        name: entry.name || "",
+        interactionId: entry.interactionId || 0,
+        target: describeEventTarget(entry.target),
+        cancelable: typeof entry.cancelable === "boolean" ? entry.cancelable : null
+    });
+    if (eventTimings.length > MAX_EVENT_TIMINGS) {
+        eventTimings.shift();
+    }
+}
+
+function startEventTimingObserver() {
+    if (eventTimingObserver || !enabled) return;
+    if (!supportsPerformanceEntry("event")) {
+        if (!eventTimingSupportLogged) {
+            eventTimingSupportLogged = true;
+            log.info("Event timing diagnostics unavailable in this browser");
+        }
+        return;
+    }
+
+    try {
+        const Observer = globalThis.PerformanceObserver;
+        eventTimingObserver = new Observer((list) => {
+            list.getEntries().forEach(recordEventTiming);
+        });
+        eventTimingObserver.observe({
+            type: "event",
+            buffered: true,
+            durationThreshold: EVENT_TIMING_THRESHOLD_MS
+        });
+        log.info("Event timing diagnostics enabled");
+    } catch (error) {
+        eventTimingObserver = null;
+        log.warn("Failed to enable event timing diagnostics", error);
+    }
+}
+
+function stopEventTimingObserver() {
+    if (!eventTimingObserver) return;
+
+    try {
+        eventTimingObserver.disconnect();
+    } catch {
+        // Some browser implementations can throw during teardown.
+    }
+    eventTimingObserver = null;
 }
 
 function getPageState() {
@@ -392,8 +614,7 @@ function installLiteGraphProfiler() {
                 end(token);
             }
         };
-        Object.defineProperty(wrapped, "__resolutionMasterPerfWrapped", { value: true });
-        Object.defineProperty(wrapped, "__resolutionMasterPerfOriginal", { value: original });
+        tagProfilerWrapper(wrapped, original, operationName);
         liteGraphOriginalMethods.set(methodName, original);
         prototype[methodName] = wrapped;
         installedMethods.push(methodName);
@@ -405,16 +626,68 @@ function installLiteGraphProfiler() {
     }
 }
 
+function getGraphCanvasElement() {
+    return globalThis.document?.getElementById?.("graph-canvas")
+        || globalThis.LGraphCanvas?.active_canvas?.canvas
+        || globalThis.document?.querySelector?.("canvas#graph-canvas")
+        || null;
+}
+
+function installGraphCanvasHandlerProfiler() {
+    if (graphCanvasHandlerProfilerInstalled || !enabled) return;
+
+    const canvas = getGraphCanvasElement();
+    if (!canvas) {
+        if (!graphCanvasHandlerProfilerUnavailableLogged) {
+            graphCanvasHandlerProfilerUnavailableLogged = true;
+            log.info("Graph canvas handler profiler unavailable");
+        }
+        return;
+    }
+
+    const installedHandlers = [];
+    GRAPH_CANVAS_HANDLER_EVENTS.forEach(eventName => {
+        const propertyName = `on${eventName}`;
+        const original = canvas[propertyName];
+        if (typeof original !== "function" || original.__resolutionMasterPerfWrapped) return;
+
+        const operationName = `dom.graphCanvas.${propertyName}`;
+        const wrapped = function(...args) {
+            const token = start(operationName);
+            try {
+                return original.apply(this, args);
+            } finally {
+                end(token);
+            }
+        };
+        tagProfilerWrapper(wrapped, original, operationName);
+        canvas[propertyName] = wrapped;
+        graphCanvasProfiledHandlers.add(propertyName);
+        installedHandlers.push(propertyName);
+    });
+
+    graphCanvasHandlerProfilerInstalled = installedHandlers.length > 0 || graphCanvasProfiledHandlers.size > 0;
+    if (installedHandlers.length) {
+        log.info("Graph canvas handler profiler enabled", { handlers: installedHandlers });
+    }
+}
+
 function diagnosticsState() {
     return {
         enabled,
         autoReport,
         longTaskSupported: supportsLongTaskObserver(),
         longTaskObserverActive: !!longTaskObserver,
+        longAnimationFrameSupported: supportsPerformanceEntry("long-animation-frame"),
+        longAnimationFrameObserverActive: !!longAnimationFrameObserver,
+        eventTimingSupported: supportsPerformanceEntry("event"),
+        eventTimingObserverActive: !!eventTimingObserver,
         frameGapMonitorActive: frameGapMonitorId !== null,
         eventLoopMonitorActive: eventLoopMonitorId !== null,
         liteGraphProfilerActive: liteGraphProfilerInstalled,
         liteGraphProfiledMethods: [...liteGraphOriginalMethods.keys()],
+        graphCanvasHandlerProfilerActive: graphCanvasHandlerProfilerInstalled,
+        graphCanvasProfiledHandlers: [...graphCanvasProfiledHandlers],
         ...getRuntimeState()
     };
 }
@@ -429,20 +702,25 @@ function scheduleReport() {
 }
 
 function report(reason = "manual") {
+    installGraphCanvasHandlerProfiler();
     const data = snapshot();
     const longTaskData = longTaskSnapshot();
+    const longAnimationFrameData = longAnimationFrameSnapshot();
+    const eventTimingData = eventTimingSnapshot();
     const frameGapData = frameGapSnapshot();
     const eventLoopGapData = eventLoopGapSnapshot();
     const state = diagnosticsState();
-    if (!data.length && !longTaskData.length && !frameGapData.length && !eventLoopGapData.length) {
+    if (!data.length && !longTaskData.length && !longAnimationFrameData.length && !eventTimingData.length && !frameGapData.length && !eventLoopGapData.length) {
         log.info("Performance diagnostics: no samples collected yet", { reason });
-        return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
+        return { operations: data, longTasks: longTaskData, longAnimationFrames: longAnimationFrameData, eventTimings: eventTimingData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
     }
 
     log.info("Performance diagnostics report", {
         reason,
         samples: data.length,
         longTasks: longTaskData.length,
+        longAnimationFrames: longAnimationFrameData.length,
+        eventTimings: eventTimingData.length,
         frameGaps: frameGapData.length,
         eventLoopGaps: eventLoopGapData.length,
         ...state
@@ -454,6 +732,12 @@ function report(reason = "manual") {
         if (longTaskData.length) {
             console.table(longTaskData);
         }
+        if (longAnimationFrameData.length) {
+            console.table(longAnimationFrameData);
+        }
+        if (eventTimingData.length) {
+            console.table(eventTimingData);
+        }
         if (frameGapData.length) {
             console.table(frameGapData);
         }
@@ -461,14 +745,16 @@ function report(reason = "manual") {
             console.table(eventLoopGapData);
         }
     } else {
-        console.log({ operations: data, longTasks: longTaskData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state });
+        console.log({ operations: data, longTasks: longTaskData, longAnimationFrames: longAnimationFrameData, eventTimings: eventTimingData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state });
     }
-    return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
+    return { operations: data, longTasks: longTaskData, longAnimationFrames: longAnimationFrameData, eventTimings: eventTimingData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
 }
 
 function reset() {
     operations.clear();
     longTasks.length = 0;
+    longAnimationFrames.length = 0;
+    eventTimings.length = 0;
     frameGaps.length = 0;
     eventLoopGaps.length = 0;
     lastFrameAt = null;
@@ -529,9 +815,14 @@ function enable(options = {}) {
     enabled = true;
     autoReport = !!options.autoReport;
     startLongTaskObserver();
+    startLongAnimationFrameObserver();
+    startEventTimingObserver();
     startFrameGapMonitor();
     startEventLoopMonitor();
     installLiteGraphProfiler();
+    installGraphCanvasHandlerProfiler();
+    globalThis.requestAnimationFrame?.(() => installGraphCanvasHandlerProfiler());
+    globalThis.setTimeout?.(() => installGraphCanvasHandlerProfiler(), 1000);
     if (options.persist !== false) {
         setStoredEnabled(true);
     }
@@ -549,6 +840,8 @@ function disable(options = {}) {
     enabled = false;
     autoReport = false;
     stopLongTaskObserver();
+    stopLongAnimationFrameObserver();
+    stopEventTimingObserver();
     stopFrameGapMonitor();
     stopEventLoopMonitor();
     if (options.persist !== false) {
@@ -580,8 +873,10 @@ export const performanceDiagnostics = {
     disable,
     end,
     eventLoopGaps: eventLoopGapSnapshot,
+    eventTimings: eventTimingSnapshot,
     frameGaps: frameGapSnapshot,
     isEnabled,
+    longAnimationFrames: longAnimationFrameSnapshot,
     longTasks: longTaskSnapshot,
     measure,
     now: getNow,
