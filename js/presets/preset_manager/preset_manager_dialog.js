@@ -607,8 +607,8 @@ export class PresetManagerDialog {
 
             // Add resize listener to update indicators dynamically (matching aspect_ratio_selector)
             this.presetPreviewResizeHandler = () => {
-                updateHorizontalScrollIndicator();
                 AspectRatioUtils.updateColumnScrollIndicators(columns);
+                updateHorizontalScrollIndicator();
             };
             window.addEventListener('resize', this.presetPreviewResizeHandler);
         });

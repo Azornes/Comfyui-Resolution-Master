@@ -331,8 +331,8 @@ export class AspectRatioSelector {
         
         // Listen for window resize to update both indicators dynamically
         this.resizeHandler = () => {
-            updateHorizontalScrollIndicator();
             AspectRatioUtils.updateColumnScrollIndicators(columns);
+            updateHorizontalScrollIndicator();
         };
         window.addEventListener('resize', this.resizeHandler);
 
@@ -406,7 +406,6 @@ export class AspectRatioSelector {
             width: 100%;
             max-height: 400px;
             overflow-y: auto;
-            scrollbar-gutter: stable;
         `;
 
         presetList.forEach(preset => {

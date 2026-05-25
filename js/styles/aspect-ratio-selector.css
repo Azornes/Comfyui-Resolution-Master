@@ -52,6 +52,9 @@
     max-height: 400px;
     overflow-y: auto;
     flex-shrink: 0;
+}
+
+.resolution-master-aspect-ratio-column-list.has-vertical-scrollbar {
     scrollbar-gutter: stable;
 }
 

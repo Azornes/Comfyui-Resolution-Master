@@ -219,6 +219,10 @@ export class AspectRatioUtils {
             
             const needsIndicator = presetListContainer && 
                                   presetListContainer.scrollHeight > presetListContainer.clientHeight;
+
+            if (presetListContainer) {
+                presetListContainer.classList.toggle('has-vertical-scrollbar', needsIndicator);
+            }
             
             if (needsIndicator && !scrollIndicator) {
                 scrollIndicator = document.createElement('div');
