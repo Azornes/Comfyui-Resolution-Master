@@ -10,10 +10,17 @@ const MAX_RECENT_SAMPLES = 20;
 const MAX_LONG_TASKS = 100;
 const MAX_FRAME_GAPS = 100;
 const FRAME_GAP_THRESHOLD_MS = 50;
+const LITEGRAPH_CANVAS_METHODS = [
+    ["draw", "litegraph.draw"],
+    ["drawBackCanvas", "litegraph.drawBackCanvas"],
+    ["drawFrontCanvas", "litegraph.drawFrontCanvas"],
+    ["processMouseMove", "litegraph.processMouseMove"]
+];
 
 const operations = new Map();
 const longTasks = [];
 const frameGaps = [];
+const liteGraphOriginalMethods = new Map();
 
 let enabled = false;
 let autoReport = false;
@@ -22,6 +29,8 @@ let longTaskObserver = null;
 let longTaskSupportLogged = false;
 let frameGapMonitorId = null;
 let lastFrameAt = null;
+let liteGraphProfilerInstalled = false;
+let liteGraphProfilerUnavailableLogged = false;
 
 function getNow() {
     return globalThis.performance?.now?.() ?? Date.now();
@@ -255,6 +264,48 @@ function stopFrameGapMonitor() {
     lastFrameAt = null;
 }
 
+function getLiteGraphCanvasPrototype() {
+    return globalThis.LGraphCanvas?.prototype || globalThis.LiteGraph?.LGraphCanvas?.prototype || null;
+}
+
+function installLiteGraphProfiler() {
+    if (liteGraphProfilerInstalled || !enabled) return;
+
+    const prototype = getLiteGraphCanvasPrototype();
+    if (!prototype) {
+        if (!liteGraphProfilerUnavailableLogged) {
+            liteGraphProfilerUnavailableLogged = true;
+            log.info("LiteGraph canvas profiler unavailable");
+        }
+        return;
+    }
+
+    const installedMethods = [];
+    LITEGRAPH_CANVAS_METHODS.forEach(([methodName, operationName]) => {
+        const original = prototype[methodName];
+        if (typeof original !== "function" || original.__resolutionMasterPerfWrapped) return;
+
+        const wrapped = function(...args) {
+            const token = start(operationName);
+            try {
+                return original.apply(this, args);
+            } finally {
+                end(token);
+            }
+        };
+        Object.defineProperty(wrapped, "__resolutionMasterPerfWrapped", { value: true });
+        Object.defineProperty(wrapped, "__resolutionMasterPerfOriginal", { value: original });
+        liteGraphOriginalMethods.set(methodName, original);
+        prototype[methodName] = wrapped;
+        installedMethods.push(methodName);
+    });
+
+    liteGraphProfilerInstalled = installedMethods.length > 0 || liteGraphOriginalMethods.size > 0;
+    if (installedMethods.length) {
+        log.info("LiteGraph canvas profiler enabled", { methods: installedMethods });
+    }
+}
+
 function diagnosticsState() {
     return {
         enabled,
@@ -262,6 +313,8 @@ function diagnosticsState() {
         longTaskSupported: supportsLongTaskObserver(),
         longTaskObserverActive: !!longTaskObserver,
         frameGapMonitorActive: frameGapMonitorId !== null,
+        liteGraphProfilerActive: liteGraphProfilerInstalled,
+        liteGraphProfiledMethods: [...liteGraphOriginalMethods.keys()],
         ...getPageState()
     };
 }
@@ -370,6 +423,7 @@ function enable(options = {}) {
     autoReport = !!options.autoReport;
     startLongTaskObserver();
     startFrameGapMonitor();
+    installLiteGraphProfiler();
     if (options.persist !== false) {
         setStoredEnabled(true);
     }

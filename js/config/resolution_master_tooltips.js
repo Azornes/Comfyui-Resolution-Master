@@ -26,7 +26,7 @@ export const tooltips = {
     megapixelsBtn: "Scale the current size to the selected megapixel target.",
     megapixelsRadio: "Use the megapixel target for the Rescale Factor output.",
     megapixelsValueArea: "Click to enter the target megapixels.",
-    preserveScalingRatioCheckbox: "Keep the image proportions while scaling. Also affects Auto-Detect Smart Fit and Resize.",
+    preserveScalingRatioCheckbox: "Keep an exact aspect ratio when resizing. Also affects Smart Fit.",
     
     // Auto-detect controls
     autoDetectToggle: "Detect the size from the connected input image.",
