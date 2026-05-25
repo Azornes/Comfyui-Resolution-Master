@@ -793,17 +793,21 @@ export const drawingMethods = {
     drawButton(ctx, x, y, w, h, content, hover = false, disabled = false, text = null, centerIconAndText = false, textOffset = 0) {
         const grad = ctx.createLinearGradient(x, y, x, y + h);
         if (disabled) {
-            grad.addColorStop(0, "#4a4a4a");
-            grad.addColorStop(1, "#404040");
+            grad.addColorStop(0, "rgba(255, 255, 255, 0.12)");
+            grad.addColorStop(1, "rgba(255, 255, 255, 0.08)");
         } else if (hover) {
-            grad.addColorStop(0, "#6a6a6a");
-            grad.addColorStop(1, "#606060");
+            grad.addColorStop(0, "rgba(255, 255, 255, 0.30)");
+            grad.addColorStop(1, "rgba(255, 255, 255, 0.24)");
         } else {
-            grad.addColorStop(0, "#5a5a5a");
-            grad.addColorStop(1, "#505050");
+            grad.addColorStop(0, "rgba(255, 255, 255, 0.24)");
+            grad.addColorStop(1, "rgba(255, 255, 255, 0.18)");
         }
         ctx.fillStyle = grad;
-        ctx.strokeStyle = disabled ? "#333" : hover ? "#777" : "#222";
+        ctx.strokeStyle = disabled
+            ? "rgba(0, 0, 0, 0.28)"
+            : hover
+                ? "rgba(255, 255, 255, 0.28)"
+                : "rgba(0, 0, 0, 0.36)";
         ctx.lineWidth = 1;
 
         ctx.beginPath();
