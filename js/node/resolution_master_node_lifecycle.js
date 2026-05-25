@@ -300,6 +300,7 @@ export const nodeLifecycleMethods = {
         };
         const origOnSerialize = node.onSerialize;
         node.onSerialize = function() {
+            self.syncAutoDetectSourceState();
             self.syncBackendFallbackWidgets();
             if (origOnSerialize) return origOnSerialize.apply(this, arguments);
         };

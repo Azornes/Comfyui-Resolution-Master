@@ -1,6 +1,7 @@
 import { parseDimensionsFromText } from "./shared.js";
 
 const LOCAL_IMAGE_GALLERY_NODE_TYPE = "LocalImageGallery";
+const EMPTY_LOCAL_IMAGE_GALLERY_SELECTIONS = new Set(["", "none", "null", "undefined"]);
 
 function isLocalImageGallerySourceNode(sourceNode) {
     return !!(sourceNode?.type === LOCAL_IMAGE_GALLERY_NODE_TYPE
@@ -9,12 +10,23 @@ function isLocalImageGallerySourceNode(sourceNode) {
         || sourceNode?._gallery?.elements?.selectedName);
 }
 
+function getSelectedLocalImageGalleryImage(sourceNode) {
+    const gallery = sourceNode?._gallery;
+    return gallery?.selectedImage ?? sourceNode?.properties?.selected_image ?? "";
+}
+
+function hasSelectedLocalImageGalleryImage(sourceNode) {
+    const selectedImage = getSelectedLocalImageGalleryImage(sourceNode);
+    const normalizedSelection = String(selectedImage ?? "").trim().toLowerCase();
+    return !EMPTY_LOCAL_IMAGE_GALLERY_SELECTIONS.has(normalizedSelection);
+}
+
 function getLocalImageGalleryDimensions(sourceNode) {
     if (!isLocalImageGallerySourceNode(sourceNode)) return null;
 
     const gallery = sourceNode?._gallery;
-    const selectedImage = gallery?.selectedImage || sourceNode?.properties?.selected_image || "";
-    if (!selectedImage) return null;
+    const selectedImage = getSelectedLocalImageGalleryImage(sourceNode);
+    if (!hasSelectedLocalImageGalleryImage(sourceNode)) return null;
 
     let width = Number(gallery?.selectedImageWidth);
     let height = Number(gallery?.selectedImageHeight);
@@ -45,6 +57,15 @@ function getLocalImageGalleryDimensions(sourceNode) {
         ].join(":"),
         liveChangeTracking: true
     };
+}
+
+function isIgnoredPreview(sourceNode) {
+    return isLocalImageGallerySourceNode(sourceNode)
+        && !hasSelectedLocalImageGalleryImage(sourceNode);
+}
+
+function shouldSuppressBackendFallback(sourceNode) {
+    return isIgnoredPreview(sourceNode);
 }
 
 function detachWatcher(controller) {
@@ -87,6 +108,8 @@ export const localImageGalleryDetector = {
     id: "localimagegallery",
     isSourceNode: isLocalImageGallerySourceNode,
     getDimensions: getLocalImageGalleryDimensions,
+    isIgnoredPreview,
+    shouldSuppressBackendFallback,
     attachWatcher,
     detachWatcher
 };

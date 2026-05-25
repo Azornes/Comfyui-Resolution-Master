@@ -3,13 +3,14 @@ import { isLivePreviewWidget } from "./source_detectors/shared.js";
 import {
     attachSourceDetectorWatchers,
     detachSourceDetectorWatchers,
-    getSourceDimensions
+    getSourceDimensions,
+    shouldSuppressBackendFallback
 } from "./source_detectors/detector_registry.js";
 
 const log = createModuleLogger('auto_detect_methods');
-const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 5000;
+const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 1000;
 const AUTO_DETECT_DEBOUNCE_MS = 30;
-const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 5000;
+const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 1000;
 const AUTO_DETECT_FRONTEND_PREVIEW_RETRY_MS = 150;
 const AUTO_DETECT_WIDGET_WATCHERS_PROP = "__resolutionMasterAutoDetectWatchers";
 const AUTO_DETECT_WIDGET_ORIGINAL_CALLBACK_PROP = "__resolutionMasterAutoDetectOriginalCallback";
@@ -285,7 +286,7 @@ export const autoDetectMethods = {
     },
 
     setAutoDetectSource(source) {
-        const normalizedSource = source === 'frontend' ? 'frontend' : 'backend';
+        const normalizedSource = ['frontend', 'frontend-empty'].includes(source) ? source : 'backend';
         this.node.properties.autoDetectSource = normalizedSource;
         if (this.autoDetectSourceWidget) {
             this.autoDetectSourceWidget.value = normalizedSource;
@@ -302,6 +303,18 @@ export const autoDetectMethods = {
         }
         if (this.autoDetectHeightWidget) {
             this.autoDetectHeightWidget.value = height;
+        }
+    },
+
+    syncAutoDetectSourceState() {
+        if (!this.node?.properties?.autoDetect) return;
+
+        const sourceNode = this.getConnectedSourceNode();
+        if (shouldSuppressBackendFallback(sourceNode)) {
+            this.setAutoDetectSource('frontend-empty');
+            this.setRawAutoDetectDimensions(null);
+        } else if (this.node.properties.autoDetectSource === 'frontend-empty') {
+            this.setAutoDetectSource('backend');
         }
     },
 
@@ -342,7 +355,15 @@ export const autoDetectMethods = {
             };
         }
 
-        const previewDimensions = this.getConnectedPreviewDimensions();
+        const sourceNode = this.getConnectedSourceNode();
+        const previewDimensions = getSourceDimensions(sourceNode);
+        if (shouldSuppressBackendFallback(sourceNode)) {
+            return {
+                text: "Live: no selection",
+                color: [150, 150, 150],
+                textColor: "#aaa"
+            };
+        }
         if (previewDimensions?.liveChangeTracking) {
             return {
                 text: "Live: supported",
@@ -393,9 +414,22 @@ export const autoDetectMethods = {
                 return;
             }
 
-            const previewDimensions = this.getConnectedPreviewDimensions();
+            const sourceNode = this.getConnectedSourceNode();
+            const previewDimensions = getSourceDimensions(sourceNode);
+            const suppressBackendFallback = shouldSuppressBackendFallback(sourceNode);
             if (previewDimensions) {
                 this.clearLivePreviewPending();
+            } else if (suppressBackendFallback) {
+                if (this.detectedDimensions) {
+                    log.debug('Auto-detect dimensions cleared because frontend source has no active selection', {
+                        nodeId: node.id ?? null
+                    });
+                }
+                this.clearLivePreviewPending();
+                this.detectedDimensions = null;
+                this.setAutoDetectSource('frontend-empty');
+                this.setRawAutoDetectDimensions(null);
+                return;
             } else if (this.isAwaitingLivePreview()) {
                 this.scheduleAutoDetectCheck('waiting for frontend preview', AUTO_DETECT_FRONTEND_PREVIEW_RETRY_MS);
                 return;

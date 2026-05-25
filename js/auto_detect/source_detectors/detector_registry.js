@@ -28,6 +28,12 @@ export function getSourceDimensions(sourceNode) {
     return null;
 }
 
+export function shouldSuppressBackendFallback(sourceNode) {
+    if (!sourceNode) return false;
+
+    return customSourceDetectors.some(detector => detector.shouldSuppressBackendFallback?.(sourceNode));
+}
+
 export function attachSourceDetectorWatchers(controller, sourceNode) {
     for (const detector of sourceDetectors) {
         detector.attachWatcher?.(controller, sourceNode);

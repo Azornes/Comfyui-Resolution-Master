@@ -72,6 +72,7 @@ class ResolutionMaster:
             },
             "hidden": {
                 "unique_id": "UNIQUE_ID",
+                "prompt": "PROMPT",
             },
         }
 
@@ -96,6 +97,28 @@ class ResolutionMaster:
             return int(input_image.shape[1]), int(input_image.shape[0])
         log.warning("Unsupported input image tensor dimensions", input_image.dim())
         return None
+
+    @staticmethod
+    def _is_empty_local_image_gallery_selection(value):
+        return str(value or "").strip().lower() in ("", "none", "null", "undefined")
+
+    @classmethod
+    def is_empty_local_image_gallery_input(cls, prompt, unique_id):
+        if not isinstance(prompt, dict) or unique_id is None:
+            return False
+
+        current_node = prompt.get(str(unique_id)) or prompt.get(unique_id)
+        input_link = current_node.get("inputs", {}).get("input_image") if isinstance(current_node, dict) else None
+        if not isinstance(input_link, (list, tuple)) or not input_link:
+            return False
+
+        source_node_id = str(input_link[0])
+        source_node = prompt.get(source_node_id) or prompt.get(input_link[0])
+        if not isinstance(source_node, dict) or source_node.get("class_type") != "LocalImageGallery":
+            return False
+
+        selected_image = source_node.get("inputs", {}).get("selected_image", "")
+        return cls._is_empty_local_image_gallery_selection(selected_image)
 
     def main(
         self,
@@ -124,6 +147,7 @@ class ResolutionMaster:
         batch_size=1,
         input_image=None,
         unique_id=None,
+        prompt=None,
     ):
         log.debug(
             "Executing",
@@ -139,7 +163,18 @@ class ResolutionMaster:
             auto_detect,
         )
 
-        if auto_detect and input_image is not None:
+        frontend_source_empty = auto_detect_source == "frontend-empty"
+        local_image_gallery_empty = self.is_empty_local_image_gallery_input(prompt, unique_id)
+
+        if auto_detect and (frontend_source_empty or local_image_gallery_empty):
+            log.debug(
+                "Skipping backend auto-detect fallback because frontend source has no active selection",
+                "frontend_source_empty=",
+                frontend_source_empty,
+                "local_image_gallery_empty=",
+                local_image_gallery_empty,
+            )
+        elif auto_detect and input_image is not None:
             detected_dimensions = self.detect_image_dimensions(input_image)
             if detected_dimensions is not None:
                 detected_width, detected_height = detected_dimensions
