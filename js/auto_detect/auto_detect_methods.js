@@ -2,7 +2,6 @@ import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('auto_detect_methods');
 const LAYERFORGE_NODE_TYPE = "LayerForgeNode";
-const LAYERFORGE_PLACEHOLDER_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 5000;
 const AUTO_DETECT_DEBOUNCE_MS = 30;
 const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 5000;
@@ -540,14 +539,12 @@ export const autoDetectMethods = {
 
         const width = Number(preview?.naturalWidth || preview?.width || preview?.videoWidth);
         const height = Number(preview?.naturalHeight || preview?.height || preview?.videoHeight);
-        const src = String(preview?.currentSrc || preview?.src || "");
         const showPreview = getWidgetValue(sourceNode, "show_preview");
 
         return this.isLayerForgeSourceNode(sourceNode)
             && showPreview === false
             && width <= 1
-            && height <= 1
-            && (!src || src === LAYERFORGE_PLACEHOLDER_IMAGE || src.startsWith("data:image/"));
+            && height <= 1;
     },
 
     getConnectedPreviewDimensions() {
