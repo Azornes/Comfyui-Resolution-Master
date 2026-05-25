@@ -5,6 +5,14 @@ import {
 } from "../scaling/scaling_math.js";
 
 const log = createModuleLogger('resolution_master_calculation_methods');
+const RESCALE_VALUE_MIN = 0;
+const RESCALE_VALUE_MAX = 100;
+
+function normalizeRescaleValue(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+    return Math.max(RESCALE_VALUE_MIN, Math.min(RESCALE_VALUE_MAX, numericValue));
+}
 
 export const calculationMethods = {
     getAllPresets() {
@@ -84,8 +92,8 @@ export const calculationMethods = {
     },
 
     applyRescaleResult(result) {
-        const value = Number(result?.rescale_factor);
-        if (!Number.isFinite(value)) return;
+        const value = normalizeRescaleValue(result?.rescale_factor);
+        if (value === null) return;
 
         const props = this.node.properties;
         props.rescaleValue = value;
@@ -294,8 +302,8 @@ export const calculationMethods = {
 
     updateRescaleValue() {
         const props = this.node.properties;
-        const cachedValue = this.getScaleFactor(props.rescaleMode);
-        if (Number.isFinite(cachedValue)) {
+        const cachedValue = normalizeRescaleValue(this.getScaleFactor(props.rescaleMode));
+        if (cachedValue !== null) {
             props.rescaleValue = cachedValue;
             if (this.rescaleValueWidget) {
                 this.rescaleValueWidget.value = cachedValue;

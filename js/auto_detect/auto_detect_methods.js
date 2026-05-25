@@ -1,6 +1,8 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('auto_detect_methods');
+const LAYERFORGE_NODE_TYPE = "LayerForgeNode";
+const LAYERFORGE_PLACEHOLDER_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 5000;
 const AUTO_DETECT_DEBOUNCE_MS = 30;
 const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 5000;
@@ -15,12 +17,21 @@ const LIVE_PREVIEW_WIDGET_NAMES = new Set([
     "filename",
     "path",
     "url",
-    "image_path"
+    "image_path",
+    "show_preview",
+    "width",
+    "height",
+    "canvas_width",
+    "canvas_height"
 ]);
 
 function isLivePreviewWidget(widget) {
     const name = String(widget?.name || "").toLowerCase();
     return LIVE_PREVIEW_WIDGET_NAMES.has(name) || typeof widget?.value === "string";
+}
+
+function getWidgetValue(node, widgetName) {
+    return node?.widgets?.find(widget => widget?.name === widgetName)?.value;
 }
 
 export const autoDetectMethods = {
@@ -488,12 +499,70 @@ export const autoDetectMethods = {
         };
     },
 
+    isLayerForgeSourceNode(sourceNode) {
+        return !!(sourceNode?.type === LAYERFORGE_NODE_TYPE
+            || sourceNode?.comfyClass === LAYERFORGE_NODE_TYPE
+            || sourceNode?.constructor?.nodeData?.name === LAYERFORGE_NODE_TYPE
+            || sourceNode?.canvasWidget?.canvas?.outputAreaBounds);
+    },
+
+    getLayerForgeDimensions(sourceNode) {
+        if (!this.isLayerForgeSourceNode(sourceNode)) return null;
+
+        const canvas = sourceNode?.canvasWidget?.canvas;
+        const outputArea = canvas?.outputAreaBounds;
+        const width = Number(outputArea?.width ?? canvas?.width);
+        const height = Number(outputArea?.height ?? canvas?.height);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            return null;
+        }
+
+        const showPreview = getWidgetValue(sourceNode, "show_preview");
+        return {
+            width: Math.round(width),
+            height: Math.round(height),
+            source: "frontend",
+            signature: [
+                "frontend:layerforge",
+                sourceNode?.id ?? "unknown",
+                showPreview === false ? "preview-off" : "preview-on",
+                Math.round(width),
+                Math.round(height),
+                Math.round(Number(outputArea?.x) || 0),
+                Math.round(Number(outputArea?.y) || 0)
+            ].join(":"),
+            liveChangeTracking: true
+        };
+    },
+
+    isIgnoredPreviewPlaceholder(sourceNode, preview) {
+        if (!preview) return false;
+
+        const width = Number(preview?.naturalWidth || preview?.width || preview?.videoWidth);
+        const height = Number(preview?.naturalHeight || preview?.height || preview?.videoHeight);
+        const src = String(preview?.currentSrc || preview?.src || "");
+        const showPreview = getWidgetValue(sourceNode, "show_preview");
+
+        return this.isLayerForgeSourceNode(sourceNode)
+            && showPreview === false
+            && width <= 1
+            && height <= 1
+            && (!src || src === LAYERFORGE_PLACEHOLDER_IMAGE || src.startsWith("data:image/"));
+    },
+
     getConnectedPreviewDimensions() {
         const sourceNode = this.getConnectedSourceNode();
         if (!sourceNode) return null;
+        const layerForgeDimensions = this.getLayerForgeDimensions(sourceNode);
+        if (layerForgeDimensions) return layerForgeDimensions;
+
         // Best-effort live UI hint: ComfyUI exposes preview images on many source nodes,
         // but the backend tensor remains the source of truth when the workflow executes.
         const preview = sourceNode?.imgs?.[0];
+        if (this.isIgnoredPreviewPlaceholder(sourceNode, preview)) {
+            return null;
+        }
+
         const width = Number(preview?.naturalWidth || preview?.width || preview?.videoWidth);
         const height = Number(preview?.naturalHeight || preview?.height || preview?.videoHeight);
 

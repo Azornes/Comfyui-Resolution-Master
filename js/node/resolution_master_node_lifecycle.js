@@ -203,7 +203,9 @@ export const nodeLifecycleMethods = {
             rescaleModeWidget.value = node.properties.rescaleMode;
         }
         if (rescaleValueWidget) {
-            rescaleValueWidget.value = node.properties.rescaleValue;
+            const rescaleValue = Math.max(0, Math.min(100, Number(node.properties.rescaleValue) || 1));
+            node.properties.rescaleValue = rescaleValue;
+            rescaleValueWidget.value = rescaleValue;
         }
         if (autoDetectSourceWidget) {
             autoDetectSourceWidget.value = node.properties.autoDetectSource || "backend";
