@@ -111,8 +111,23 @@ export const autoDetectMethods = {
     },
 
     async checkForImageDimensions() {
+        if (this._isCheckingDimensions) return;
+
         const node = this.node;
+        this._isCheckingDimensions = true;
         try {
+            if (!node.inputs?.[0]?.link) {
+                if (this.detectedDimensions) {
+                    log.debug('Auto-detect dimensions cleared because input is disconnected', {
+                        nodeId: node.id ?? null
+                    });
+                }
+                this.detectedDimensions = null;
+                this.setAutoDetectSource('backend');
+                this.setRawAutoDetectDimensions(null);
+                return;
+            }
+
             const previewDimensions = this.getConnectedPreviewDimensions();
             const backendDimensions = previewDimensions ? null : await this.getBackendDetectedDimensions();
             const dimensions = previewDimensions || backendDimensions;
@@ -165,6 +180,8 @@ export const autoDetectMethods = {
             }
         } catch (error) {
             log.error('Error checking for image dimensions:', error);
+        } finally {
+            this._isCheckingDimensions = false;
         }
     },
 
