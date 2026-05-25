@@ -333,6 +333,7 @@ export class AspectRatioSelector {
         this.resizeHandler = () => {
             AspectRatioUtils.updateColumnScrollIndicators(columns);
             updateHorizontalScrollIndicator();
+            repositionContainer();
         };
         window.addEventListener('resize', this.resizeHandler);
 
