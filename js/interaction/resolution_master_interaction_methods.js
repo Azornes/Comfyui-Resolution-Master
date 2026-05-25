@@ -7,6 +7,7 @@ const DRAG_ZOOM_BYPASS_PATCH_FLAG = '__resolutionMasterDragZoomBypassInstalled';
 const DRAG_ZOOM_CAPTURE_PATCH_FLAG = '__resolutionMasterDragZoomCaptureInstalled';
 const ORIGINAL_MOUSE_MODIFIERS_PROP = '__resolutionMasterOriginalMouseModifiers';
 const BYPASSED_DRAG_ZOOM_EVENT_PROP = '__resolutionMasterBypassedDragZoom';
+const HELP_DIALOG_SCALE = 0.7;
 
 function getMouseModifiers(e) {
     return {
@@ -557,6 +558,7 @@ export const interactionMethods = {
             border: 1px solid rgba(210, 220, 235, 0.28);
             border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,0.82), inset 0 1px 0 rgba(255,255,255,0.05);
             color: #ddd; font-family: Arial, sans-serif; padding: 0;
+            transform: scale(${HELP_DIALOG_SCALE}); transform-origin: center center;
         `;
 
         dialog.innerHTML = `
