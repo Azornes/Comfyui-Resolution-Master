@@ -204,30 +204,29 @@ class Logger {
             ? console.log.bind(console)
             : consoleFn;
         const normalizedCallsite = this.normalizeCallsite(callsite);
-        const shouldGroupCallsite = this.shouldGroupCallsite(normalizedCallsite);
-        const outputFn = shouldGroupCallsite
+        const shouldGroupDetails = this.shouldGroupDetails(normalizedCallsite);
+        const outputFn = shouldGroupDetails
             ? console.groupCollapsed.bind(console)
             : consoleFn;
         const { root, detail } = this.splitModuleName(module);
-        const message = this.stringifyArgs(args);
+        const consoleArgs = this.formatConsoleArgs(args);
         const suffix = this.formatSuffix(detail, normalizedCallsite);
+        const suffixArgs = suffix ? [suffix.trimStart()] : [];
         if (this.config.useColors && typeof consoleFn === 'function') {
             const color = COLORS[level] || '#000000';
-            outputFn(
-                `%c ${levelName.padEnd(LEVEL_WIDTH, ' ')} %c ${timestamp} %c %c ${root} %c %c ${message}%c${suffix}`,
-                `background:${color};color:#fff;font-weight:bold;`,
-                `background:${TIME_BG};color:#fff;font-weight:bold;`,
-                `background:${color};color:${color};`,
-                `background:${TIME_BG};color:#fff;font-weight:bold;`,
-                `background:${color};color:${color};`,
-                `color:${color};font-weight:bold;`,
-                '',
-            );
-            this.printCallsiteDetails(detailFn, normalizedCallsite);
+            outputFn(...this.formatStyledConsoleArgs({
+                levelName,
+                timestamp,
+                root,
+                args: consoleArgs,
+                suffix: suffixArgs[0] || '',
+                color
+            }));
+            this.printExpandedDetails(detailFn, normalizedCallsite);
             return;
         }
-        outputFn(`${levelName.padEnd(LEVEL_WIDTH, ' ')} ${timestamp} ${root} ${message}${suffix}`);
-        this.printCallsiteDetails(detailFn, normalizedCallsite);
+        outputFn(`${levelName.padEnd(LEVEL_WIDTH, ' ')} ${timestamp} ${root}`, ...consoleArgs, ...suffixArgs);
+        this.printExpandedDetails(detailFn, normalizedCallsite);
     }
 
     splitModuleName(module) {
@@ -264,6 +263,75 @@ class Logger {
             }
             return String(arg);
         }).join(' ');
+    }
+
+    formatConsoleArgs(args = []) {
+        return args.flatMap((arg) => this.formatConsoleArg(arg));
+    }
+
+    formatConsoleArg(arg) {
+        if (typeof arg === 'string') {
+            const payload = this.parseJsonPayloadFromString(arg);
+            if (payload) {
+                return payload.prefix ? [payload.prefix, payload.value] : [payload.value];
+            }
+        }
+        return [arg];
+    }
+
+    formatStyledConsoleArgs({ levelName, timestamp, root, args = [], suffix = '', color }) {
+        const outputArgs = [
+            `%c ${levelName.padEnd(LEVEL_WIDTH, ' ')} %c ${timestamp} %c %c ${root} %c %c `,
+            `background:${color};color:#fff;font-weight:bold;`,
+            `background:${TIME_BG};color:#fff;font-weight:bold;`,
+            `background:${color};color:${color};`,
+            `background:${TIME_BG};color:#fff;font-weight:bold;`,
+            `background:${color};color:${color};`,
+            `color:${color};font-weight:bold;`
+        ];
+
+        let format = outputArgs[0];
+        let hasContent = false;
+        args.forEach((arg) => {
+            if (hasContent) {
+                format += ' ';
+            }
+            if (this.isExpandableConsoleArg(arg)) {
+                format += '%o';
+                outputArgs.push(arg);
+            }
+            else {
+                format += this.escapeConsoleFormat(this.stringifyConsolePrimitive(arg));
+            }
+            hasContent = true;
+        });
+
+        if (suffix) {
+            if (hasContent) {
+                format += ' ';
+            }
+            format += `%c${this.escapeConsoleFormat(suffix)}`;
+            outputArgs.push('');
+        }
+
+        outputArgs[0] = format;
+        return outputArgs;
+    }
+
+    isExpandableConsoleArg(arg) {
+        return (typeof arg === 'object' && arg !== null && !(arg instanceof Error))
+            || typeof arg === 'function';
+    }
+
+    stringifyConsolePrimitive(arg) {
+        if (arg instanceof Error) {
+            return arg.stack || arg.message;
+        }
+        return String(arg);
+    }
+
+    escapeConsoleFormat(value) {
+        return String(value).replace(/%/g, '%%');
     }
 
     getCallsite() {
@@ -353,19 +421,68 @@ class Logger {
         return filename.replace(/\.(?:mjs|js|tsx?|jsx)$/i, '') || this.formatCallsite(callsite);
     }
 
-    shouldGroupCallsite(callsite) {
+    shouldGroupDetails(callsite) {
         return this.config.compactCallsite !== false
             && !!callsite?.full
             && typeof console.groupCollapsed === 'function'
             && typeof console.groupEnd === 'function';
     }
 
-    printCallsiteDetails(consoleFn, callsite) {
-        if (!this.shouldGroupCallsite(callsite)) {
+    printExpandedDetails(consoleFn, callsite) {
+        if (!this.shouldGroupDetails(callsite)) {
             return;
         }
-        consoleFn(`Source: ${callsite.full}`);
+        if (callsite?.full) {
+            consoleFn(`Source: ${callsite.full}`);
+        }
         console.groupEnd();
+    }
+
+    parseJsonPayloadFromString(value) {
+        const parsed = this.parseJsonLikeString(value);
+        if (parsed !== null) {
+            return {
+                prefix: '',
+                value: parsed
+            };
+        }
+        const start = this.findJsonPayloadStart(value);
+        if (start <= 0) {
+            return null;
+        }
+        const payload = this.parseJsonLikeString(value.slice(start));
+        if (payload === null) {
+            return null;
+        }
+        return {
+            prefix: value.slice(0, start).trimEnd(),
+            value: payload
+        };
+    }
+
+    findJsonPayloadStart(value) {
+        const objectStart = value.indexOf('{');
+        const arrayStart = value.indexOf('[');
+        if (objectStart < 0) {
+            return arrayStart;
+        }
+        if (arrayStart < 0) {
+            return objectStart;
+        }
+        return Math.min(objectStart, arrayStart);
+    }
+
+    parseJsonLikeString(value) {
+        const trimmed = value.trim();
+        if (!trimmed || !/^[{[]/.test(trimmed)) {
+            return null;
+        }
+        try {
+            return JSON.parse(trimmed);
+        }
+        catch (e) {
+            return null;
+        }
     }
 
     formatSuffix(detail, callsite, options = {}) {
