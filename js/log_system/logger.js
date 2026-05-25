@@ -58,7 +58,8 @@ const DEFAULT_CONFIG = {
     useColors: USE_COLORS,
     saveToStorage: false,
     maxStoredLogs: 1000,
-    timestampFormat: 'HH:mm:ss.SSS',
+    timestampFormat: 'HH:mm:ss',
+    includeMilliseconds: true,
     storageKey: LOGGER_STORAGE_KEY
 };
 const COLORS = {
@@ -146,12 +147,17 @@ class Logger {
      */
     formatTimestamp() {
         const now = new Date();
-        const format = this.config.timestampFormat;
-        return format
+        const format = this.config.timestampFormat || DEFAULT_CONFIG.timestampFormat;
+        const milliseconds = padStart(String(now.getMilliseconds()), 3, '0');
+        const timestamp = format
             .replace('HH', padStart(String(now.getHours()), 2, '0'))
             .replace('mm', padStart(String(now.getMinutes()), 2, '0'))
             .replace('ss', padStart(String(now.getSeconds()), 2, '0'))
-            .replace('SSS', padStart(String(now.getMilliseconds()), 3, '0'));
+            .replace('SSS', milliseconds);
+        if (this.config.includeMilliseconds !== false && !format.includes('SSS')) {
+            return `${timestamp}.${milliseconds}`;
+        }
+        return timestamp;
     }
     /**
      * Save log

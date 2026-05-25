@@ -18,9 +18,9 @@ function getMouseModifiers(e) {
     };
 }
 
-function isCtrlShiftPrimaryMouseDown(e) {
+function isCtrlPrimaryMouseDown(e) {
     const modifiers = getMouseModifiers(e);
-    return e?.button === 0 && modifiers.ctrlKey && modifiers.shiftKey && !modifiers.altKey;
+    return e?.button === 0 && modifiers.ctrlKey && !modifiers.altKey;
 }
 
 function getNodeUnderPointer(canvas, e) {
@@ -168,7 +168,7 @@ export const interactionMethods = {
         });
 
         const handlePotentialCanvasShortcut = (e) => {
-            if (!isCtrlShiftPrimaryMouseDown(e)) return;
+            if (!isCtrlPrimaryMouseDown(e)) return;
 
             const canvas = getGraphCanvasFromMouseEvent(this.app, e);
             if (!canvas || !isOverResolutionMasterCanvas(canvas, e)) return;
@@ -196,7 +196,7 @@ export const interactionMethods = {
         });
 
         prototype.processMouseDown = function(e) {
-            if (this.dragZoomEnabled && isCtrlShiftPrimaryMouseDown(e) && isOverResolutionMasterCanvas(this, e)) {
+            if (this.dragZoomEnabled && isCtrlPrimaryMouseDown(e) && isOverResolutionMasterCanvas(this, e)) {
                 const previousDragZoomEnabled = this.dragZoomEnabled;
                 this.dragZoomEnabled = false;
                 try {
