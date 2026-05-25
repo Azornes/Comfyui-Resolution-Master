@@ -51,6 +51,7 @@ export const DEFAULT_NODE_PROPERTIES = {
     autoFitOnChange: false,
     autoResizeOnChange: false,
     autoSnapOnChange: false,
+    smartFit: false,
     selectedCategory: "Standard",
     selectedPreset: null,
     useCustomCalc: false,

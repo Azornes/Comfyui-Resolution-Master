@@ -587,10 +587,11 @@ export const drawingMethods = {
         const rowGap = 6;
         const actionWidth = (availableWidth - actionGap) / 2;
         const actionButtonWidth = actionWidth - checkboxWidth - 4;
+        const smartToggleWidth = 56;
         const showToggleWidth = 56;
         const calcEnabled = !!props.selectedCategory;
         const actions = [
-            { button: 'autoFitBtn', checkbox: 'autoFitCheckbox', icon: this.icons.autoFit, label: 'Fit', checked: props.autoFitOnChange, disabled: !props.selectedCategory, col: 0, row: 0 },
+            { button: 'autoFitBtn', checkbox: 'autoFitCheckbox', icon: this.icons.autoFit, label: 'Fit', checked: props.autoFitOnChange, disabled: !props.selectedCategory, col: 0, row: 0, showSmartToggle: true },
             { button: 'autoResizeBtn', checkbox: 'autoResizeCheckbox', icon: this.icons.autoResize, label: 'Resize', checked: props.autoResizeOnChange, disabled: false, col: 0, row: 1 },
             { button: 'autoSnapBtn', checkbox: 'autoSnapCheckbox', icon: this.icons.snap, label: 'Snap', checked: props.autoSnapOnChange, disabled: false, col: 1, row: 0 },
             { button: 'autoCalcBtn', checkbox: 'customCalcCheckbox', icon: this.icons.autoCalculate, label: 'Calc', checked: props.useCustomCalc, disabled: !calcEnabled, col: 1, row: 1, showInfoToggle: true, textOffset: 8 }
@@ -599,11 +600,24 @@ export const drawingMethods = {
         actions.forEach((action) => {
             const x = margin + action.col * (actionWidth + actionGap);
             const actionY = currentY + action.row * (28 + rowGap);
-            const buttonWidth = action.showInfoToggle ? actionWidth - checkboxWidth - showToggleWidth - 8 : actionButtonWidth;
+            const buttonWidth = action.showInfoToggle
+                ? actionWidth - checkboxWidth - showToggleWidth - 8
+                : action.showSmartToggle
+                    ? actionWidth - checkboxWidth - smartToggleWidth - 8
+                    : actionButtonWidth;
             this.controls[action.button] = { x, y: actionY, w: buttonWidth, h: 28 };
             this.drawButton(ctx, x, actionY, buttonWidth, 28, action.icon, this.hoverElement === action.button, action.disabled, action.label, false, action.textOffset || 0);
 
-            if (action.showInfoToggle) {
+            if (action.showSmartToggle) {
+                const toggleX = x + buttonWidth + 4;
+                this.controls.smartFitToggle = { x: toggleX, y: actionY + 3, w: smartToggleWidth, h: 22 };
+                const previousAlpha = ctx.globalAlpha;
+                if (action.disabled) ctx.globalAlpha = 0.5;
+                this.drawToggle(ctx, toggleX, actionY + 3, smartToggleWidth, 22, props.smartFit, "Smart", this.hoverElement === 'smartFitToggle');
+                ctx.globalAlpha = previousAlpha;
+
+                this.drawAutoDetectActionCheckbox(ctx, action, toggleX + smartToggleWidth + 4, actionY, checkboxWidth);
+            } else if (action.showInfoToggle) {
                 const toggleX = x + buttonWidth + 4;
                 this.controls.calcInfoToggle = { x: toggleX, y: actionY + 3, w: showToggleWidth, h: 22 };
                 const previousAlpha = ctx.globalAlpha;

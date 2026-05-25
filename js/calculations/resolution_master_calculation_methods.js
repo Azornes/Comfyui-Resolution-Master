@@ -34,6 +34,7 @@ export const calculationMethods = {
             auto_fit_on_change: !!get('auto_fit_on_change', 'autoFitOnChange', props.autoFitOnChange),
             auto_resize_on_change: !!get('auto_resize_on_change', 'autoResizeOnChange', props.autoResizeOnChange),
             auto_snap_on_change: !!get('auto_snap_on_change', 'autoSnapOnChange', props.autoSnapOnChange),
+            smart_fit: !!get('smart_fit', 'smartFit', props.smartFit),
             use_custom_calc: !!get('use_custom_calc', 'useCustomCalc', props.useCustomCalc),
             preserve_scaling_ratio: !!get('preserve_scaling_ratio', 'preserveScalingRatio', props.preserveScalingRatio),
             selected_category: selectedCategory,
@@ -192,7 +193,7 @@ export const calculationMethods = {
             width: this.widthWidget.value,
             height: this.heightWidget.value,
             selected_category: category,
-            use_custom_calc: props.useCustomCalc
+            smart_fit: props.smartFit
         });
         this.applyBackendCalculationResult(result);
     },

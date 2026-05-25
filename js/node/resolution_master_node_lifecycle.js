@@ -179,6 +179,7 @@ export const nodeLifecycleMethods = {
         const autoFitOnChangeWidget = node.widgets?.find(w => w.name === 'auto_fit_on_change');
         const autoResizeOnChangeWidget = node.widgets?.find(w => w.name === 'auto_resize_on_change');
         const autoSnapOnChangeWidget = node.widgets?.find(w => w.name === 'auto_snap_on_change');
+        const smartFitWidget = node.widgets?.find(w => w.name === 'smart_fit');
         const useCustomCalcWidget = node.widgets?.find(w => w.name === 'use_custom_calc');
         const preserveScalingRatioWidget = node.widgets?.find(w => w.name === 'preserve_scaling_ratio');
         const selectedCategoryWidget = node.widgets?.find(w => w.name === 'selected_category');
@@ -232,6 +233,7 @@ export const nodeLifecycleMethods = {
             autoFitOnChange: autoFitOnChangeWidget,
             autoResizeOnChange: autoResizeOnChangeWidget,
             autoSnapOnChange: autoSnapOnChangeWidget,
+            smartFit: smartFitWidget,
             useCustomCalc: useCustomCalcWidget,
             preserveScalingRatio: preserveScalingRatioWidget,
             selectedCategory: selectedCategoryWidget,

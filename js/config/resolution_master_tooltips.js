@@ -32,6 +32,7 @@ export const tooltips = {
     autoDetectToggle: "Detect the size from the connected input image.",
     autoFitBtn: "Fit the current size to the closest preset now.",
     autoFitCheckbox: "When a new image is detected, fit it to the closest preset automatically.",
+    smartFitToggle: "Fit to the closest preset aspect ratio while keeping the size close to the current resolution.",
     autoResizeBtn: "Resize the current size using the selected scaling mode now.",
     autoResizeCheckbox: "When a new image is detected, resize it automatically using the selected scaling mode.",
     autoSnapBtn: "Round the current size to the selected snap step now.",

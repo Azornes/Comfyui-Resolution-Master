@@ -597,6 +597,10 @@ export const interactionMethods = {
             if (widget) widget.value = props.autoDetect;
             this.syncBackendFallbackWidgets();
             this.app?.graph?.setDirtyCanvas(true);
+        } else if (toggleName === 'smartFitToggle' && props.selectedCategory) {
+            props.smartFit = !props.smartFit;
+            this.syncBackendFallbackWidgets();
+            this.app?.graph?.setDirtyCanvas(true);
         } else if (toggleName === 'calcInfoToggle' && props.selectedCategory) {
             props.showCalcInfo = !props.showCalcInfo;
             this.app?.graph?.setDirtyCanvas(true);

@@ -46,6 +46,16 @@ def scale_to_preset_aspect_ratio(width, height, preset_aspect):
     return choose_best_scaling_option(current_pixels, option1, option2)
 
 
+def scale_to_exact_preset_ratio(width, height, preset_width, preset_height):
+    divisor = math.gcd(max(1, preset_width), max(1, preset_height))
+    ratio_width = preset_width // divisor
+    ratio_height = preset_height // divisor
+    current_pixels = width * height
+    ratio_pixels = ratio_width * ratio_height
+    ratio_scale = max(1, round(math.sqrt(current_pixels / ratio_pixels)))
+    return {"width": ratio_width * ratio_scale, "height": ratio_height * ratio_scale}
+
+
 def find_closest_preset(width, height, presets):
     if not presets:
         return None
@@ -150,23 +160,25 @@ def apply_custom_calculation(width, height, category, presets):
     return scale_to_preset_aspect_ratio(width, height, preset_aspect)
 
 
-def calculate_auto_fit(width, height, category, use_custom_calc, presets):
+def calculate_auto_fit(width, height, category, smart_fit, presets, preserve_scaling_ratio=False):
     closest = find_closest_preset(width, height, presets)
     if not closest:
         return {"width": width, "height": height, "selected_preset": None}
 
-    if not use_custom_calc:
+    if not smart_fit:
         return {"width": closest["width"], "height": closest["height"], "selected_preset": closest["name"]}
+
+    if preserve_scaling_ratio:
+        scaled = scale_to_exact_preset_ratio(width, height, closest["width"], closest["height"])
+        return {"width": scaled["width"], "height": scaled["height"], "selected_preset": closest["name"]}
 
     preset_aspect = closest["width"] / closest["height"]
     current_aspect = width / height
     if abs(current_aspect - preset_aspect) < 0.01:
-        calculated = apply_custom_calculation(width, height, category, presets)
-        return {"width": calculated["width"], "height": calculated["height"], "selected_preset": closest["name"]}
+        return {"width": width, "height": height, "selected_preset": closest["name"]}
 
     scaled = scale_to_preset_aspect_ratio(width, height, preset_aspect)
-    calculated = apply_custom_calculation(scaled["width"], scaled["height"], category, presets)
-    return {"width": calculated["width"], "height": calculated["height"], "selected_preset": closest["name"]}
+    return {"width": scaled["width"], "height": scaled["height"], "selected_preset": closest["name"]}
 
 
 def calculate_scaled_dimensions(width, height, scale, preserve_ratio):
@@ -219,6 +231,7 @@ def apply_backend_auto_detect_fallback(
     auto_fit_on_change,
     auto_resize_on_change,
     auto_snap_on_change,
+    smart_fit,
     use_custom_calc,
     preserve_scaling_ratio,
     selected_category,
@@ -244,6 +257,7 @@ def apply_backend_auto_detect_fallback(
         auto_fit_on_change=auto_fit_on_change,
         auto_resize_on_change=auto_resize_on_change,
         auto_snap_on_change=auto_snap_on_change,
+        smart_fit=smart_fit,
         use_custom_calc=use_custom_calc,
         preserve_scaling_ratio=preserve_scaling_ratio,
         selected_category=selected_category,
@@ -270,6 +284,7 @@ def calculate_resolution(
     auto_fit_on_change=False,
     auto_resize_on_change=False,
     auto_snap_on_change=False,
+    smart_fit=False,
     use_custom_calc=False,
     preserve_scaling_ratio=False,
     selected_category="",
@@ -303,7 +318,7 @@ def calculate_resolution(
 
     if action == "auto_fit":
         if selected_category:
-            fitted = calculate_auto_fit(width, height, selected_category, use_custom_calc, presets)
+            fitted = calculate_auto_fit(width, height, selected_category, smart_fit, presets, preserve_scaling_ratio)
             width, height = fitted["width"], fitted["height"]
             selected_preset = fitted.get("selected_preset")
 
@@ -330,7 +345,7 @@ def calculate_resolution(
 
     elif action == "auto_detect":
         if auto_fit_on_change and selected_category:
-            fitted = calculate_auto_fit(width, height, selected_category, False, presets)
+            fitted = calculate_auto_fit(width, height, selected_category, smart_fit, presets, preserve_scaling_ratio)
             width, height = fitted["width"], fitted["height"]
             selected_preset = fitted.get("selected_preset")
 

@@ -61,6 +61,7 @@ export const autoDetectMethods = {
         this.setBackendFallbackWidgetValue('autoFitOnChange', !!props.autoFitOnChange);
         this.setBackendFallbackWidgetValue('autoResizeOnChange', !!props.autoResizeOnChange);
         this.setBackendFallbackWidgetValue('autoSnapOnChange', !!props.autoSnapOnChange);
+        this.setBackendFallbackWidgetValue('smartFit', !!props.smartFit);
         this.setBackendFallbackWidgetValue('useCustomCalc', !!props.useCustomCalc);
         this.setBackendFallbackWidgetValue('preserveScalingRatio', !!props.preserveScalingRatio);
         this.setBackendFallbackWidgetValue('selectedCategory', props.selectedCategory || "");

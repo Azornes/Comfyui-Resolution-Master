@@ -30,6 +30,7 @@ def _normalize_payload(payload):
         "auto_fit_on_change": _payload_bool(payload, "auto_fit_on_change"),
         "auto_resize_on_change": _payload_bool(payload, "auto_resize_on_change"),
         "auto_snap_on_change": _payload_bool(payload, "auto_snap_on_change"),
+        "smart_fit": _payload_bool(payload, "smart_fit"),
         "use_custom_calc": _payload_bool(payload, "use_custom_calc"),
         "preserve_scaling_ratio": _payload_bool(payload, "preserve_scaling_ratio"),
         "selected_category": payload.get("selected_category") or "",
