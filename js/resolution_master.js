@@ -53,6 +53,15 @@ class ResolutionMasterCanvas {
         this.detectedDimensions = null;
         this.lastBackendDimensionsTimestamp = null;
         this.dimensionCheckInterval = null;
+        this.autoDetectCheckTimeout = null;
+        this.lastAutoDetectCheckReason = null;
+        this.watchedLivePreviewSourceNode = null;
+        this.watchedLivePreviewElement = null;
+        this.watchedLivePreviewWidgets = new Set();
+        this.lastLivePreviewSignature = null;
+        this.lastLivePreviewChangeAtMs = null;
+        this.awaitingLivePreviewUntilMs = null;
+        this.awaitingLivePreviewReason = null;
         this.manuallySetByAutoFit = false;
         this.canvasDragAspectLock = null;
         this.canvasDotsCache = null;

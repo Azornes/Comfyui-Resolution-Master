@@ -287,6 +287,13 @@ export const nodeLifecycleMethods = {
         node.onConnectionsChange = function() {
             const result = origOnConnectionsChange?.apply(this, arguments);
             self.applyCompactSlotLabels();
+            if (self.node.properties.autoDetect) {
+                self.markLivePreviewPending('connection changed');
+                self.refreshLivePreviewWatcher();
+                self.scheduleAutoDetectCheck('connection changed', 0);
+            } else {
+                self.teardownLivePreviewWatcher();
+            }
             return result;
         };
         const origOnSerialize = node.onSerialize;
@@ -303,10 +310,7 @@ export const nodeLifecycleMethods = {
         };
         const origOnRemoved = node.onRemoved;
         node.onRemoved = function() {
-            if (self.dimensionCheckInterval) {
-                clearInterval(self.dimensionCheckInterval);
-                self.dimensionCheckInterval = null;
-            }
+            self.stopAutoDetect();
             if (self.tooltipTimer) {
                 clearTimeout(self.tooltipTimer);
                 self.tooltipTimer = null;

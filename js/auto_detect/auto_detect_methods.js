@@ -1,25 +1,266 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('auto_detect_methods');
+const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 5000;
+const AUTO_DETECT_DEBOUNCE_MS = 30;
+const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 5000;
+const AUTO_DETECT_FRONTEND_PREVIEW_RETRY_MS = 150;
+const AUTO_DETECT_WIDGET_WATCHERS_PROP = "__resolutionMasterAutoDetectWatchers";
+const AUTO_DETECT_WIDGET_ORIGINAL_CALLBACK_PROP = "__resolutionMasterAutoDetectOriginalCallback";
+const AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP = "__resolutionMasterAutoDetectPatchedCallback";
+const LIVE_PREVIEW_WIDGET_NAMES = new Set([
+    "image",
+    "upload",
+    "file",
+    "filename",
+    "path",
+    "url",
+    "image_path"
+]);
+
+function isLivePreviewWidget(widget) {
+    const name = String(widget?.name || "").toLowerCase();
+    return LIVE_PREVIEW_WIDGET_NAMES.has(name) || typeof widget?.value === "string";
+}
 
 export const autoDetectMethods = {
     startAutoDetect() {
-        if (this.dimensionCheckInterval) return;
+        if (this.dimensionCheckInterval) {
+            this.refreshLivePreviewWatcher();
+            this.scheduleAutoDetectCheck('auto-detect already running', 0);
+            return;
+        }
         log.info('Auto-detect started', {
             nodeId: this.node?.id ?? null,
             source: this.node?.properties?.autoDetectSource || 'backend'
         });
-        this.checkForImageDimensions();
-        this.dimensionCheckInterval = setInterval(() => this.checkForImageDimensions(), 1000);
+        this.refreshLivePreviewWatcher();
+        this.scheduleAutoDetectCheck('auto-detect started', 0);
+        this.dimensionCheckInterval = setInterval(() => {
+            this.refreshLivePreviewWatcher();
+            this.scheduleAutoDetectCheck('fallback poll', 0);
+        }, AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS);
     },
 
     stopAutoDetect() {
+        const wasRunning = !!this.dimensionCheckInterval;
         if (this.dimensionCheckInterval) {
             clearInterval(this.dimensionCheckInterval);
             this.dimensionCheckInterval = null;
+        }
+        this.clearScheduledAutoDetectCheck();
+        this.teardownLivePreviewWatcher();
+        if (wasRunning) {
             log.info('Auto-detect stopped', {
                 nodeId: this.node?.id ?? null
             });
+        }
+    },
+
+    clearScheduledAutoDetectCheck() {
+        if (this.autoDetectCheckTimeout) {
+            clearTimeout(this.autoDetectCheckTimeout);
+            this.autoDetectCheckTimeout = null;
+        }
+    },
+
+    scheduleAutoDetectCheck(reason = 'scheduled', delay = AUTO_DETECT_DEBOUNCE_MS) {
+        if (!this.node?.properties?.autoDetect) return;
+
+        this.clearScheduledAutoDetectCheck();
+        this.lastAutoDetectCheckReason = reason;
+        this.autoDetectCheckTimeout = setTimeout(() => {
+            this.autoDetectCheckTimeout = null;
+            this.refreshLivePreviewWatcher(false);
+            this.checkForImageDimensions();
+        }, Math.max(0, delay));
+    },
+
+    markLivePreviewPending(reason = 'frontend source changed') {
+        this.lastLivePreviewChangeAtMs = Date.now();
+        this.awaitingLivePreviewUntilMs = this.lastLivePreviewChangeAtMs + AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS;
+        this.awaitingLivePreviewReason = reason;
+    },
+
+    clearLivePreviewPending() {
+        this.awaitingLivePreviewUntilMs = null;
+        this.awaitingLivePreviewReason = null;
+    },
+
+    isAwaitingLivePreview() {
+        return Number.isFinite(this.awaitingLivePreviewUntilMs) && Date.now() < this.awaitingLivePreviewUntilMs;
+    },
+
+    isBackendCacheStaleForLivePreviewChange(dimensions) {
+        if (!dimensions || !Number.isFinite(this.lastLivePreviewChangeAtMs)) return false;
+
+        const backendTimestampMs = Number(dimensions.timestamp) * 1000;
+        if (!Number.isFinite(backendTimestampMs)) return true;
+
+        return backendTimestampMs < this.lastLivePreviewChangeAtMs;
+    },
+
+    refreshLivePreviewWatcher(scheduleOnChange = true) {
+        if (!this.node?.properties?.autoDetect) {
+            this.teardownLivePreviewWatcher();
+            return;
+        }
+
+        const sourceNode = this.getConnectedSourceNode();
+        if (sourceNode !== this.watchedLivePreviewSourceNode) {
+            this.teardownLivePreviewWatcher();
+            this.watchedLivePreviewSourceNode = sourceNode;
+            this.lastLivePreviewSignature = null;
+        }
+
+        if (!sourceNode) {
+            this.detachLivePreviewElementWatcher();
+            this.detachLivePreviewWidgetWatchers();
+            return;
+        }
+
+        this.attachLivePreviewWidgetWatchers(sourceNode);
+        this.attachLivePreviewElementWatcher(sourceNode?.imgs?.[0]);
+
+        const dimensions = this.getConnectedPreviewDimensions();
+        const nextSignature = dimensions?.signature || null;
+        if (nextSignature !== this.lastLivePreviewSignature) {
+            this.lastLivePreviewSignature = nextSignature;
+            if (nextSignature) {
+                this.clearLivePreviewPending();
+            } else {
+                this.markLivePreviewPending('frontend preview cleared');
+            }
+            if (scheduleOnChange) {
+                this.scheduleAutoDetectCheck(nextSignature ? 'frontend preview changed' : 'frontend preview cleared', 0);
+            }
+        }
+    },
+
+    teardownLivePreviewWatcher() {
+        this.detachLivePreviewElementWatcher();
+        this.detachLivePreviewWidgetWatchers();
+        this.watchedLivePreviewSourceNode = null;
+        this.lastLivePreviewSignature = null;
+        this.clearLivePreviewPending();
+    },
+
+    detachLivePreviewElementWatcher() {
+        if (this.watchedLivePreviewElement && this.livePreviewElementChangeHandler) {
+            this.watchedLivePreviewElement.removeEventListener?.('load', this.livePreviewElementChangeHandler);
+            this.watchedLivePreviewElement.removeEventListener?.('error', this.livePreviewElementChangeHandler);
+        }
+        this.watchedLivePreviewElement = null;
+    },
+
+    attachLivePreviewElementWatcher(preview) {
+        if (preview === this.watchedLivePreviewElement) return;
+
+        this.detachLivePreviewElementWatcher();
+        this.watchedLivePreviewElement = preview || null;
+
+        if (!preview?.addEventListener) return;
+
+        if (!this.livePreviewElementChangeHandler) {
+            this.livePreviewElementChangeHandler = () => {
+                this.markLivePreviewPending('preview image event');
+                this.scheduleAutoDetectCheck('preview image event', 0);
+            };
+        }
+
+        preview.addEventListener('load', this.livePreviewElementChangeHandler);
+        preview.addEventListener('error', this.livePreviewElementChangeHandler);
+    },
+
+    detachLivePreviewWidgetWatchers() {
+        if (!this.watchedLivePreviewWidgets?.size || !this.livePreviewWidgetChangeHandler) {
+            this.watchedLivePreviewWidgets = new Set();
+            return;
+        }
+
+        for (const widget of this.watchedLivePreviewWidgets) {
+            widget?.[AUTO_DETECT_WIDGET_WATCHERS_PROP]?.delete(this.livePreviewWidgetChangeHandler);
+            if (
+                widget?.[AUTO_DETECT_WIDGET_WATCHERS_PROP]?.size === 0 &&
+                widget.callback === widget[AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP]
+            ) {
+                widget.callback = widget[AUTO_DETECT_WIDGET_ORIGINAL_CALLBACK_PROP];
+                delete widget[AUTO_DETECT_WIDGET_WATCHERS_PROP];
+                delete widget[AUTO_DETECT_WIDGET_ORIGINAL_CALLBACK_PROP];
+                delete widget[AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP];
+            }
+        }
+
+        this.watchedLivePreviewWidgets = new Set();
+    },
+
+    attachLivePreviewWidgetWatchers(sourceNode) {
+        const nextWidgets = new Set((sourceNode?.widgets || []).filter(isLivePreviewWidget));
+        const currentWidgets = this.watchedLivePreviewWidgets || new Set();
+        let changed = currentWidgets.size !== nextWidgets.size;
+        if (!changed) {
+            for (const widget of nextWidgets) {
+                if (
+                    !currentWidgets.has(widget) ||
+                    widget.callback !== widget[AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP]
+                ) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        if (!changed) return;
+
+        this.detachLivePreviewWidgetWatchers();
+        this.watchedLivePreviewWidgets = nextWidgets;
+
+        if (!this.livePreviewWidgetChangeHandler) {
+            this.livePreviewWidgetChangeHandler = () => {
+                this.markLivePreviewPending('source widget changed');
+                this.scheduleAutoDetectCheck('source widget changed', 0);
+                globalThis.requestAnimationFrame?.(() => this.scheduleAutoDetectCheck('source widget changed after frame', 0));
+            };
+        }
+
+        for (const widget of nextWidgets) {
+            if (
+                !widget[AUTO_DETECT_WIDGET_WATCHERS_PROP] ||
+                widget.callback !== widget[AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP]
+            ) {
+                const originalCallback = widget.callback;
+                const watchers = widget[AUTO_DETECT_WIDGET_WATCHERS_PROP] || new Set();
+                const patchedCallback = function(...args) {
+                    const notifyWatchers = () => {
+                        try {
+                            widget[AUTO_DETECT_WIDGET_WATCHERS_PROP]?.forEach(watcher => watcher());
+                        } catch (error) {
+                            log.debug('Live preview widget watcher failed:', error);
+                        }
+                    };
+
+                    let result;
+                    try {
+                        result = originalCallback?.apply(this, args);
+                    } catch (error) {
+                        notifyWatchers();
+                        throw error;
+                    }
+
+                    if (typeof result?.then === "function") {
+                        result.then(notifyWatchers, notifyWatchers);
+                    } else {
+                        notifyWatchers();
+                    }
+                    return result;
+                };
+
+                widget[AUTO_DETECT_WIDGET_WATCHERS_PROP] = watchers;
+                widget[AUTO_DETECT_WIDGET_ORIGINAL_CALLBACK_PROP] = originalCallback;
+                widget[AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP] = patchedCallback;
+                widget.callback = patchedCallback;
+            }
+
+            widget[AUTO_DETECT_WIDGET_WATCHERS_PROP].add(this.livePreviewWidgetChangeHandler);
         }
     },
 
@@ -111,11 +352,15 @@ export const autoDetectMethods = {
     },
 
     async checkForImageDimensions() {
-        if (this._isCheckingDimensions) return;
+        if (this._isCheckingDimensions) {
+            this._pendingDimensionCheck = true;
+            return;
+        }
 
         const node = this.node;
         this._isCheckingDimensions = true;
         try {
+            this.refreshLivePreviewWatcher(false);
             if (!node.inputs?.[0]?.link) {
                 if (this.detectedDimensions) {
                     log.debug('Auto-detect dimensions cleared because input is disconnected', {
@@ -129,7 +374,26 @@ export const autoDetectMethods = {
             }
 
             const previewDimensions = this.getConnectedPreviewDimensions();
+            if (previewDimensions) {
+                this.clearLivePreviewPending();
+            } else if (this.isAwaitingLivePreview()) {
+                this.scheduleAutoDetectCheck('waiting for frontend preview', AUTO_DETECT_FRONTEND_PREVIEW_RETRY_MS);
+                return;
+            }
+
             const backendDimensions = previewDimensions ? null : await this.getBackendDetectedDimensions();
+            if (this.isBackendCacheStaleForLivePreviewChange(backendDimensions)) {
+                log.debug('Ignoring stale backend dimensions after frontend source change', {
+                    nodeId: node.id ?? null,
+                    width: backendDimensions.width,
+                    height: backendDimensions.height,
+                    backendTimestamp: backendDimensions.timestamp,
+                    livePreviewChangeAt: this.lastLivePreviewChangeAtMs
+                });
+                this.scheduleAutoDetectCheck('stale backend cache ignored', AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS);
+                return;
+            }
+
             const dimensions = previewDimensions || backendDimensions;
             if (!dimensions) {
                 if (this.detectedDimensions) {
@@ -182,6 +446,10 @@ export const autoDetectMethods = {
             log.error('Error checking for image dimensions:', error);
         } finally {
             this._isCheckingDimensions = false;
+            if (this._pendingDimensionCheck) {
+                this._pendingDimensionCheck = false;
+                this.scheduleAutoDetectCheck('pending dimensions check', 0);
+            }
         }
     },
 
@@ -197,20 +465,11 @@ export const autoDetectMethods = {
 
     getPreviewSourceSignatureInfo(sourceNode, preview, width, height) {
         const nodeId = sourceNode?.id ?? "unknown";
-        const relevantWidgetNames = new Set([
-            "image",
-            "upload",
-            "file",
-            "filename",
-            "path",
-            "url",
-            "image_path"
-        ]);
         const widgetParts = (sourceNode?.widgets || [])
             .filter(widget => {
                 const name = String(widget?.name || "").toLowerCase();
                 const value = widget?.value;
-                return relevantWidgetNames.has(name) || typeof value === "string";
+                return LIVE_PREVIEW_WIDGET_NAMES.has(name) || typeof value === "string";
             })
             .map(widget => `${widget?.name || ""}:${String(widget?.value ?? "")}`)
             .join("|");
