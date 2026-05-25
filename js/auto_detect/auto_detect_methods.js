@@ -2,6 +2,7 @@ import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('auto_detect_methods');
 const LAYERFORGE_NODE_TYPE = "LayerForgeNode";
+const LOCAL_IMAGE_GALLERY_NODE_TYPE = "LocalImageGallery";
 const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 5000;
 const AUTO_DETECT_DEBOUNCE_MS = 30;
 const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 5000;
@@ -21,7 +22,10 @@ const LIVE_PREVIEW_WIDGET_NAMES = new Set([
     "width",
     "height",
     "canvas_width",
-    "canvas_height"
+    "canvas_height",
+    "selected_image",
+    "source_folder",
+    "actual_source"
 ]);
 
 function isLivePreviewWidget(widget) {
@@ -44,6 +48,7 @@ export const autoDetectMethods = {
             nodeId: this.node?.id ?? null,
             source: this.node?.properties?.autoDetectSource || 'backend'
         });
+        this.autoDetectStartedAtMs = Date.now();
         this.refreshLivePreviewWatcher();
         this.scheduleAutoDetectCheck('auto-detect started', 0);
         this.dimensionCheckInterval = setInterval(() => {
@@ -60,6 +65,7 @@ export const autoDetectMethods = {
         }
         this.clearScheduledAutoDetectCheck();
         this.teardownLivePreviewWatcher();
+        this.autoDetectStartedAtMs = null;
         if (wasRunning) {
             log.info('Auto-detect stopped', {
                 nodeId: this.node?.id ?? null
@@ -110,6 +116,29 @@ export const autoDetectMethods = {
         return backendTimestampMs < this.lastLivePreviewChangeAtMs;
     },
 
+    haveDifferentDimensions(first, second) {
+        if (!first || !second) return false;
+        return Math.round(Number(first.width) || 0) !== Math.round(Number(second.width) || 0)
+            || Math.round(Number(first.height) || 0) !== Math.round(Number(second.height) || 0);
+    },
+
+    shouldPreferBackendDimensions(frontendDimensions, backendDimensions, previousBackendTimestamp) {
+        if (!frontendDimensions || !backendDimensions) return false;
+        if (!this.haveDifferentDimensions(frontendDimensions, backendDimensions)) return false;
+        if (this.isBackendCacheStaleForLivePreviewChange(backendDimensions)) return false;
+
+        const backendTimestampMs = Number(backendDimensions.timestamp) * 1000;
+        if (!Number.isFinite(backendTimestampMs)) return false;
+
+        const previousBackendTimestampMs = Number(previousBackendTimestamp) * 1000;
+        if (Number.isFinite(previousBackendTimestampMs)) {
+            return backendTimestampMs > previousBackendTimestampMs;
+        }
+
+        return Number.isFinite(this.autoDetectStartedAtMs)
+            && backendTimestampMs >= this.autoDetectStartedAtMs;
+    },
+
     refreshLivePreviewWatcher(scheduleOnChange = true) {
         if (!this.node?.properties?.autoDetect) {
             this.teardownLivePreviewWatcher();
@@ -131,6 +160,7 @@ export const autoDetectMethods = {
 
         this.attachLivePreviewWidgetWatchers(sourceNode);
         this.attachLivePreviewElementWatcher(sourceNode?.imgs?.[0]);
+        this.attachLocalImageGalleryWatcher(sourceNode);
 
         const dimensions = this.getConnectedPreviewDimensions();
         const nextSignature = dimensions?.signature || null;
@@ -150,6 +180,7 @@ export const autoDetectMethods = {
     teardownLivePreviewWatcher() {
         this.detachLivePreviewElementWatcher();
         this.detachLivePreviewWidgetWatchers();
+        this.detachLocalImageGalleryWatcher();
         this.watchedLivePreviewSourceNode = null;
         this.lastLivePreviewSignature = null;
         this.clearLivePreviewPending();
@@ -274,6 +305,42 @@ export const autoDetectMethods = {
         }
     },
 
+    detachLocalImageGalleryWatcher() {
+        if (this.watchedLocalImageGalleryElement && this.localImageGalleryChangeHandler) {
+            this.watchedLocalImageGalleryElement.removeEventListener?.('click', this.localImageGalleryChangeHandler);
+            this.watchedLocalImageGalleryElement.removeEventListener?.('change', this.localImageGalleryChangeHandler);
+        }
+        this.watchedLocalImageGalleryElement = null;
+    },
+
+    attachLocalImageGalleryWatcher(sourceNode) {
+        if (!this.isLocalImageGallerySourceNode(sourceNode)) {
+            this.detachLocalImageGalleryWatcher();
+            return;
+        }
+
+        const galleryElement = sourceNode?._gallery?.elements?.viewport
+            || sourceNode?._gallery?.elements?.container
+            || null;
+        if (galleryElement === this.watchedLocalImageGalleryElement) return;
+
+        this.detachLocalImageGalleryWatcher();
+        this.watchedLocalImageGalleryElement = galleryElement;
+        if (!galleryElement?.addEventListener) return;
+
+        if (!this.localImageGalleryChangeHandler) {
+            this.localImageGalleryChangeHandler = () => {
+                globalThis.setTimeout?.(() => {
+                    this.markLivePreviewPending('local image gallery selection changed');
+                    this.scheduleAutoDetectCheck('local image gallery selection changed', 0);
+                }, 0);
+            };
+        }
+
+        galleryElement.addEventListener('click', this.localImageGalleryChangeHandler);
+        galleryElement.addEventListener('change', this.localImageGalleryChangeHandler);
+    },
+
     setAutoDetectSource(source) {
         const normalizedSource = source === 'frontend' ? 'frontend' : 'backend';
         this.node.properties.autoDetectSource = normalizedSource;
@@ -391,8 +458,10 @@ export const autoDetectMethods = {
                 return;
             }
 
-            const backendDimensions = previewDimensions ? null : await this.getBackendDetectedDimensions();
-            if (this.isBackendCacheStaleForLivePreviewChange(backendDimensions)) {
+            const previousBackendTimestamp = this.lastBackendDimensionsTimestamp;
+            const backendDimensions = await this.getBackendDetectedDimensions();
+            const backendCacheIsStale = this.isBackendCacheStaleForLivePreviewChange(backendDimensions);
+            if (!previewDimensions && backendCacheIsStale) {
                 log.debug('Ignoring stale backend dimensions after frontend source change', {
                     nodeId: node.id ?? null,
                     width: backendDimensions.width,
@@ -404,7 +473,18 @@ export const autoDetectMethods = {
                 return;
             }
 
-            const dimensions = previewDimensions || backendDimensions;
+            let dimensions = previewDimensions || backendDimensions;
+            if (this.shouldPreferBackendDimensions(previewDimensions, backendDimensions, previousBackendTimestamp)) {
+                log.debug('Backend dimensions corrected frontend auto-detect result', {
+                    nodeId: node.id ?? null,
+                    frontendWidth: previewDimensions.width,
+                    frontendHeight: previewDimensions.height,
+                    backendWidth: backendDimensions.width,
+                    backendHeight: backendDimensions.height,
+                    backendTimestamp: backendDimensions.timestamp
+                });
+                dimensions = backendDimensions;
+            }
             if (!dimensions) {
                 if (this.detectedDimensions) {
                     log.debug('Auto-detect dimensions cleared', {
@@ -417,7 +497,7 @@ export const autoDetectMethods = {
                 return;
             }
 
-            this.setAutoDetectSource(previewDimensions ? 'frontend' : 'backend');
+            this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');
             this.setRawAutoDetectDimensions(dimensions);
 
             const previousSignature = this.detectedDimensions?.signature || null;
@@ -505,6 +585,13 @@ export const autoDetectMethods = {
             || sourceNode?.canvasWidget?.canvas?.outputAreaBounds);
     },
 
+    isLocalImageGallerySourceNode(sourceNode) {
+        return !!(sourceNode?.type === LOCAL_IMAGE_GALLERY_NODE_TYPE
+            || sourceNode?.comfyClass === LOCAL_IMAGE_GALLERY_NODE_TYPE
+            || sourceNode?.constructor?.nodeData?.name === LOCAL_IMAGE_GALLERY_NODE_TYPE
+            || sourceNode?._gallery?.elements?.selectedName);
+    },
+
     getLayerForgeDimensions(sourceNode) {
         if (!this.isLayerForgeSourceNode(sourceNode)) return null;
 
@@ -534,6 +621,57 @@ export const autoDetectMethods = {
         };
     },
 
+    parseDimensionsFromText(text) {
+        const match = String(text || "").match(/\((\d+)\s*[x×]\s*(\d+)\)/i);
+        if (!match) return null;
+
+        const width = Number(match[1]);
+        const height = Number(match[2]);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            return null;
+        }
+
+        return { width: Math.round(width), height: Math.round(height) };
+    },
+
+    getLocalImageGalleryDimensions(sourceNode) {
+        if (!this.isLocalImageGallerySourceNode(sourceNode)) return null;
+
+        const gallery = sourceNode?._gallery;
+        const selectedImage = gallery?.selectedImage || sourceNode?.properties?.selected_image || "";
+        if (!selectedImage) return null;
+
+        let width = Number(gallery?.selectedImageWidth);
+        let height = Number(gallery?.selectedImageHeight);
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            const textDimensions = this.parseDimensionsFromText(gallery?.elements?.selectedName?.textContent);
+            width = Number(textDimensions?.width);
+            height = Number(textDimensions?.height);
+        }
+        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+            return null;
+        }
+
+        const selectedSource = gallery?.selectedImageSource
+            || sourceNode?.properties?.actual_source
+            || sourceNode?.properties?.source_folder
+            || "";
+        return {
+            width: Math.round(width),
+            height: Math.round(height),
+            source: "frontend",
+            signature: [
+                "frontend:localimagegallery",
+                sourceNode?.id ?? "unknown",
+                selectedSource,
+                selectedImage,
+                Math.round(width),
+                Math.round(height)
+            ].join(":"),
+            liveChangeTracking: true
+        };
+    },
+
     isIgnoredPreviewPlaceholder(sourceNode, preview) {
         if (!preview) return false;
 
@@ -552,6 +690,8 @@ export const autoDetectMethods = {
         if (!sourceNode) return null;
         const layerForgeDimensions = this.getLayerForgeDimensions(sourceNode);
         if (layerForgeDimensions) return layerForgeDimensions;
+        const galleryDimensions = this.getLocalImageGalleryDimensions(sourceNode);
+        if (galleryDimensions) return galleryDimensions;
 
         // Best-effort live UI hint: ComfyUI exposes preview images on many source nodes,
         // but the backend tensor remains the source of truth when the workflow executes.

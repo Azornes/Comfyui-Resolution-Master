@@ -52,12 +52,15 @@ class ResolutionMasterCanvas {
         this.tooltipMousePos = null; 
         this.detectedDimensions = null;
         this.lastBackendDimensionsTimestamp = null;
+        this.autoDetectStartedAtMs = null;
         this.dimensionCheckInterval = null;
         this.autoDetectCheckTimeout = null;
         this.lastAutoDetectCheckReason = null;
         this.watchedLivePreviewSourceNode = null;
         this.watchedLivePreviewElement = null;
         this.watchedLivePreviewWidgets = new Set();
+        this.watchedLocalImageGalleryElement = null;
+        this.localImageGalleryChangeHandler = null;
         this.lastLivePreviewSignature = null;
         this.lastLivePreviewChangeAtMs = null;
         this.awaitingLivePreviewUntilMs = null;
