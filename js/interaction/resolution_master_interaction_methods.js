@@ -1,4 +1,5 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
+import { inlineSvgIcons } from "../utils/icon_utils.js";
 import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 
 const log = createModuleLogger('resolution_master_interaction_methods');
@@ -538,8 +539,9 @@ export const interactionMethods = {
         const overlay = document.createElement('div');
         this.helpDialogOverlay = overlay;
         overlay.style.cssText = `
-            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.62);
             z-index: 9999; display: flex; align-items: center; justify-content: center;
+            padding: 24px; box-sizing: border-box; backdrop-filter: blur(2px);
         `;
         overlay.addEventListener('mousedown', (e) => {
             if (e.target === overlay) this.closeHelpDialog();
@@ -549,34 +551,79 @@ export const interactionMethods = {
         this.helpDialog = dialog;
         dialog.addEventListener('mousedown', (e) => e.stopPropagation());
         dialog.style.cssText = `
-            width: min(420px, calc(100vw - 40px));
-            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-            border: 1px solid rgba(160, 190, 255, 0.45);
-            border-radius: 8px; box-shadow: 0 12px 36px rgba(0,0,0,0.75);
-            color: #ddd; font-family: Arial, sans-serif; padding: 18px;
+            width: min(860px, calc(100vw - 32px)); max-height: calc(100vh - 40px);
+            overflow: auto; box-sizing: border-box;
+            background: linear-gradient(135deg, rgba(37,37,37,0.98) 0%, rgba(20,20,20,0.98) 100%);
+            border: 1px solid rgba(210, 220, 235, 0.28);
+            border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,0.82), inset 0 1px 0 rgba(255,255,255,0.05);
+            color: #ddd; font-family: Arial, sans-serif; padding: 0;
         `;
 
         dialog.innerHTML = `
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;">
-                <div style="font-size:16px; font-weight:700; color:#fff;">Resolution Master Help</div>
-                <button type="button" data-close style="width:28px; height:28px; border-radius:5px; border:1px solid #555; background:#333; color:#ddd; cursor:pointer; font-size:16px; line-height:1;">&times;</button>
+            <div style="padding:28px 40px 22px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:30px;">
+                    <div style="font-size:36px; line-height:1.1; font-weight:800; color:#e9e9e9; letter-spacing:0; text-shadow:0 2px 18px rgba(255,255,255,0.13);">Resolution Master Help</div>
+                    <button type="button" data-close aria-label="Close" style="width:50px; height:50px; border-radius:9px; border:1px solid rgba(210,220,235,0.25); background:linear-gradient(180deg, rgba(80,80,80,0.85), rgba(45,45,45,0.9)); color:#eee; cursor:pointer; font-size:28px; line-height:1; box-shadow:inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 18px rgba(0,0,0,0.35);">&times;</button>
+                </div>
+
+                <section style="margin-bottom:30px;">
+                    <div style="display:grid; grid-template-columns:26px minmax(0, 1fr); align-items:center; column-gap:10px; margin-bottom:14px; color:#d9d9d9;">
+                        <span style="display:flex; align-items:center; justify-content:center; width:26px; color:#bfc3c7;">${inlineSvgIcons.keyboard}</span>
+                        <div style="font-size:24px; line-height:1.2; font-weight:800; color:#e4e4e4;">2D Canvas Shortcuts</div>
+                    </div>
+                    <div style="border:1px solid rgba(210,220,235,0.16); border-radius:8px; overflow:hidden; background:rgba(10,10,10,0.17);">
+                        <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr); align-items:center; min-height:60px; border-bottom:1px solid rgba(210,220,235,0.12);">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; padding:10px 24px;">
+                                <span style="display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">${inlineSvgIcons.mouse}<span>Drag</span></span>
+                            </div>
+                            <div style="padding:10px 22px; color:#e2e2e2; font-size:18px; line-height:1.35; border-left:1px solid rgba(210,220,235,0.08);">Set width and height</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr); align-items:center; min-height:60px; border-bottom:1px solid rgba(210,220,235,0.12);">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; padding:10px 24px;">
+                                <span style="display:inline-flex; align-items:center; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">Shift</span>
+                                <span style="color:#f0f0f0; font-weight:700;">+</span>
+                                <span style="display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">${inlineSvgIcons.mouse}<span>Drag</span></span>
+                            </div>
+                            <div style="padding:10px 22px; color:#e2e2e2; font-size:18px; line-height:1.35; border-left:1px solid rgba(210,220,235,0.08);">Keep aspect ratio</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr); align-items:center; min-height:60px; border-bottom:1px solid rgba(210,220,235,0.12);">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; padding:10px 24px;">
+                                <span style="display:inline-flex; align-items:center; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">Ctrl</span>
+                                <span style="color:#f0f0f0; font-weight:700;">+</span>
+                                <span style="display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">${inlineSvgIcons.mouse}<span>Drag</span></span>
+                            </div>
+                            <div style="padding:10px 22px; color:#e2e2e2; font-size:18px; line-height:1.35; border-left:1px solid rgba(210,220,235,0.08);">Disable canvas snap</div>
+                        </div>
+                        <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr); align-items:center; min-height:60px;">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; padding:10px 24px;">
+                                <span style="display:inline-flex; align-items:center; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">Ctrl</span>
+                                <span style="color:#f0f0f0; font-weight:700;">+</span>
+                                <span style="display:inline-flex; align-items:center; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">Shift</span>
+                                <span style="color:#f0f0f0; font-weight:700;">+</span>
+                                <span style="display:inline-flex; align-items:center; gap:8px; min-height:36px; padding:0 13px; border:1px solid rgba(210,220,235,0.17); border-radius:6px; background:linear-gradient(180deg, rgba(78,78,78,0.78), rgba(40,40,40,0.8)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.08); color:#f0f0f0; font-size:18px; white-space:nowrap;">${inlineSvgIcons.mouse}<span>Drag</span></span>
+                            </div>
+                            <div style="padding:10px 22px; color:#e2e2e2; font-size:18px; line-height:1.35; border-left:1px solid rgba(210,220,235,0.08);">Keep aspect ratio with canvas snap disabled</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <div style="display:grid; grid-template-columns:26px minmax(0, 1fr); align-items:center; column-gap:10px; color:#d9d9d9;">
+                        <span style="display:flex; align-items:center; justify-content:center; width:26px; color:#bfc3c7;">${inlineSvgIcons.tip}</span>
+                        <div style="font-size:24px; line-height:1.2; font-weight:800; color:#e4e4e4;">Tip</div>
+                    </div>
+                    <div style="margin:13px 0 0 36px; color:#b9b9b9; font-size:18px; line-height:1.45;">Click most numeric values to enter a custom value.</div>
+                </section>
             </div>
-            <div style="font-size:12px; line-height:1.55; color:#cfcfcf;">
-                <div style="font-weight:700; color:#fff; margin-bottom:4px;">2D Canvas shortcuts</div>
-                <div>Drag: set width and height</div>
-                <div>Shift + drag: keep aspect ratio</div>
-                <div>Ctrl + drag: disable canvas snap</div>
-                <div>Ctrl + Shift + drag: keep exact aspect ratio</div>
-                <div style="font-weight:700; color:#fff; margin:14px 0 4px;">Tip</div>
-                <div>Most text values can be clicked to set a custom value.</div>
-                <div style="font-weight:700; color:#fff; margin:14px 0 4px;">Project</div>
-                <a href="https://github.com/Azornes/Comfyui-Resolution-Master" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; gap:6px; max-width:100%; color:#8fc7ff; text-decoration:none;">
-                    <span style="min-width:0; overflow-wrap:anywhere;">Azornes/Comfyui-Resolution-Master</span>
-                    <svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" fill="currentColor" style="flex:0 0 auto;">
-                        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.57 7.57 0 0 1 8 3.86c.68 0 1.36.09 2 .27 1.53-1.03 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.45.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"></path>
-                    </svg>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:18px; flex-wrap:wrap; padding:20px 40px 24px; border-top:1px solid rgba(210,220,235,0.18); background:rgba(255,255,255,0.02);">
+                <div style="display:flex; align-items:center; gap:14px; min-width:0; color:#bdbdbd; font-size:18px; line-height:1.4;">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; color:#f2cc60; background:rgba(242,204,96,0.14); border:1px solid rgba(242,204,96,0.42); box-shadow:0 0 20px rgba(242,204,96,0.12);">${inlineSvgIcons.star}</span>
+                    <span>If this node helps you, please consider <span style="color:#f2cc60; font-weight:700;">starring</span> the repository.</span>
+                </div>
+                <a href="https://github.com/Azornes/Comfyui-Resolution-Master" target="_blank" rel="noopener noreferrer" style="display:inline-flex; align-items:center; justify-content:center; gap:10px; min-height:44px; padding:0 18px; border:1px solid rgba(210,220,235,0.18); border-radius:7px; color:#f2f2f2; background:linear-gradient(180deg, rgba(48,48,48,0.72), rgba(26,26,26,0.88)); box-shadow:inset 0 1px 0 rgba(255,255,255,0.06), 0 6px 16px rgba(0,0,0,0.25); text-decoration:none; font-size:18px; white-space:nowrap;">
+                    <span style="color:#f2f2f2;">${inlineSvgIcons.github}</span>
+                    <span>Go to GitHub</span>
                 </a>
-                <div style="margin-top:10px; color:#aaa;">If this node helps you, please consider <span style="display:inline-flex; align-items:center; gap:4px;">starring <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style="flex:0 0 auto; color:#f2cc60; transform:translateY(-1px);"><path d="M8 .25a.75.75 0 0 1 .673.418l1.882 3.815 4.21.612a.75.75 0 0 1 .416 1.279l-3.046 2.97.719 4.192a.751.751 0 0 1-1.088.791L8 12.347l-3.766 1.98a.75.75 0 0 1-1.088-.79l.72-4.194L.818 6.374a.75.75 0 0 1 .416-1.28l4.21-.611L7.327.668A.75.75 0 0 1 8 .25Z"></path></svg></span> the repository.</div>
             </div>
         `;
 
