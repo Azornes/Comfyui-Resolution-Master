@@ -961,16 +961,16 @@ export const drawingMethods = {
 
         const grad = ctx.createLinearGradient(x, y, x + w, y);
         if (isOn) {
-            grad.addColorStop(0, "#3a76d6");
-            grad.addColorStop(1, "#5a96f6");
+            grad.addColorStop(0, hover ? "rgba(72, 140, 255, 0.94)" : "rgba(58, 118, 214, 0.90)");
+            grad.addColorStop(1, hover ? "rgba(104, 166, 255, 0.94)" : "rgba(90, 150, 246, 0.90)");
         } else {
-            grad.addColorStop(0, "#555");
-            grad.addColorStop(1, "#666");
+            grad.addColorStop(0, hover ? "rgba(255, 255, 255, 0.22)" : "rgba(255, 255, 255, 0.16)");
+            grad.addColorStop(1, hover ? "rgba(255, 255, 255, 0.30)" : "rgba(255, 255, 255, 0.24)");
         }
         ctx.fillStyle = grad;
         ctx.fill();
 
-        ctx.strokeStyle = hover ? "#888" : "#222";
+        ctx.strokeStyle = hover ? "rgba(255, 255, 255, 0.32)" : "rgba(0, 0, 0, 0.36)";
         ctx.stroke();
 
         const knobX = isOn ? x + w - h + 2 : x + 2;
