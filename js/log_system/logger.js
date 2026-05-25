@@ -1,7 +1,7 @@
 /**
 author: Azornes
 title: AzLogs
-version: 1.5.4
+version: 1.5.5
 description: Logging Setup - Central logging system
 
 Features:
@@ -60,6 +60,7 @@ const DEFAULT_CONFIG = {
     maxStoredLogs: 1000,
     timestampFormat: 'HH:mm:ss',
     includeMilliseconds: true,
+    compactCallsite: true,
     storageKey: LOGGER_STORAGE_KEY
 };
 const COLORS = {
@@ -199,12 +200,20 @@ class Logger {
         const consoleFn = typeof console[consoleMethod] === 'function'
             ? console[consoleMethod].bind(console)
             : console.log.bind(console);
+        const detailFn = typeof console.log === 'function'
+            ? console.log.bind(console)
+            : consoleFn;
+        const normalizedCallsite = this.normalizeCallsite(callsite);
+        const shouldGroupCallsite = this.shouldGroupCallsite(normalizedCallsite);
+        const outputFn = shouldGroupCallsite
+            ? console.groupCollapsed.bind(console)
+            : consoleFn;
+        const { root, detail } = this.splitModuleName(module);
+        const message = this.stringifyArgs(args);
+        const suffix = this.formatSuffix(detail, normalizedCallsite);
         if (this.config.useColors && typeof consoleFn === 'function') {
             const color = COLORS[level] || '#000000';
-            const { root, detail } = this.splitModuleName(module);
-            const message = this.stringifyArgs(args);
-            const suffix = this.formatSuffix(detail, callsite);
-            consoleFn(
+            outputFn(
                 `%c ${levelName.padEnd(LEVEL_WIDTH, ' ')} %c ${timestamp} %c %c ${root} %c %c ${message}%c${suffix}`,
                 `background:${color};color:#fff;font-weight:bold;`,
                 `background:${TIME_BG};color:#fff;font-weight:bold;`,
@@ -214,11 +223,11 @@ class Logger {
                 `color:${color};font-weight:bold;`,
                 '',
             );
+            this.printCallsiteDetails(detailFn, normalizedCallsite);
             return;
         }
-        const { root, detail } = this.splitModuleName(module);
-        const suffix = this.formatSuffix(detail, callsite);
-        consoleFn(`${levelName.padEnd(LEVEL_WIDTH, ' ')} ${timestamp} ${root} ${this.stringifyArgs(args)}${suffix}`);
+        outputFn(`${levelName.padEnd(LEVEL_WIDTH, ' ')} ${timestamp} ${root} ${message}${suffix}`);
+        this.printCallsiteDetails(detailFn, normalizedCallsite);
     }
 
     splitModuleName(module) {
@@ -275,7 +284,7 @@ class Logger {
                 continue;
             }
 
-            return this.formatCallsite(parsed);
+            return this.createCallsite(parsed);
         }
 
         return '';
@@ -297,11 +306,74 @@ class Logger {
     }
 
     formatCallsite(callsite) {
+        if (!callsite) {
+            return '';
+        }
+        if (typeof callsite === 'string') {
+            return callsite;
+        }
+        if (callsite.full) {
+            return callsite.full;
+        }
         return `${callsite.url}:${callsite.line}:${callsite.column}`;
     }
 
-    formatSuffix(detail, callsite) {
-        const suffixDetail = callsite || detail;
+    createCallsite(callsite) {
+        const full = this.formatCallsite(callsite);
+        return {
+            url: callsite.url,
+            line: callsite.line,
+            column: callsite.column,
+            full,
+            label: this.formatCompactCallsite(callsite)
+        };
+    }
+
+    normalizeCallsite(callsite) {
+        if (!callsite) {
+            return null;
+        }
+        const full = this.formatCallsite(callsite);
+        if (!full) {
+            return null;
+        }
+        return {
+            ...(typeof callsite === 'object' ? callsite : {}),
+            full,
+            label: callsite.label || this.formatCompactCallsite(callsite)
+        };
+    }
+
+    formatCompactCallsite(callsite) {
+        const source = typeof callsite === 'string'
+            ? callsite.replace(/:\d+:\d+$/, '')
+            : callsite.url || callsite.full || '';
+        const normalizedSource = String(source).split(/[?#]/)[0].replace(/\\/g, '/');
+        const filename = normalizedSource.slice(normalizedSource.lastIndexOf('/') + 1);
+        return filename.replace(/\.(?:mjs|js|tsx?|jsx)$/i, '') || this.formatCallsite(callsite);
+    }
+
+    shouldGroupCallsite(callsite) {
+        return this.config.compactCallsite !== false
+            && !!callsite?.full
+            && typeof console.groupCollapsed === 'function'
+            && typeof console.groupEnd === 'function';
+    }
+
+    printCallsiteDetails(consoleFn, callsite) {
+        if (!this.shouldGroupCallsite(callsite)) {
+            return;
+        }
+        consoleFn(`Source: ${callsite.full}`);
+        console.groupEnd();
+    }
+
+    formatSuffix(detail, callsite, options = {}) {
+        const normalizedCallsite = this.normalizeCallsite(callsite);
+        const compactCallsite = options.compactCallsite ?? this.config.compactCallsite !== false;
+        const suffixDetail = normalizedCallsite
+            ? (compactCallsite ? normalizedCallsite.label : normalizedCallsite.full)
+            : detail;
         return suffixDetail ? ` (${suffixDetail})` : '';
     }
 
@@ -445,7 +517,7 @@ class Logger {
         else {
             content = this.logs.map((log) => {
                 const { root, detail } = this.splitModuleName(log.module);
-                const suffix = this.formatSuffix(detail, log.callsite);
+                const suffix = this.formatSuffix(detail, log.callsite, { compactCallsite: false });
                 return `${log.levelName.padEnd(LEVEL_WIDTH, ' ')} ${log.timestamp} ${root} ${this.stringifyArgs(log.args)}${suffix}`;
             }).join('\n');
             mimeType = 'text/plain';

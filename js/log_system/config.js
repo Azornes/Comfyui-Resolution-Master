@@ -1,7 +1,7 @@
 /**
 author: Azornes
 title: AzLogs
-version: 1.5.4
+version: 1.5.5
 description: Logging Configuration
 */
 // Log level for development.
