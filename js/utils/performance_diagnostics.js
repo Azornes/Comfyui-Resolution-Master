@@ -10,6 +10,9 @@ const MAX_RECENT_SAMPLES = 20;
 const MAX_LONG_TASKS = 100;
 const MAX_FRAME_GAPS = 100;
 const FRAME_GAP_THRESHOLD_MS = 50;
+const MAX_EVENT_LOOP_GAPS = 100;
+const EVENT_LOOP_INTERVAL_MS = 100;
+const EVENT_LOOP_DELAY_THRESHOLD_MS = 100;
 const LITEGRAPH_CANVAS_METHODS = [
     ["draw", "litegraph.draw"],
     ["drawBackCanvas", "litegraph.drawBackCanvas"],
@@ -20,6 +23,7 @@ const LITEGRAPH_CANVAS_METHODS = [
 const operations = new Map();
 const longTasks = [];
 const frameGaps = [];
+const eventLoopGaps = [];
 const liteGraphOriginalMethods = new Map();
 
 let enabled = false;
@@ -29,6 +33,8 @@ let longTaskObserver = null;
 let longTaskSupportLogged = false;
 let frameGapMonitorId = null;
 let lastFrameAt = null;
+let eventLoopMonitorId = null;
+let lastEventLoopAt = null;
 let liteGraphProfilerInstalled = false;
 let liteGraphProfilerUnavailableLogged = false;
 
@@ -208,6 +214,34 @@ function getPageState() {
     };
 }
 
+function bytesToMb(value) {
+    return Number.isFinite(value) ? round(value / (1024 * 1024)) : null;
+}
+
+function getMemoryState() {
+    const memory = globalThis.performance?.memory;
+    if (!memory) {
+        return {
+            usedJsHeapMb: null,
+            totalJsHeapMb: null,
+            jsHeapLimitMb: null
+        };
+    }
+
+    return {
+        usedJsHeapMb: bytesToMb(memory.usedJSHeapSize),
+        totalJsHeapMb: bytesToMb(memory.totalJSHeapSize),
+        jsHeapLimitMb: bytesToMb(memory.jsHeapSizeLimit)
+    };
+}
+
+function getRuntimeState() {
+    return {
+        ...getPageState(),
+        ...getMemoryState()
+    };
+}
+
 function recordFrameGap(startTime, endTime) {
     const duration = endTime - startTime;
     if (duration < FRAME_GAP_THRESHOLD_MS) return;
@@ -216,7 +250,7 @@ function recordFrameGap(startTime, endTime) {
         startTime,
         endTime,
         duration,
-        ...getPageState()
+        ...getRuntimeState()
     });
     if (frameGaps.length > MAX_FRAME_GAPS) {
         frameGaps.shift();
@@ -231,7 +265,10 @@ function frameGapSnapshot() {
             durationMs: round(entry.duration),
             visibilityState: entry.visibilityState,
             hidden: entry.hidden,
-            hasFocus: entry.hasFocus
+            hasFocus: entry.hasFocus,
+            usedJsHeapMb: entry.usedJsHeapMb,
+            totalJsHeapMb: entry.totalJsHeapMb,
+            jsHeapLimitMb: entry.jsHeapLimitMb
         }))
         .sort((a, b) => b.durationMs - a.durationMs);
 }
@@ -262,6 +299,68 @@ function stopFrameGapMonitor() {
     }
     frameGapMonitorId = null;
     lastFrameAt = null;
+}
+
+function recordEventLoopGap(startTime, endTime) {
+    const duration = endTime - startTime;
+    const delay = duration - EVENT_LOOP_INTERVAL_MS;
+    if (delay < EVENT_LOOP_DELAY_THRESHOLD_MS) return;
+
+    eventLoopGaps.push({
+        startTime,
+        endTime,
+        duration,
+        delay,
+        ...getRuntimeState()
+    });
+    if (eventLoopGaps.length > MAX_EVENT_LOOP_GAPS) {
+        eventLoopGaps.shift();
+    }
+}
+
+function eventLoopGapSnapshot() {
+    return eventLoopGaps
+        .map(entry => ({
+            startMs: round(entry.startTime),
+            endMs: round(entry.endTime),
+            durationMs: round(entry.duration),
+            delayMs: round(entry.delay),
+            visibilityState: entry.visibilityState,
+            hidden: entry.hidden,
+            hasFocus: entry.hasFocus,
+            usedJsHeapMb: entry.usedJsHeapMb,
+            totalJsHeapMb: entry.totalJsHeapMb,
+            jsHeapLimitMb: entry.jsHeapLimitMb
+        }))
+        .sort((a, b) => b.delayMs - a.delayMs);
+}
+
+function startEventLoopMonitor() {
+    if (eventLoopMonitorId !== null || !enabled) return;
+    const setTimer = globalThis.setTimeout;
+    if (typeof setTimer !== "function") return;
+
+    lastEventLoopAt = getNow();
+    const tick = () => {
+        eventLoopMonitorId = null;
+        if (!enabled) return;
+
+        const now = getNow();
+        if (lastEventLoopAt !== null) {
+            recordEventLoopGap(lastEventLoopAt, now);
+        }
+        lastEventLoopAt = now;
+        eventLoopMonitorId = setTimer(tick, EVENT_LOOP_INTERVAL_MS);
+    };
+    eventLoopMonitorId = setTimer(tick, EVENT_LOOP_INTERVAL_MS);
+}
+
+function stopEventLoopMonitor() {
+    if (eventLoopMonitorId !== null) {
+        globalThis.clearTimeout?.(eventLoopMonitorId);
+    }
+    eventLoopMonitorId = null;
+    lastEventLoopAt = null;
 }
 
 function getLiteGraphCanvasPrototype() {
@@ -313,9 +412,10 @@ function diagnosticsState() {
         longTaskSupported: supportsLongTaskObserver(),
         longTaskObserverActive: !!longTaskObserver,
         frameGapMonitorActive: frameGapMonitorId !== null,
+        eventLoopMonitorActive: eventLoopMonitorId !== null,
         liteGraphProfilerActive: liteGraphProfilerInstalled,
         liteGraphProfiledMethods: [...liteGraphOriginalMethods.keys()],
-        ...getPageState()
+        ...getRuntimeState()
     };
 }
 
@@ -332,10 +432,11 @@ function report(reason = "manual") {
     const data = snapshot();
     const longTaskData = longTaskSnapshot();
     const frameGapData = frameGapSnapshot();
+    const eventLoopGapData = eventLoopGapSnapshot();
     const state = diagnosticsState();
-    if (!data.length && !longTaskData.length && !frameGapData.length) {
+    if (!data.length && !longTaskData.length && !frameGapData.length && !eventLoopGapData.length) {
         log.info("Performance diagnostics: no samples collected yet", { reason });
-        return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, state };
+        return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
     }
 
     log.info("Performance diagnostics report", {
@@ -343,6 +444,7 @@ function report(reason = "manual") {
         samples: data.length,
         longTasks: longTaskData.length,
         frameGaps: frameGapData.length,
+        eventLoopGaps: eventLoopGapData.length,
         ...state
     });
     if (typeof console.table === "function") {
@@ -355,17 +457,22 @@ function report(reason = "manual") {
         if (frameGapData.length) {
             console.table(frameGapData);
         }
+        if (eventLoopGapData.length) {
+            console.table(eventLoopGapData);
+        }
     } else {
-        console.log({ operations: data, longTasks: longTaskData, frameGaps: frameGapData, state });
+        console.log({ operations: data, longTasks: longTaskData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state });
     }
-    return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, state };
+    return { operations: data, longTasks: longTaskData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
 }
 
 function reset() {
     operations.clear();
     longTasks.length = 0;
     frameGaps.length = 0;
+    eventLoopGaps.length = 0;
     lastFrameAt = null;
+    lastEventLoopAt = null;
     log.info("Performance diagnostics reset");
 }
 
@@ -423,6 +530,7 @@ function enable(options = {}) {
     autoReport = !!options.autoReport;
     startLongTaskObserver();
     startFrameGapMonitor();
+    startEventLoopMonitor();
     installLiteGraphProfiler();
     if (options.persist !== false) {
         setStoredEnabled(true);
@@ -442,6 +550,7 @@ function disable(options = {}) {
     autoReport = false;
     stopLongTaskObserver();
     stopFrameGapMonitor();
+    stopEventLoopMonitor();
     if (options.persist !== false) {
         setStoredEnabled(false);
     }
@@ -470,6 +579,7 @@ export const performanceDiagnostics = {
     enable,
     disable,
     end,
+    eventLoopGaps: eventLoopGapSnapshot,
     frameGaps: frameGapSnapshot,
     isEnabled,
     longTasks: longTaskSnapshot,
