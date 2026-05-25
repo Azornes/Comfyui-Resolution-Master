@@ -1,8 +1,12 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
+import { isLivePreviewWidget } from "./source_detectors/shared.js";
+import {
+    attachSourceDetectorWatchers,
+    detachSourceDetectorWatchers,
+    getSourceDimensions
+} from "./source_detectors/detector_registry.js";
 
 const log = createModuleLogger('auto_detect_methods');
-const LAYERFORGE_NODE_TYPE = "LayerForgeNode";
-const LOCAL_IMAGE_GALLERY_NODE_TYPE = "LocalImageGallery";
 const AUTO_DETECT_FALLBACK_POLL_INTERVAL_MS = 5000;
 const AUTO_DETECT_DEBOUNCE_MS = 30;
 const AUTO_DETECT_FRONTEND_PREVIEW_WAIT_MS = 5000;
@@ -10,32 +14,6 @@ const AUTO_DETECT_FRONTEND_PREVIEW_RETRY_MS = 150;
 const AUTO_DETECT_WIDGET_WATCHERS_PROP = "__resolutionMasterAutoDetectWatchers";
 const AUTO_DETECT_WIDGET_ORIGINAL_CALLBACK_PROP = "__resolutionMasterAutoDetectOriginalCallback";
 const AUTO_DETECT_WIDGET_PATCHED_CALLBACK_PROP = "__resolutionMasterAutoDetectPatchedCallback";
-const LIVE_PREVIEW_WIDGET_NAMES = new Set([
-    "image",
-    "upload",
-    "file",
-    "filename",
-    "path",
-    "url",
-    "image_path",
-    "show_preview",
-    "width",
-    "height",
-    "canvas_width",
-    "canvas_height",
-    "selected_image",
-    "source_folder",
-    "actual_source"
-]);
-
-function isLivePreviewWidget(widget) {
-    const name = String(widget?.name || "").toLowerCase();
-    return LIVE_PREVIEW_WIDGET_NAMES.has(name) || typeof widget?.value === "string";
-}
-
-function getWidgetValue(node, widgetName) {
-    return node?.widgets?.find(widget => widget?.name === widgetName)?.value;
-}
 
 export const autoDetectMethods = {
     startAutoDetect() {
@@ -155,12 +133,13 @@ export const autoDetectMethods = {
         if (!sourceNode) {
             this.detachLivePreviewElementWatcher();
             this.detachLivePreviewWidgetWatchers();
+            detachSourceDetectorWatchers(this);
             return;
         }
 
         this.attachLivePreviewWidgetWatchers(sourceNode);
         this.attachLivePreviewElementWatcher(sourceNode?.imgs?.[0]);
-        this.attachLocalImageGalleryWatcher(sourceNode);
+        attachSourceDetectorWatchers(this, sourceNode);
 
         const dimensions = this.getConnectedPreviewDimensions();
         const nextSignature = dimensions?.signature || null;
@@ -180,7 +159,7 @@ export const autoDetectMethods = {
     teardownLivePreviewWatcher() {
         this.detachLivePreviewElementWatcher();
         this.detachLivePreviewWidgetWatchers();
-        this.detachLocalImageGalleryWatcher();
+        detachSourceDetectorWatchers(this);
         this.watchedLivePreviewSourceNode = null;
         this.lastLivePreviewSignature = null;
         this.clearLivePreviewPending();
@@ -303,42 +282,6 @@ export const autoDetectMethods = {
 
             widget[AUTO_DETECT_WIDGET_WATCHERS_PROP].add(this.livePreviewWidgetChangeHandler);
         }
-    },
-
-    detachLocalImageGalleryWatcher() {
-        if (this.watchedLocalImageGalleryElement && this.localImageGalleryChangeHandler) {
-            this.watchedLocalImageGalleryElement.removeEventListener?.('click', this.localImageGalleryChangeHandler);
-            this.watchedLocalImageGalleryElement.removeEventListener?.('change', this.localImageGalleryChangeHandler);
-        }
-        this.watchedLocalImageGalleryElement = null;
-    },
-
-    attachLocalImageGalleryWatcher(sourceNode) {
-        if (!this.isLocalImageGallerySourceNode(sourceNode)) {
-            this.detachLocalImageGalleryWatcher();
-            return;
-        }
-
-        const galleryElement = sourceNode?._gallery?.elements?.viewport
-            || sourceNode?._gallery?.elements?.container
-            || null;
-        if (galleryElement === this.watchedLocalImageGalleryElement) return;
-
-        this.detachLocalImageGalleryWatcher();
-        this.watchedLocalImageGalleryElement = galleryElement;
-        if (!galleryElement?.addEventListener) return;
-
-        if (!this.localImageGalleryChangeHandler) {
-            this.localImageGalleryChangeHandler = () => {
-                globalThis.setTimeout?.(() => {
-                    this.markLivePreviewPending('local image gallery selection changed');
-                    this.scheduleAutoDetectCheck('local image gallery selection changed', 0);
-                }, 0);
-            };
-        }
-
-        galleryElement.addEventListener('click', this.localImageGalleryChangeHandler);
-        galleryElement.addEventListener('change', this.localImageGalleryChangeHandler);
     },
 
     setAutoDetectSource(source) {
@@ -553,168 +496,9 @@ export const autoDetectMethods = {
         return this.app.graph.getNodeById(link.origin_id) || null;
     },
 
-    getPreviewSourceSignatureInfo(sourceNode, preview, width, height) {
-        const nodeId = sourceNode?.id ?? "unknown";
-        const widgetParts = (sourceNode?.widgets || [])
-            .filter(widget => {
-                const name = String(widget?.name || "").toLowerCase();
-                const value = widget?.value;
-                return LIVE_PREVIEW_WIDGET_NAMES.has(name) || typeof value === "string";
-            })
-            .map(widget => `${widget?.name || ""}:${String(widget?.value ?? "")}`)
-            .join("|");
-        const previewParts = [
-            preview?.currentSrc,
-            preview?.src,
-            preview?.dataset?.filename,
-            preview?.dataset?.name,
-            preview?.alt,
-            preview?.title
-        ].filter(Boolean).join("|");
-
-        return {
-            signature: `frontend:${nodeId}:${widgetParts}:${previewParts}:${Math.round(width)}x${Math.round(height)}`,
-            hasChangeSignal: !!(widgetParts || previewParts)
-        };
-    },
-
-    isLayerForgeSourceNode(sourceNode) {
-        return !!(sourceNode?.type === LAYERFORGE_NODE_TYPE
-            || sourceNode?.comfyClass === LAYERFORGE_NODE_TYPE
-            || sourceNode?.constructor?.nodeData?.name === LAYERFORGE_NODE_TYPE
-            || sourceNode?.canvasWidget?.canvas?.outputAreaBounds);
-    },
-
-    isLocalImageGallerySourceNode(sourceNode) {
-        return !!(sourceNode?.type === LOCAL_IMAGE_GALLERY_NODE_TYPE
-            || sourceNode?.comfyClass === LOCAL_IMAGE_GALLERY_NODE_TYPE
-            || sourceNode?.constructor?.nodeData?.name === LOCAL_IMAGE_GALLERY_NODE_TYPE
-            || sourceNode?._gallery?.elements?.selectedName);
-    },
-
-    getLayerForgeDimensions(sourceNode) {
-        if (!this.isLayerForgeSourceNode(sourceNode)) return null;
-
-        const canvas = sourceNode?.canvasWidget?.canvas;
-        const outputArea = canvas?.outputAreaBounds;
-        const width = Number(outputArea?.width ?? canvas?.width);
-        const height = Number(outputArea?.height ?? canvas?.height);
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            return null;
-        }
-
-        const showPreview = getWidgetValue(sourceNode, "show_preview");
-        return {
-            width: Math.round(width),
-            height: Math.round(height),
-            source: "frontend",
-            signature: [
-                "frontend:layerforge",
-                sourceNode?.id ?? "unknown",
-                showPreview === false ? "preview-off" : "preview-on",
-                Math.round(width),
-                Math.round(height),
-                Math.round(Number(outputArea?.x) || 0),
-                Math.round(Number(outputArea?.y) || 0)
-            ].join(":"),
-            liveChangeTracking: true
-        };
-    },
-
-    parseDimensionsFromText(text) {
-        const match = String(text || "").match(/\((\d+)\s*[x×]\s*(\d+)\)/i);
-        if (!match) return null;
-
-        const width = Number(match[1]);
-        const height = Number(match[2]);
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            return null;
-        }
-
-        return { width: Math.round(width), height: Math.round(height) };
-    },
-
-    getLocalImageGalleryDimensions(sourceNode) {
-        if (!this.isLocalImageGallerySourceNode(sourceNode)) return null;
-
-        const gallery = sourceNode?._gallery;
-        const selectedImage = gallery?.selectedImage || sourceNode?.properties?.selected_image || "";
-        if (!selectedImage) return null;
-
-        let width = Number(gallery?.selectedImageWidth);
-        let height = Number(gallery?.selectedImageHeight);
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            const textDimensions = this.parseDimensionsFromText(gallery?.elements?.selectedName?.textContent);
-            width = Number(textDimensions?.width);
-            height = Number(textDimensions?.height);
-        }
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            return null;
-        }
-
-        const selectedSource = gallery?.selectedImageSource
-            || sourceNode?.properties?.actual_source
-            || sourceNode?.properties?.source_folder
-            || "";
-        return {
-            width: Math.round(width),
-            height: Math.round(height),
-            source: "frontend",
-            signature: [
-                "frontend:localimagegallery",
-                sourceNode?.id ?? "unknown",
-                selectedSource,
-                selectedImage,
-                Math.round(width),
-                Math.round(height)
-            ].join(":"),
-            liveChangeTracking: true
-        };
-    },
-
-    isIgnoredPreviewPlaceholder(sourceNode, preview) {
-        if (!preview) return false;
-
-        const width = Number(preview?.naturalWidth || preview?.width || preview?.videoWidth);
-        const height = Number(preview?.naturalHeight || preview?.height || preview?.videoHeight);
-        const showPreview = getWidgetValue(sourceNode, "show_preview");
-
-        return this.isLayerForgeSourceNode(sourceNode)
-            && showPreview === false
-            && width <= 1
-            && height <= 1;
-    },
-
     getConnectedPreviewDimensions() {
         const sourceNode = this.getConnectedSourceNode();
-        if (!sourceNode) return null;
-        const layerForgeDimensions = this.getLayerForgeDimensions(sourceNode);
-        if (layerForgeDimensions) return layerForgeDimensions;
-        const galleryDimensions = this.getLocalImageGalleryDimensions(sourceNode);
-        if (galleryDimensions) return galleryDimensions;
-
-        // Best-effort live UI hint: ComfyUI exposes preview images on many source nodes,
-        // but the backend tensor remains the source of truth when the workflow executes.
-        const preview = sourceNode?.imgs?.[0];
-        if (this.isIgnoredPreviewPlaceholder(sourceNode, preview)) {
-            return null;
-        }
-
-        const width = Number(preview?.naturalWidth || preview?.width || preview?.videoWidth);
-        const height = Number(preview?.naturalHeight || preview?.height || preview?.videoHeight);
-
-        if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-            return null;
-        }
-
-        const signatureInfo = this.getPreviewSourceSignatureInfo(sourceNode, preview, width, height);
-        return {
-            width: Math.round(width),
-            height: Math.round(height),
-            source: "frontend",
-            signature: signatureInfo.signature,
-            liveChangeTracking: signatureInfo.hasChangeSignal
-        };
+        return getSourceDimensions(sourceNode);
     },
 
     async getBackendDetectedDimensions() {
