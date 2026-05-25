@@ -590,12 +590,13 @@ export const drawingMethods = {
         const actionButtonWidth = actionWidth - checkboxWidth - 4;
         const smartToggleWidth = 56;
         const showToggleWidth = 56;
+        const actionTextOffset = 8;
         const calcEnabled = !!props.selectedCategory;
         const actions = [
             { button: 'autoFitBtn', checkbox: 'autoFitCheckbox', icon: this.icons.autoFit, label: 'Fit', checked: props.autoFitOnChange, disabled: !props.selectedCategory, col: 0, row: 0, showSmartToggle: true },
             { button: 'autoResizeBtn', checkbox: 'autoResizeCheckbox', icon: this.icons.autoResize, label: 'Resize', checked: props.autoResizeOnChange, disabled: false, col: 0, row: 1 },
             { button: 'autoSnapBtn', checkbox: 'autoSnapCheckbox', icon: this.icons.snap, label: 'Snap', checked: props.autoSnapOnChange, disabled: false, col: 1, row: 0 },
-            { button: 'autoCalcBtn', checkbox: 'customCalcCheckbox', icon: this.icons.autoCalculate, label: 'Calc', checked: props.useCustomCalc, disabled: !calcEnabled, col: 1, row: 1, showInfoToggle: true, textOffset: 8 }
+            { button: 'autoCalcBtn', checkbox: 'customCalcCheckbox', icon: this.icons.autoCalculate, label: 'Calc', checked: props.useCustomCalc, disabled: !calcEnabled, col: 1, row: 1, showInfoToggle: true }
         ];
 
         actions.forEach((action) => {
@@ -607,7 +608,7 @@ export const drawingMethods = {
                     ? actionWidth - checkboxWidth - smartToggleWidth - 8
                     : actionButtonWidth;
             this.controls[action.button] = { x, y: actionY, w: buttonWidth, h: 28 };
-            this.drawButton(ctx, x, actionY, buttonWidth, 28, action.icon, this.hoverElement === action.button, action.disabled, action.label, false, action.textOffset || 0);
+            this.drawButton(ctx, x, actionY, buttonWidth, 28, action.icon, this.hoverElement === action.button, action.disabled, action.label, false, actionTextOffset);
 
             if (action.showSmartToggle) {
                 const toggleX = x + buttonWidth + 4;
