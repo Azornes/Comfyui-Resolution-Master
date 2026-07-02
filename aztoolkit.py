@@ -25,7 +25,7 @@ except ImportError:
     from core.log_system import create_module_logger
 
 
-log = create_module_logger()
+log = create_module_logger(__name__)
 
 
 class ResolutionMaster:

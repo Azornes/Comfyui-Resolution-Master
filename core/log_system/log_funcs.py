@@ -1,24 +1,22 @@
 """
 @author: Azornes
 @title: AzLogs
-@version: 1.5.2
-@description: Logging Initializator
+@version: 2.0.0
+@description: Logging Initializer
 """
 # ruff: noqa: T201
 import os
-import sys
 import traceback
 import logging
 
 _logger = logging.getLogger(__name__)
-LOG_MODULE_NAME = None
-_default_module_name = __name__
 _initialized = False
 _project_root = None
+_default_module_name = __name__
 
 try:
-    from .logger import logger, LogLevel, debug, info, warn, error, exception
-    from .config import LOG_LEVEL, LOG_MODULE_NAME, USE_COLORS
+    from .logger import logger, LogLevel, debug, info, warn, error, exception, fatal
+    from .config import LOG_LEVEL, LOG_MODULE_NAME, USE_COLORS, PROJECT_ALIASES
 
     def _find_project_root(start_path):
         current = os.path.dirname(os.path.abspath(start_path))
@@ -45,9 +43,9 @@ try:
             "log_to_file": True,
             "log_dir": os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs"),
             "use_colors": (
-                logger.config["use_colors"]
-                if "AZLOGS_USE_COLORS" in os.environ
-                else USE_COLORS
+                    logger.config["use_colors"]
+                    if "AZLOGS_USE_COLORS" in os.environ
+                    else USE_COLORS
             ),
         }
     )
@@ -56,124 +54,110 @@ try:
 except ImportError as e:
     _initialized = False
     _logger.error(f"Failed to initialize logger: {e}")
+    # Provide fallback values when import fails
+    LOG_MODULE_NAME = None
+    PROJECT_ALIASES = []
 
 
 def _normalize_module_name(module_name):
+    """Normalize a dotted module name for display in logs.
+
+    Strips common prefixes (custom_nodes, project aliases) and ``__init__``
+    suffixes to produce a clean, readable module path.
+
+    ComfyUI sets ``__name__`` to hybrid values like
+    ``E:\\...\\comfyui-model-resolver.core.sources.model_list`` where the
+    first dotted segment is a full OS path.  We detect this and convert
+    the path portion to a dotted name before applying the normal logic.
+    """
     module_name = str(module_name or "").strip()
-    if not module_name:
+    if not module_name or module_name == "__main__":
         return _default_module_name
 
-    normalized_path = module_name.replace("/", os.sep).replace("\\", os.sep)
+    # --- path-to-dots conversion (required for ComfyUI's __name__) ---
+    if os.sep in module_name or "/" in module_name:
+        # Replace all path separators with dots so the rest of the logic
+        # can work uniformly on dotted segments.
+        normalized = module_name.replace("\\", ".").replace("/", ".")
+        # Remove drive letter prefix (e.g. "E:." → "")
+        if len(normalized) >= 2 and normalized[1] == ":":
+            normalized = normalized[2:].lstrip(".")
+        # Strip .py extension if present
+        if normalized.endswith(".py"):
+            normalized = normalized[:-3]
+        module_name = normalized
 
-    if os.path.isabs(normalized_path):
-        path_no_ext = os.path.splitext(normalized_path)[0]
-        if _project_root:
-            try:
-                relative_path = os.path.relpath(path_no_ext, _project_root)
-            except ValueError:
-                relative_path = os.path.basename(path_no_ext)
-        else:
-            relative_path = os.path.basename(path_no_ext)
-
-        if relative_path.endswith("__init__"):
-            relative_path = os.path.dirname(relative_path) or os.path.basename(
-                os.path.dirname(path_no_ext)
-            )
-
-        cleaned = relative_path.replace(os.sep, ".").strip(".")
-        return cleaned or _default_module_name
-
-    if module_name == "__main__":
-        return _default_module_name
-
-    parts = [part for part in module_name.split(".") if part]
+    parts = [p for p in module_name.split(".") if p]
     if not parts:
         return _default_module_name
 
+    # Strip __init__ suffix
     if parts[-1] == "__init__":
         parts = parts[:-1]
 
-    if LOG_MODULE_NAME and parts[0] == LOG_MODULE_NAME:
+    # Strip LOG_MODULE_NAME prefix if present (re-added later)
+    if LOG_MODULE_NAME and parts and parts[0] == LOG_MODULE_NAME:
         parts = parts[1:]
 
+    # Strip custom_nodes.<package_name> prefix
     if "custom_nodes" in parts:
-        parts = parts[parts.index("custom_nodes") + 2 :]
+        idx = parts.index("custom_nodes")
+        parts = parts[idx + 2:]  # skip custom_nodes + package folder
 
-    if "comfyui-resolution-master" in parts:
-        parts = parts[parts.index("comfyui-resolution-master") + 1 :]
+    # Strip project aliases from config
+    for alias in PROJECT_ALIASES:
+        if alias in parts:
+            parts = parts[parts.index(alias) + 1:]
+            break
 
-    cleaned = ".".join(parts).strip(".")
-    return cleaned or _default_module_name
-
-
-def _normalize_module_path(file_path):
-    if not file_path:
-        return _default_module_name
-
-    normalized_path = os.path.normpath(file_path)
-    path_no_ext = os.path.splitext(normalized_path)[0]
-
-    if _project_root:
-        try:
-            relative_path = os.path.relpath(path_no_ext, _project_root)
-        except ValueError:
-            relative_path = os.path.basename(path_no_ext)
-    else:
-        relative_path = os.path.basename(path_no_ext)
-
-    parts = [part for part in relative_path.split(os.sep) if part]
-    if not parts:
-        return _default_module_name
-
-    if parts[-1] == "__init__":
-        parts = parts[:-1]
-
+    # Re-insert LOG_MODULE_NAME prefix at the start
     package_name = LOG_MODULE_NAME or os.path.basename(_project_root or "")
-    if package_name:
+    if package_name and (not parts or parts[0] != package_name):
         parts.insert(0, package_name)
 
     cleaned = ".".join(parts).strip(".")
     return cleaned or _default_module_name
 
 
-def _resolve_module_name(stack_depth=2):
-    if not _initialized:
-        return _normalize_module_name(LOG_MODULE_NAME or __name__)
-
-    try:
-        frame = sys._getframe(stack_depth)
-    except ValueError:
-        return _normalize_module_name(_default_module_name)
-
-    file_path = frame.f_globals.get("__file__")
-    if file_path:
-        return _normalize_module_path(file_path)
-
-    module_name = frame.f_globals.get("__name__")
-    return _normalize_module_name(module_name)
+# Number of internal call frames between ModuleLogger methods and
+# Python's logging.Logger.log().  Used to compute the correct
+# ``stacklevel`` so that log records report the *caller's* file and
+# line number instead of an internal wrapper.
+#
+# Call chain: ModuleLogger.method → module-level func → AzLogsLogger.log → logging.Logger.log
+_INTERNAL_FRAMES = 3
 
 
 class ModuleLogger:
+    """Per-module logger with a fixed module name.
+
+    Usage:
+        log = create_module_logger(__name__)
+        log.debug("message")
+        log.info("message")
+        log.info("downloaded", extra={"model": "xyz"})
+    """
+
     def __init__(self, module_name):
         self.module_name = module_name
 
     def debug(self, *args, **kwargs):
         if _initialized:
-            kwargs.setdefault("stacklevel", 4)
+            kwargs["stacklevel"] = kwargs.pop("stacklevel", 1) + _INTERNAL_FRAMES
             debug(self.module_name, *args, **kwargs)
         else:
             print(f"[DEBUG] [{self.module_name}]", *args)
 
     def info(self, *args, **kwargs):
         if _initialized:
-            kwargs.setdefault("stacklevel", 4)
+            kwargs["stacklevel"] = kwargs.pop("stacklevel", 1) + _INTERNAL_FRAMES
             info(self.module_name, *args, **kwargs)
         else:
             print(f"[INFO] [{self.module_name}]", *args)
 
     def warning(self, *args, **kwargs):
         if _initialized:
-            kwargs.setdefault("stacklevel", 4)
+            kwargs["stacklevel"] = kwargs.pop("stacklevel", 1) + _INTERNAL_FRAMES
             warn(self.module_name, *args, **kwargs)
         else:
             print(f"[WARN] [{self.module_name}]", *args)
@@ -183,68 +167,36 @@ class ModuleLogger:
 
     def error(self, *args, **kwargs):
         if _initialized:
-            kwargs.setdefault("stacklevel", 4)
+            kwargs["stacklevel"] = kwargs.pop("stacklevel", 1) + _INTERNAL_FRAMES
             error(self.module_name, *args, **kwargs)
         else:
             print(f"[ERROR] [{self.module_name}]", *args)
 
-    def exception(self, *args):
+    def exception(self, *args, **kwargs):
         if _initialized:
-            exception(self.module_name, *args, stacklevel=4)
+            kwargs["stacklevel"] = kwargs.pop("stacklevel", 1) + _INTERNAL_FRAMES
+            exception(self.module_name, *args, **kwargs)
         else:
             print(f"[ERROR] [{self.module_name}]", *args)
             traceback.print_exc()
 
+    def fatal(self, *args, **kwargs):
+        if _initialized:
+            kwargs["stacklevel"] = kwargs.pop("stacklevel", 1) + _INTERNAL_FRAMES
+            fatal(self.module_name, *args, **kwargs)
+        else:
+            print(f"[FATAL] [{self.module_name}]", *args)
+
 
 def create_module_logger(module_name=None):
-    resolved_name = (
-        _normalize_module_name(module_name)
-        if module_name is not None
-        else _resolve_module_name(stack_depth=2)
-    )
+    """Create a ModuleLogger with a normalized module name.
+
+    Args:
+        module_name: Dotted module name, typically ``__name__``.
+            Required for proper module identification.
+
+    Returns:
+        A :class:`ModuleLogger` instance.
+    """
+    resolved_name = _normalize_module_name(module_name or _default_module_name)
     return ModuleLogger(resolved_name)
-
-
-def log_debug(*args, **kwargs):
-    module_name = _resolve_module_name(stack_depth=2)
-    if _initialized:
-        kwargs.setdefault("stacklevel", 4)
-        debug(module_name, *args, **kwargs)
-    else:
-        print(f"[DEBUG] [{module_name}]", *args)
-
-
-def log_info(*args, **kwargs):
-    module_name = _resolve_module_name(stack_depth=2)
-    if _initialized:
-        kwargs.setdefault("stacklevel", 4)
-        info(module_name, *args, **kwargs)
-    else:
-        print(f"[INFO] [{module_name}]", *args)
-
-
-def log_warn(*args, **kwargs):
-    module_name = _resolve_module_name(stack_depth=2)
-    if _initialized:
-        kwargs.setdefault("stacklevel", 4)
-        warn(module_name, *args, **kwargs)
-    else:
-        print(f"[WARN] [{module_name}]", *args)
-
-
-def log_error(*args, **kwargs):
-    module_name = _resolve_module_name(stack_depth=2)
-    if _initialized:
-        kwargs.setdefault("stacklevel", 4)
-        error(module_name, *args, **kwargs)
-    else:
-        print(f"[ERROR] [{module_name}]", *args)
-
-
-def log_exception(*args):
-    module_name = _resolve_module_name(stack_depth=2)
-    if _initialized:
-        exception(module_name, *args, stacklevel=4)
-    else:
-        print(f"[ERROR] [{module_name}]", *args)
-        traceback.print_exc()

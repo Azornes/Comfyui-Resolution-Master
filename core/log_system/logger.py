@@ -1,7 +1,7 @@
 """
 @author: Azornes
 @title: AzLogs
-@version: 1.5.2
+@version: 2.0.0
 @description: Logging Setup - Central logging system
 
 Features:
@@ -18,6 +18,7 @@ import json
 import re
 import logging
 import time
+import threading
 from enum import IntEnum
 from logging.handlers import RotatingFileHandler
 import traceback
@@ -29,6 +30,7 @@ class LogLevel(IntEnum):
     INFO = 20
     WARN = 30
     ERROR = 40
+    FATAL = 50
     NONE = 100
 
 
@@ -38,25 +40,20 @@ LEVEL_MAP = {
     LogLevel.INFO: logging.INFO,
     LogLevel.WARN: logging.WARNING,
     LogLevel.ERROR: logging.ERROR,
+    LogLevel.FATAL: logging.CRITICAL,
     LogLevel.NONE: logging.CRITICAL + 1,
 }
 
-# ANSI colors for different log levels
-COLORS = {
-    LogLevel.DEBUG: "\033[90m",  # Gray
-    LogLevel.INFO: "\033[94m",  # Blue
-    LogLevel.WARN: "\033[93m",  # Yellow
-    LogLevel.ERROR: "\033[91m",  # Red
-    "TIME_BG": "\033[48;2;38;63;76;97m",  # #263f4c background, white text
-    "MESSAGE": "\033[96m",  # Cyan
-    "RESET": "\033[0m",  # Reset
-}
+# ANSI reset sequence (all coloring uses LEVEL_THEME RGB values)
+ANSI_RESET = "\033[0m"
 
+# RGB color theme per log level
 LEVEL_THEME = {
-    "DEBUG": (155, 89, 182),  # #9B59B6
-    "INFO": (46, 204, 113),  # #2ECC71
-    "WARN": (243, 156, 18),  # #F39C12
-    "ERROR": (192, 57, 43),  # #C0392B
+    "DEBUG": (155, 89, 182),     # #9B59B6
+    "INFO": (46, 204, 113),      # #2ECC71
+    "WARN": (243, 156, 18),      # #F39C12
+    "ERROR": (192, 57, 43),      # #C0392B
+    "FATAL": (231, 76, 60),      # #E74C3C — brighter red than ERROR
 }
 
 # Default configuration
@@ -72,6 +69,107 @@ DEFAULT_CONFIG = {
     "level_field_width": 5,
     "source_field_width": 0,
 }
+
+
+_WINDOWS_VT_PROCESSING_ENABLED = False
+
+
+def _enable_windows_virtual_terminal_processing():
+    """Enable ANSI escape sequence handling for classic Windows consoles."""
+    global _WINDOWS_VT_PROCESSING_ENABLED
+    if _WINDOWS_VT_PROCESSING_ENABLED or os.name != "nt":
+        return
+
+    try:
+        import ctypes
+
+        enable_virtual_terminal_processing = 0x0004
+        std_handles = (-11, -12)
+        invalid_handle_value = ctypes.c_void_p(-1).value
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.GetStdHandle.restype = ctypes.c_void_p
+        enabled_any = False
+        for std_handle in std_handles:
+            handle = kernel32.GetStdHandle(std_handle)
+            if handle in (None, 0, invalid_handle_value):
+                continue
+
+            mode = ctypes.c_uint32()
+            if not kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                continue
+
+            new_mode = mode.value | enable_virtual_terminal_processing
+            if new_mode != mode.value:
+                kernel32.SetConsoleMode(handle, new_mode)
+
+            enabled_any = True
+
+        _WINDOWS_VT_PROCESSING_ENABLED = enabled_any
+    except Exception:
+        return
+
+
+def _get_console_output_stream():
+    """Return the console stream that preserves ANSI colors under wrapped launchers."""
+    for stream_name in ("__stdout__", "__stderr__", "stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None:
+            continue
+        if getattr(stream, "closed", False):
+            continue
+        return stream
+    return None
+
+
+class SafeRotatingFileHandler(RotatingFileHandler):
+    """Rotating file handler that disables itself if a launcher breaks its stream."""
+
+    def __init__(self, *args, **kwargs):
+        self._disabled_by_stream_error = False
+        super().__init__(*args, **kwargs)
+
+    def emit(self, record):
+        if self._disabled_by_stream_error:
+            return
+
+        try:
+            if self.stream is not None and self.maxBytes > 0:
+                tell = getattr(self.stream, "tell", None)
+                if not callable(tell):
+                    raise OSError(
+                        "Log file stream does not support tell(); disabling file logs"
+                    )
+            super().emit(record)
+        except Exception:
+            self.handleError(record)
+
+    def handleError(self, record):
+        self._disabled_by_stream_error = True
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
+class DirectConsoleHandler(logging.Handler):
+    """Console handler that writes directly to the original console stream."""
+
+    terminator = "\n"
+
+    def __init__(self, stream=None):
+        super().__init__()
+        self.stream = stream
+
+    def emit(self, record):
+        try:
+            stream = self.stream or _get_console_output_stream()
+            if stream is None:
+                return
+            stream.write(self.format(record) + self.terminator)
+            stream.flush()
+        except Exception:
+            self.handleError(record)
 
 
 class ColoredFormatter(logging.Formatter):
@@ -144,7 +242,12 @@ class ColoredFormatter(logging.Formatter):
         return parts[0], parts[1]
 
     def _display_level_name(self, levelname):
-        return "WARN" if levelname == "WARNING" else str(levelname or "")
+        name = str(levelname or "")
+        if name == "WARNING":
+            return "WARN"
+        if name == "CRITICAL":
+            return "FATAL"
+        return name
 
     def _format_level(self, levelname):
         if self.include_brackets:
@@ -165,27 +268,28 @@ class ColoredFormatter(logging.Formatter):
         if not rgb:
             return text
         r, g, b = rgb
-        return f"\033[1m\033[48;2;{r};{g};{b};97m {text} {COLORS['RESET']}"
+        return f"\033[1;97;48;2;{r};{g};{b}m {text} {ANSI_RESET}"
 
     def _color_timestamp(self, text):
-        return f"{COLORS['TIME_BG']} {text} {COLORS['RESET']}"
+        return f"\033[97;48;2;38;63;76m {text} {ANSI_RESET}"
 
     def _color_root_label(self, text):
-        return f"{COLORS['TIME_BG']} {text} {COLORS['RESET']}"
+        return f"\033[97;48;2;38;63;76m {text} {ANSI_RESET}"
 
     def _color_separator(self, levelname, text):
         rgb = LEVEL_THEME.get(levelname)
         if not rgb:
             return text
         r, g, b = rgb
-        return f"\033[48;2;{r};{g};{b}m{text}{COLORS['RESET']}"
+        return f"\033[48;2;{r};{g};{b}m{text}{ANSI_RESET}"
 
     def _color_message(self, levelname, text):
         rgb = LEVEL_THEME.get(levelname)
         if not rgb:
-            return f"{COLORS['MESSAGE']}{text}{COLORS['RESET']}"
+            # Fallback: cyan for unknown levels
+            return f"\033[96m{text}{ANSI_RESET}"
         r, g, b = rgb
-        return f"\033[38;2;{r};{g};{b}m{text}{COLORS['RESET']}"
+        return f"\033[38;2;{r};{g};{b}m{text}{ANSI_RESET}"
 
 
 class AzLogsLogger:
@@ -207,6 +311,7 @@ class AzLogsLogger:
         self.enabled = True
         self.loggers = {}
         self.file_handlers = {}
+        self._lock = threading.RLock()
 
         # Load configuration from environment variables
         self._load_config_from_env()
@@ -265,15 +370,19 @@ class AzLogsLogger:
     def configure(self, config):
         """Configure the logger"""
         self.config.update(config)
+        self.reset_loggers()
+
+        if self.config.get("use_colors"):
+            _enable_windows_virtual_terminal_processing()
 
         # If file logging is enabled, ensure the directory exists
         if self.config.get("log_to_file") and self.config.get("log_dir"):
             try:
                 os.makedirs(self.config["log_dir"], exist_ok=True)
             except OSError as e:
-                # This is a critical situation, so use print
+                # This is a fatal situation, so use print
                 print(
-                    f"[CRITICAL] Could not create log directory: {self.config['log_dir']}. Error: {e}"
+                    f"[FATAL] Could not create log directory: {self.config['log_dir']}. Error: {e}"
                 )
                 traceback.print_exc()
                 # Disable file logging to avoid further errors
@@ -329,85 +438,102 @@ class AzLogsLogger:
     def _get_file_handler(self, module):
         """Get or create a shared rotating file handler for the root module."""
         log_file = self._get_log_file(module)
+        # Fast path without lock
         if log_file in self.file_handlers:
             return self.file_handlers[log_file]
 
-        os.makedirs(self.config["log_dir"], exist_ok=True)
-        file_handler = RotatingFileHandler(
-            log_file,
-            maxBytes=self.config["max_file_size_mb"] * 1024 * 1024,
-            backupCount=self.config["backup_count"],
-            encoding="utf-8",
-        )
-        file_formatter = ColoredFormatter(
-            datefmt="%Y-%m-%d %H:%M:%S",
-            use_colors=False,
-            source_field_width=self.config["source_field_width"],
-            include_milliseconds=True,
-        )
-        file_handler.setFormatter(file_formatter)
-        self.file_handlers[log_file] = file_handler
-        return file_handler
+        with self._lock:
+            # Double-check after acquiring lock
+            if log_file in self.file_handlers:
+                return self.file_handlers[log_file]
+
+            os.makedirs(self.config["log_dir"], exist_ok=True)
+            file_handler = SafeRotatingFileHandler(
+                log_file,
+                maxBytes=self.config["max_file_size_mb"] * 1024 * 1024,
+                backupCount=self.config["backup_count"],
+                encoding="utf-8",
+            )
+            file_formatter = ColoredFormatter(
+                datefmt="%Y-%m-%d %H:%M:%S",
+                use_colors=False,
+                source_field_width=self.config["source_field_width"],
+                include_milliseconds=True,
+            )
+            file_handler.setFormatter(file_formatter)
+            self.file_handlers[log_file] = file_handler
+            return file_handler
 
     def reset_loggers(self):
         """Remove configured handlers so new settings are applied cleanly."""
-        handlers_to_close = set()
+        with self._lock:
+            handlers_to_close = set()
 
-        for module in self.loggers:
-            configured_logger = logging.getLogger(f"azlogs.{module}")
-            for handler in list(configured_logger.handlers):
-                configured_logger.removeHandler(handler)
-                if isinstance(handler, RotatingFileHandler):
-                    handlers_to_close.add(handler)
+            for module in self.loggers:
+                configured_logger = logging.getLogger(f"azlogs.{module}")
+                for handler in list(configured_logger.handlers):
+                    configured_logger.removeHandler(handler)
+                    if isinstance(handler, RotatingFileHandler):
+                        handlers_to_close.add(handler)
 
-        for handler in self.file_handlers.values():
-            handlers_to_close.add(handler)
+            for handler in self.file_handlers.values():
+                handlers_to_close.add(handler)
 
-        for handler in handlers_to_close:
-            handler.close()
+            for handler in handlers_to_close:
+                handler.close()
 
-        self.loggers = {}
-        self.file_handlers = {}
+            self.loggers = {}
+            self.file_handlers = {}
         return self
 
     def _get_logger(self, module):
         """Get or create a logger for the module"""
+        # Fast path without lock
         if module in self.loggers:
             return self.loggers[module]
 
-        # Create new logger
-        logger = logging.getLogger(f"azlogs.{module}")
-        logger.setLevel(logging.DEBUG)  # Set lowest level, filtering will be done later
-        logger.propagate = False
+        with self._lock:
+            # Double-check after acquiring lock
+            if module in self.loggers:
+                return self.loggers[module]
 
-        # Add console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_formatter = ColoredFormatter(
-            fmt="[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s",
-            datefmt=self.config["timestamp_format"],
-            use_colors=self.config["use_colors"],
-            level_field_width=self.config["level_field_width"],
-            source_field_width=self.config["source_field_width"],
-            include_brackets=False,
-        )
-        console_handler.setFormatter(console_formatter)
-        logger.addHandler(console_handler)
+            # Create new logger
+            new_logger = logging.getLogger(f"azlogs.{module}")
+            new_logger.setLevel(logging.DEBUG)  # Set lowest level, filtering will be done later
+            new_logger.propagate = False
 
-        # Add file handler if file logging is enabled
-        if self.config["log_to_file"]:
-            try:
-                file_handler = self._get_file_handler(module)
-                logger.addHandler(file_handler)
-            except OSError as e:
-                self.config["log_to_file"] = False
-                logger.warning(
-                    "AzLogs: disabling file logging after handler setup failed for %s: %s",
-                    self._get_log_file(module),
-                    e,
-                )
+            # Add console handler
+            if self.config["use_colors"]:
+                _enable_windows_virtual_terminal_processing()
 
-        self.loggers[module] = logger
-        return logger
+            console_stream = _get_console_output_stream()
+            console_handler = DirectConsoleHandler(console_stream)
+            console_formatter = ColoredFormatter(
+                fmt="[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s",
+                datefmt=self.config["timestamp_format"],
+                use_colors=self.config["use_colors"],
+                level_field_width=self.config["level_field_width"],
+                source_field_width=self.config["source_field_width"],
+                include_brackets=False,
+            )
+            console_handler.setFormatter(console_formatter)
+            new_logger.addHandler(console_handler)
+
+            # Add file handler if file logging is enabled
+            if self.config["log_to_file"]:
+                try:
+                    file_handler = self._get_file_handler(module)
+                    new_logger.addHandler(file_handler)
+                except OSError as e:
+                    self.config["log_to_file"] = False
+                    new_logger.warning(
+                        "AzLogs: disabling file logging after handler setup failed for %s: %s",
+                        self._get_log_file(module),
+                        e,
+                    )
+
+            self.loggers[module] = new_logger
+            return new_logger
 
     def log(self, module, level, *args, **kwargs):
         """Write log"""
@@ -419,15 +545,16 @@ class AzLogsLogger:
         # Convert arguments to string
         message = " ".join(str(arg) for arg in args)
 
-        # Add exception info if provided
+        # Extract known kwargs
         exc_info = kwargs.get("exc_info", None)
         stacklevel = kwargs.get("stacklevel", 1)
+        extra = kwargs.get("extra", None)
 
         # Map LogLevel to logging level
         log_level = LEVEL_MAP.get(level, logging.INFO)
 
         # Write log
-        logger.log(log_level, message, exc_info=exc_info, stacklevel=stacklevel)
+        logger.log(log_level, message, exc_info=exc_info, stacklevel=stacklevel, extra=extra)
 
     def debug(self, module, *args, **kwargs):
         """Log at DEBUG level"""
@@ -449,6 +576,10 @@ class AzLogsLogger:
         """Log exception at ERROR level"""
         kwargs["exc_info"] = True
         self.log(module, LogLevel.ERROR, *args, **kwargs)
+
+    def fatal(self, module, *args, **kwargs):
+        """Log at FATAL level"""
+        self.log(module, LogLevel.FATAL, *args, **kwargs)
 
 
 # Singleton
@@ -480,6 +611,11 @@ def exception(module, *args, **kwargs):
     """Log exception at ERROR level"""
     kwargs["exc_info"] = True
     logger.log(module, LogLevel.ERROR, *args, **kwargs)
+
+
+def fatal(module, *args, **kwargs):
+    """Log at FATAL level"""
+    logger.log(module, LogLevel.FATAL, *args, **kwargs)
 
 
 # Function to quickly enable/disable debugging

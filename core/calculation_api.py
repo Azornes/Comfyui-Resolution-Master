@@ -9,7 +9,7 @@ from .auto_detect import calculate_resolution, safe_float, safe_int
 from .log_system import create_module_logger
 
 
-log = create_module_logger()
+log = create_module_logger(__name__)
 _routes_registered = False
 
 

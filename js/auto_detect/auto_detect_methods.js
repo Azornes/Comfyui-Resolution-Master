@@ -474,6 +474,26 @@ export const autoDetectMethods = {
                 return;
             }
 
+            const props = node.properties;
+            // Restore detected dimensions if the newly detected dimensions match the saved ones on first run.
+            // This prevents overwriting user-modified/downsized settings upon reloading the workflow.
+            if (!this.detectedDimensions && props && props.autoDetectWidth > 0 && props.autoDetectHeight > 0) {
+                if (Math.round(Number(props.autoDetectWidth)) === dimensions.width &&
+                    Math.round(Number(props.autoDetectHeight)) === dimensions.height) {
+                    log.debug('Restoring auto-detect dimensions from saved properties without recalculation', {
+                        nodeId: node.id ?? null,
+                        width: dimensions.width,
+                        height: dimensions.height
+                    });
+                    this.detectedDimensions = dimensions;
+                    this.manuallySetByAutoFit = false;
+                    this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');
+                    this.setRawAutoDetectDimensions(dimensions);
+                    this.app?.graph?.setDirtyCanvas(true);
+                    return;
+                }
+            }
+
             this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');
             this.setRawAutoDetectDimensions(dimensions);
 

@@ -4,7 +4,7 @@ import math
 from .log_system import create_module_logger
 
 
-log = create_module_logger()
+log = create_module_logger(__name__)
 
 
 def safe_int(value, default=0):
