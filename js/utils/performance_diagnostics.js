@@ -745,7 +745,7 @@ function report(reason = "manual") {
             console.table(eventLoopGapData);
         }
     } else {
-        console.log({ operations: data, longTasks: longTaskData, longAnimationFrames: longAnimationFrameData, eventTimings: eventTimingData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state });
+        log.info("Performance diagnostics data", { operations: data, longTasks: longTaskData, longAnimationFrames: longAnimationFrameData, eventTimings: eventTimingData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state });
     }
     return { operations: data, longTasks: longTaskData, longAnimationFrames: longAnimationFrameData, eventTimings: eventTimingData, frameGaps: frameGapData, eventLoopGaps: eventLoopGapData, state };
 }

@@ -1,7 +1,7 @@
 /**
 author: Azornes
 title: AzLogs
-version: 1.5.5
+version: 1.5.6
 description: Logging Setup - Central logging system
 
 Features:
@@ -13,7 +13,7 @@ logger - Central logging system
 - Ability to export logs
 */
 
-import { DEFAULT_LOGGER_NAME, LOG_MODULE_NAME, USE_COLORS } from './config.js';
+import { DEFAULT_LOGGER_NAME, LOG_LEVEL, LOG_MODULE_NAME, USE_COLORS } from './config.js';
 
 function padStart(str, targetLength, padString) {
     targetLength = targetLength >> 0;
@@ -46,14 +46,16 @@ const LOGGER_STORAGE_KEY = `${STORAGE_PREFIX}_logs`;
 const LOGGER_EXPORT_PREFIX = STORAGE_PREFIX;
 const WINDOW_LOGGER_KEY = `${toPascalCase(LOGGER_NAME)}Logger`;
 export const LogLevel = {
-    DEBUG: 0,
-    INFO: 1,
-    WARN: 2,
-    ERROR: 3,
-    NONE: 4
+    DEBUG: 10,
+    INFO: 20,
+    WARN: 30,
+    ERROR: 40,
+    FATAL: 50,
+    NONE: 100
 };
 const DEFAULT_CONFIG = {
-    globalLevel: LogLevel.INFO,
+    enabled: true,
+    globalLevel: LogLevel[LOG_LEVEL] ?? LogLevel.INFO,
     moduleSettings: {},
     useColors: USE_COLORS,
     saveToStorage: false,
@@ -68,18 +70,21 @@ const COLORS = {
     [LogLevel.INFO]: '#2ECC71',
     [LogLevel.WARN]: '#F39C12',
     [LogLevel.ERROR]: '#C0392B',
+    [LogLevel.FATAL]: '#E74C3C',
 };
 const LEVEL_NAMES = {
     [LogLevel.DEBUG]: 'DEBUG',
     [LogLevel.INFO]: 'INFO',
     [LogLevel.WARN]: 'WARN',
     [LogLevel.ERROR]: 'ERROR',
+    [LogLevel.FATAL]: 'FATAL',
 };
 const CONSOLE_METHODS = {
     [LogLevel.DEBUG]: 'debug',
     [LogLevel.INFO]: 'info',
     [LogLevel.WARN]: 'warn',
     [LogLevel.ERROR]: 'error',
+    [LogLevel.FATAL]: 'error',
 };
 const TIME_BG = '#263f4c';
 const LEVEL_WIDTH = 5;
@@ -90,6 +95,7 @@ class Logger {
         this.logs = [];
         this.enabled = true;
         this.loadConfig();
+        this.enabled = this.config.enabled !== false;
         this.loadLogs();
     }
     /**
@@ -98,6 +104,17 @@ class Logger {
      */
     configure(config) {
         this.config = { ...this.config, ...config };
+        if (Object.prototype.hasOwnProperty.call(config, 'enabled')) {
+            this.enabled = config.enabled !== false;
+        }
+        this.config.globalLevel = this.normalizeLevel(this.config.globalLevel, DEFAULT_CONFIG.globalLevel);
+        if (!this.config.moduleSettings || typeof this.config.moduleSettings !== 'object') {
+            this.config.moduleSettings = {};
+        } else {
+            Object.entries(this.config.moduleSettings).forEach(([module, level]) => {
+                this.config.moduleSettings[module] = this.normalizeLevel(level, this.config.globalLevel);
+            });
+        }
         this.saveConfig();
         return this;
     }
@@ -106,7 +123,9 @@ class Logger {
      * @param {boolean} enabled - Whether the logger should be enabled
      */
     setEnabled(enabled) {
-        this.enabled = enabled;
+        this.enabled = Boolean(enabled);
+        this.config.enabled = this.enabled;
+        this.saveConfig();
         return this;
     }
     /**
@@ -114,7 +133,34 @@ class Logger {
      * @param {LogLevels} level - Logging level
      */
     setGlobalLevel(level) {
-        this.config.globalLevel = level;
+        this.config.globalLevel = this.normalizeLevel(level, DEFAULT_CONFIG.globalLevel);
+        this.saveConfig();
+        return this;
+    }
+    normalizeLevel(level, fallback = this.config.globalLevel) {
+        if (typeof level === 'number' && Object.values(LogLevel).includes(level)) {
+            return level;
+        }
+        if (typeof level === 'string') {
+            let normalized = level.trim().toUpperCase();
+            if (normalized === 'WARNING') normalized = 'WARN';
+            if (normalized === 'CRITICAL') normalized = 'FATAL';
+            if (Object.prototype.hasOwnProperty.call(LogLevel, normalized)) {
+                return LogLevel[normalized];
+            }
+        }
+        return fallback;
+    }
+    getLevelName(level = this.config.globalLevel) {
+        const normalizedLevel = this.normalizeLevel(level, this.config.globalLevel);
+        return Object.entries(LogLevel).find(([, value]) => value === normalizedLevel)?.[0] || 'INFO';
+    }
+    setGlobalAndModuleLevel(level) {
+        const normalizedLevel = this.normalizeLevel(level, this.config.globalLevel);
+        this.config.globalLevel = normalizedLevel;
+        Object.keys(this.config.moduleSettings || {}).forEach((module) => {
+            this.config.moduleSettings[module] = normalizedLevel;
+        });
         this.saveConfig();
         return this;
     }
@@ -124,7 +170,7 @@ class Logger {
      * @param {LogLevels} level - Logging level
      */
     setModuleLevel(module, level) {
-        this.config.moduleSettings[module] = level;
+        this.config.moduleSettings[module] = this.normalizeLevel(level, this.config.globalLevel);
         this.saveConfig();
         return this;
     }
@@ -181,11 +227,11 @@ class Logger {
             callsite,
             time: new Date()
         };
+        this.logs.push(logData);
+        if (this.logs.length > this.config.maxStoredLogs) {
+            this.logs.shift();
+        }
         if (this.config.saveToStorage) {
-            this.logs.push(logData);
-            if (this.logs.length > this.config.maxStoredLogs) {
-                this.logs.shift();
-            }
             this.saveLogs();
         }
         this.printToConsole(logData);
@@ -597,6 +643,7 @@ class Logger {
                 const storedConfig = localStorage.getItem(LOGGER_CONFIG_KEY);
                 if (storedConfig) {
                     this.config = { ...this.config, ...JSON.parse(storedConfig) };
+                    this.configure(this.config);
                 }
             }
             catch (e) {
@@ -621,13 +668,13 @@ class Logger {
     exportLogs(format = 'json') {
         if (this.logs.length === 0) {
             console.warn('No logs to export');
-            return;
+            return false;
         }
         let content;
         let mimeType;
         let extension;
         if (format === 'json') {
-            content = JSON.stringify(this.logs, null, 2);
+            content = JSON.stringify(this.logs.map((log) => this.serializeLogEntry(log)), null, 2);
             mimeType = 'application/json';
             extension = 'json';
         }
@@ -649,6 +696,7 @@ class Logger {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        return true;
     }
     /**
      * Log at DEBUG level
@@ -682,12 +730,34 @@ class Logger {
     error(module, ...args) {
         this.log(module, LogLevel.ERROR, ...args);
     }
+    /**
+     * Log at ERROR level with exception stack trace
+     * @param {string} module - Module name
+     * @param {any[]} args - Arguments to log
+     */
+    exception(module, ...args) {
+        const hasError = args.some(arg => arg instanceof Error);
+        if (!hasError) {
+            args.push(new Error("Captured stack trace"));
+        }
+        this.log(module, LogLevel.ERROR, ...args);
+    }
+    /**
+     * Log at FATAL level
+     * @param {string} module - Module name
+     * @param {any[]} args - Arguments to log
+     */
+    fatal(module, ...args) {
+        this.log(module, LogLevel.FATAL, ...args);
+    }
 }
 export const logger = new Logger();
 export const debug = (module, ...args) => logger.debug(module, ...args);
 export const info = (module, ...args) => logger.info(module, ...args);
 export const warn = (module, ...args) => logger.warn(module, ...args);
 export const error = (module, ...args) => logger.error(module, ...args);
+export const exception = (module, ...args) => logger.exception(module, ...args);
+export const fatal = (module, ...args) => logger.fatal(module, ...args);
 if (typeof window !== 'undefined') {
     window[WINDOW_LOGGER_KEY] = logger;
 }

@@ -1,7 +1,7 @@
 /**
 author: Azornes
 title: AzLogs
-version: 1.5.5
+version: 1.5.6
 description: Logging Initializator
 
 Features:
@@ -9,20 +9,20 @@ log_funcs - Centralization of logger initialization
 Eliminates repetitive logger initialization code in each module
 */
 
-import { logger, LogLevel } from "./logger.js";
-import { LOG_LEVEL } from './config.js';
+import { logger } from "./logger.js";
 /**
  * Creates a logger object for a module with predefined methods
  * @param {string} moduleName - Module name
  * @returns {Logger} Object with logging methods
  */
 export function createModuleLogger(moduleName) {
-    logger.setModuleLevel(moduleName, LogLevel[LOG_LEVEL]);
     return {
         debug: (...args) => logger.debug(moduleName, ...args),
         info: (...args) => logger.info(moduleName, ...args),
         warn: (...args) => logger.warn(moduleName, ...args),
-        error: (...args) => logger.error(moduleName, ...args)
+        error: (...args) => logger.error(moduleName, ...args),
+        exception: (...args) => logger.exception(moduleName, ...args),
+        fatal: (...args) => logger.fatal(moduleName, ...args)
     };
 }
 /**
