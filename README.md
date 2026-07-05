@@ -15,6 +15,8 @@
   <img alt="JavaScript" src="https://img.shields.io/badge/JavaScript-1a1a1a?style=for-the-badge&logo=javascript&logoColor=F7DF1E&labelColor=1a1a1a">
   <a href="https://github.com/sponsors/Azornes" style="display: inline-flex; align-items: center; white-space: nowrap;">
     <img src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=magenta&labelColor=1a1a1a" alt="Sponsor"><img src="https://img.shields.io/badge/--1a1a1a?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"></a>
+<a href="https://ko-fi.com/azornes" style="display: inline-flex; align-items: center; white-space: nowrap;">
+  <img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Ko-Fi"></a>
 </p>
 
 <p align="center">

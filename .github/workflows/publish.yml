@@ -8,6 +8,7 @@ on:
       - "pyproject.toml"
 
 permissions:
+  contents: read
   issues: write
 
 jobs:
