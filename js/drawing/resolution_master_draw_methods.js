@@ -35,9 +35,13 @@ export const drawingMethods = {
                 this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
                 currentY += canvasHeight + this.getCanvasInfoGap();
 
-                const infoY = this.lastCanvasBounds
-                    ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
-                    : currentY;
+                const infoY = this.isVueNodesMode() && this.collapsedSections.extraControls
+                    ? node.size[1]
+                        - this.getVueCompatBottomOverlayClearance()
+                        - this.getManualBottomPadding()
+                    : this.lastCanvasBounds
+                        ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
+                        : currentY;
                 this.drawInfoText(ctx, infoY);
                 currentY += 15 + spacing;
 
@@ -133,6 +137,14 @@ export const drawingMethods = {
     },
 
     drawCompactToggleButton(ctx) {
+        if (this.isVueNodesMode()) {
+            delete this.controls.compactHelpBtn;
+            delete this.controls.compactToggleBtn;
+            this.syncVueCompatHeaderControls?.();
+            return;
+        }
+
+        this.teardownVueCompatHeaderControls?.();
         const isActive = this.collapsedSections.extraControls || false;
         const buttonSize = 18;
         const x = this.node.size[0] - buttonSize - 9;
@@ -449,21 +461,29 @@ export const drawingMethods = {
         return this.canvasDotsCache;
     },
 
-    drawInfoText(ctx, y) {
-        const node = this.node;
+    getInfoText() {
         if (this.widthWidget && this.heightWidget) {
             const width = this.widthWidget.value;
             const height = this.heightWidget.value;
             const mp = ((width * height) / 1000000).toFixed(2);
             const pResolution = formatClosestPResolution(width, height);
-
             const aspectRatio = aspectRatioString(width, height);
+
+            return `${width} × ${height}  |  ${mp} MP ${pResolution}  |  ${aspectRatio}`;
+        }
+        return "";
+    },
+
+    drawInfoText(ctx, y) {
+        const text = this.getInfoText();
+        if (text) {
+            const node = this.node;
 
             ctx.fillStyle = "#bbb";
             ctx.font = "12px Arial";
             ctx.textAlign = "center";
-            ctx.fillText(`${width} × ${height}  |  ${mp} MP ${pResolution}  |  ${aspectRatio}`,
-                        node.size[0] / 2, y);
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, node.size[0] / 2, y);
         }
     },
 

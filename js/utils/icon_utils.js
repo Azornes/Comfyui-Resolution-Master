@@ -47,7 +47,7 @@ export const inlineSvgIcons = {
  * @param {Object} icons - Object to store loaded icons
  * @param {string} iconColor - Color for the SVG icons (default: "#dddddd")
  */
-export function loadIcons(icons = {}, iconColor = "#dddddd", userColors = {}) {
+export function loadIcons(icons = {}, iconColor = "#dddddd", userColors = {}, onLoad = null) {
     
     const svgs = {
         upscale: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 13a1 1 0 0 0-1-1H5.061a1 1 0 0 1-.75-1.811l6.836-6.835a1.207 1.207 0 0 1 1.707 0l6.835 6.835a1 1 0 0 1-.75 1.811H16a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/></svg>`,
@@ -74,7 +74,10 @@ export function loadIcons(icons = {}, iconColor = "#dddddd", userColors = {}) {
         const svg = svgs[name].replace("{color}", color);
 
         const img = new Image();
-        img.onload = () => app.graph.setDirtyCanvas(true);
+        img.onload = () => {
+            onLoad?.();
+            app.graph.setDirtyCanvas(true);
+        };
         img.src = `data:image/svg+xml;base64,${btoa(svg)}`;
 
         icons[name] = img;

@@ -223,6 +223,7 @@ export const interactionMethods = {
     },
 
     scheduleCanvasPointerDrag(eMove, activeCanvas) {
+        this.normalizeVueCompatPointerEvent?.(eMove);
         this._pendingCanvasPointerDragEvent = eMove;
         this._pendingCanvasPointerDragCanvas = activeCanvas;
         if (this._pendingCanvasPointerDragFrame !== null) return;
@@ -290,12 +291,15 @@ export const interactionMethods = {
                 || null;
 
             pointer.onDrag = (eMove) => {
+                this.normalizeVueCompatPointerEvent?.(eMove);
                 this.scheduleCanvasPointerDrag(eMove, activeCanvas);
             };
             pointer.finally = () => {
                 this.flushCanvasPointerDrag();
                 if (this.node?.capture) {
-                    this.handleMouseUp(pointer.eUp || pointer.eMove || pointer.eDown);
+                    const finalEvent = pointer.eUp || pointer.eMove || pointer.eDown;
+                    this.normalizeVueCompatPointerEvent?.(finalEvent);
+                    this.handleMouseUp(finalEvent);
                 }
                 this._usingCanvasPointerCallbacks = false;
                 this._capturedPointerCanvas = null;
@@ -507,7 +511,7 @@ export const interactionMethods = {
         if (newHover !== this.hoverElement) {
             this.hoverElement = newHover;
             this.handleTooltipHover(newHover, e);
-            this.app?.graph?.setDirtyCanvas(true);
+            this.requestCanvasUpdate(true);
         }
     },
 
@@ -519,7 +523,7 @@ export const interactionMethods = {
         if (this.showTooltip) {
             this.showTooltip = false;
             this.tooltipElement = null;
-            this.app?.graph?.setDirtyCanvas(true);
+            this.requestCanvasUpdate(true);
         }
         if (element && this.tooltips[element]) {
             const initialMousePos = { x: e.canvasX, y: e.canvasY };
@@ -527,7 +531,7 @@ export const interactionMethods = {
                 this.tooltipElement = element;
                 this.showTooltip = true;
                 this.tooltipFixedPos = initialMousePos;
-                this.app?.graph?.setDirtyCanvas(true);
+                this.requestCanvasUpdate(true);
             }, this.tooltipDelay);
         }
     },
@@ -711,14 +715,14 @@ export const interactionMethods = {
             const widget = this.node.widgets?.find(w => w.name === 'auto_detect');
             if (widget) widget.value = props.autoDetect;
             this.syncBackendFallbackWidgets();
-            this.app?.graph?.setDirtyCanvas(true);
+            this.requestCanvasUpdate(true);
         } else if (toggleName === 'smartFitToggle' && props.selectedCategory) {
             props.smartFit = !props.smartFit;
             this.syncBackendFallbackWidgets();
-            this.app?.graph?.setDirtyCanvas(true);
+            this.requestCanvasUpdate(true);
         } else if (toggleName === 'calcInfoToggle' && props.selectedCategory) {
             props.showCalcInfo = !props.showCalcInfo;
-            this.app?.graph?.setDirtyCanvas(true);
+            this.requestCanvasUpdate(true);
         }
     },
 
@@ -737,7 +741,7 @@ export const interactionMethods = {
         }
         this.syncBackendFallbackWidgets();
         this.updateRescaleValue();
-        this.app?.graph?.setDirtyCanvas(true);
+        this.requestCanvasUpdate(true);
     },
 
     handleRadioClick(radioName) {
@@ -749,7 +753,7 @@ export const interactionMethods = {
         };
         props.rescaleMode = radioMap[radioName];
         this.updateRescaleValue();
-        this.app?.graph?.setDirtyCanvas(true);
+        this.requestCanvasUpdate(true);
     },
 
     handleSectionHeaderClick(headerKey) {
@@ -764,7 +768,7 @@ export const interactionMethods = {
             this.userPreferredHeight = this.getStoredPreferredHeight(this.collapsedSections.extraControls);
             this.applyCompactSlotLabels();
         }
-        this.app?.graph?.setDirtyCanvas(true, true);
+        this.requestCanvasUpdate(true);
 
         log.debug(`Section ${sectionKey} ${this.collapsedSections[sectionKey] ? 'collapsed' : 'expanded'}`);
     },
@@ -803,7 +807,7 @@ export const interactionMethods = {
             }
         }
 
-        this.app?.graph?.setDirtyCanvas(true);
+        this.requestCanvasUpdate(true);
     },
 
     showPresetSelector(e, mode) {
@@ -884,7 +888,7 @@ export const interactionMethods = {
                 if (selectedType && this.latentTypeWidget) {
                     this.latentTypeWidget.value = selectedType.value;
                     log.debug(`Latent type manually changed to: ${selectedType.value}`);
-                    this.app?.graph?.setDirtyCanvas(true);
+                    this.requestCanvasUpdate(true);
                 }
             }
         });
@@ -918,7 +922,7 @@ export const interactionMethods = {
                 props.selectedPreset = null;
                 this.syncBackendFallbackWidgets();
                 this.updateRescaleValue();
-                this.app?.graph?.setDirtyCanvas(true);
+                this.requestCanvasUpdate(true);
             };
         } else if (dropdownName === 'presetDropdown' && props.selectedCategory) {
             const selectorMode = props.preset_selector_mode || 'visual';
@@ -935,7 +939,7 @@ export const interactionMethods = {
                 }
                 props.targetResolution = parseInt(resolutionValue);
                 this.updateRescaleValue();
-                this.app?.graph?.setDirtyCanvas(true);
+                this.requestCanvasUpdate(true);
             };
         }
 

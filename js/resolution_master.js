@@ -76,7 +76,7 @@ class ResolutionMasterCanvas {
         this.resolutions = [...RESOLUTION_OPTIONS];
 
         this.icons = {};
-        loadIcons(this.icons);
+        loadIcons(this.icons, "#dddddd", {}, () => this.requestCanvasUpdate(true));
         this.tooltips = tooltips;
         this.presetCategories = presetCategories;
 

@@ -489,7 +489,7 @@ export const autoDetectMethods = {
                     this.manuallySetByAutoFit = false;
                     this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');
                     this.setRawAutoDetectDimensions(dimensions);
-                    this.app?.graph?.setDirtyCanvas(true);
+                    this.requestCanvasUpdate(true);
                     return;
                 }
             }
@@ -527,7 +527,7 @@ export const autoDetectMethods = {
                     this.setDimensions(this.detectedDimensions.width, this.detectedDimensions.height);
                 }
 
-                this.app?.graph?.setDirtyCanvas(true);
+                this.requestCanvasUpdate(true);
             }
         } catch (error) {
             log.error('Error checking for image dimensions:', error);

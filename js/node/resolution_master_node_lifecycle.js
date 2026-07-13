@@ -3,6 +3,7 @@ import { DEFAULT_NODE_PROPERTIES } from "./default_node_properties.js";
 
 const log = createModuleLogger('resolution_master_node_lifecycle');
 const RESOLUTION_MASTER_AUX_ID = "Azornes/Comfyui-Resolution-Master";
+const VUE_COMPAT_WIDGET_NAME = "resolution_master_ui";
 
 export const nodeLifecycleMethods = {
     initializeProperties() {
@@ -25,6 +26,437 @@ export const nodeLifecycleMethods = {
             serializedNode.properties = serializedNode.properties || {};
             applyAuxId(serializedNode.properties);
         }
+    },
+
+    isVueNodesMode() {
+        return globalThis.LiteGraph?.vueNodesMode === true;
+    },
+
+    getVueCompatWidgetHeight() {
+        const neededHeight = Math.ceil(Number(this.calculateNeededHeight()) || 0);
+        return Math.max(neededHeight, this.node.min_size?.[1] || 200);
+    },
+
+    getVueCompatRenderedWidgetHeight() {
+        const minimumHeight = this.getVueCompatWidgetHeight();
+        if (!this.collapsedSections?.extraControls) return minimumHeight;
+
+        const computedHeight = Number(this.vueCompatWidget?.computedHeight);
+        return Number.isFinite(computedHeight) && computedHeight > 0
+            ? Math.max(minimumHeight, computedHeight)
+            : minimumHeight;
+    },
+
+    scheduleVueCompatHeightRedraw() {
+        if (this._vueCompatHeightRedrawFrame != null) return;
+
+        const redraw = () => {
+            this._vueCompatHeightRedrawFrame = null;
+            this.vueCompatWidget?.triggerDraw?.();
+        };
+        if (typeof requestAnimationFrame === 'function') {
+            this._vueCompatHeightRedrawFrame = requestAnimationFrame(redraw);
+        } else {
+            this._vueCompatHeightRedrawFrame = setTimeout(redraw, 0);
+        }
+    },
+
+    applyVueCompatAutoSize(widgetHeight = this.getVueCompatWidgetHeight()) {
+        if (!this.isVueNodesMode()) return;
+
+        const targetHeight = Math.max(
+            Math.ceil(Number(widgetHeight) || 0),
+            this.node.min_size?.[1] || 200
+        );
+        if (this._vueCompatAutoSizedContentHeight === targetHeight) return;
+
+        this._vueCompatAutoSizedContentHeight = targetHeight;
+        const targetWidth = Math.max(Number(this.node.size?.[0]) || 0, 330);
+        if (Math.abs((Number(this.node.size?.[1]) || 0) - targetHeight) <= 1) return;
+
+        this._isApplyingAutoSize = true;
+        try {
+            if (typeof this.node.setSize === 'function') {
+                this.node.setSize([targetWidth, targetHeight]);
+            } else {
+                this.node.size = [targetWidth, targetHeight];
+            }
+        } finally {
+            this._isApplyingAutoSize = false;
+        }
+    },
+
+    withVueCompatWidgetSize(callback) {
+        if (!this.isVueNodesMode() || !Array.isArray(this.node.size)) {
+            return callback();
+        }
+
+        const originalWidth = this.node.size[0];
+        const originalHeight = this.node.size[1];
+        const widgetWidth = Number(this._vueCompatWidgetWidth) || originalWidth;
+        const widgetHeight = Number(this._vueCompatWidgetHeight) || originalHeight;
+
+        this.node.size[0] = widgetWidth;
+        this.node.size[1] = widgetHeight;
+        try {
+            return callback();
+        } finally {
+            this.node.size[0] = originalWidth;
+            this.node.size[1] = originalHeight;
+        }
+    },
+
+    requestVueCompatWidgetDraw(updateHeight = false) {
+        const widget = this.vueCompatWidget;
+        if (!widget || !this.isVueNodesMode()) return;
+
+        if (updateHeight) {
+            const height = this.getVueCompatRenderedWidgetHeight();
+            this._vueCompatWidgetHeight = height;
+            if (this.collapsedSections?.extraControls) {
+                this._vueCompatAutoSizedContentHeight = null;
+            } else {
+                this.applyVueCompatAutoSize(height);
+            }
+        }
+        widget.triggerDraw?.();
+    },
+
+    normalizeVueCompatPointerEvent(e, pos = null) {
+        if (!e || !this.isVueNodesMode()) return e;
+
+        const localX = Number.isFinite(e.offsetX) ? e.offsetX : pos?.[0];
+        const localY = Number.isFinite(e.offsetY) ? e.offsetY : pos?.[1];
+        if (!Number.isFinite(localX) || !Number.isFinite(localY)) return e;
+
+        const values = {
+            canvasX: this.node.pos[0] + localX,
+            canvasY: this.node.pos[1] + localY
+        };
+        for (const [key, value] of Object.entries(values)) {
+            try {
+                Object.defineProperty(e, key, { value, configurable: true });
+            } catch {
+                try {
+                    e[key] = value;
+                } catch {
+                    // Ignore read-only event implementations.
+                }
+            }
+        }
+        return e;
+    },
+
+    updateVueCompatCanvasLayout(canvasElement) {
+        const widgetsGrid = canvasElement?.closest?.('[data-testid="node-widgets"]');
+        const slotsElement = widgetsGrid?.previousElementSibling;
+        if (!widgetsGrid || !slotsElement) return;
+
+        if (this._vueCompatLayout?.widgetsGrid !== widgetsGrid) {
+            this.teardownVueCompatCanvasLayout();
+            this._vueCompatLayout = {
+                widgetsGrid,
+                slotsElement,
+                gridMarginTop: widgetsGrid.style.marginTop,
+                gridPosition: widgetsGrid.style.position,
+                gridZIndex: widgetsGrid.style.zIndex,
+                slotsPosition: slotsElement.style.position,
+                slotsZIndex: slotsElement.style.zIndex,
+                slotsPointerEvents: slotsElement.style.pointerEvents,
+                slotDotPointerEvents: new Map()
+            };
+        }
+
+        const slotHeight = Math.max(0, Number(slotsElement.offsetHeight) || 0);
+        widgetsGrid.style.marginTop = slotHeight > 0 ? `-${slotHeight}px` : "";
+        widgetsGrid.style.position = "relative";
+        widgetsGrid.style.zIndex = "1";
+        slotsElement.style.position = "relative";
+        slotsElement.style.zIndex = "2";
+        slotsElement.style.pointerEvents = "none";
+        for (const slotDot of slotsElement.querySelectorAll?.('[data-testid="slot-connection-dot"]') || []) {
+            if (!this._vueCompatLayout.slotDotPointerEvents.has(slotDot)) {
+                this._vueCompatLayout.slotDotPointerEvents.set(slotDot, slotDot.style.pointerEvents);
+            }
+            slotDot.style.pointerEvents = "auto";
+        }
+        this.ensureVueCompatHeaderControls(widgetsGrid);
+        this._vueCompatSlotOffset = slotHeight;
+    },
+
+    ensureVueCompatHeaderControls(widgetsGrid) {
+        if (typeof document === "undefined") return;
+
+        const nodeElement = widgetsGrid?.closest?.('.lg-node');
+        const headerElement = nodeElement?.querySelector?.('.lg-node-header');
+        if (!headerElement) return;
+
+        if (this._vueCompatHeaderControls?.headerElement === headerElement) {
+            this.syncVueCompatHeaderControls();
+            return;
+        }
+
+        this.teardownVueCompatHeaderControls();
+
+        const container = document.createElement('div');
+        container.dataset.resolutionMasterHeaderControls = 'true';
+        container.style.cssText = [
+            'position:absolute',
+            'top:50%',
+            'right:9px',
+            'transform:translateY(-50%)',
+            'display:flex',
+            'align-items:center',
+            'gap:6px',
+            'z-index:20',
+            'pointer-events:auto'
+        ].join(';');
+
+        const createButton = (name, label, title) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.dataset.resolutionMasterControl = name;
+            button.textContent = label;
+            button.title = title;
+            button.setAttribute('aria-label', title);
+            button.style.cssText = [
+                'width:18px',
+                'height:18px',
+                'min-width:18px',
+                'padding:0',
+                'border-radius:5px',
+                'border:1px solid rgba(255,255,255,0.25)',
+                'background:rgba(255,255,255,0.08)',
+                'color:#cfcfcf',
+                'display:flex',
+                'align-items:center',
+                'justify-content:center',
+                'box-sizing:border-box',
+                'font-family:Arial,sans-serif',
+                'font-size:13px',
+                'font-weight:700',
+                'line-height:1',
+                'cursor:pointer',
+                'pointer-events:auto'
+            ].join(';');
+            button.addEventListener('pointerdown', event => event.stopPropagation());
+            button.addEventListener('dblclick', event => event.stopPropagation());
+            button.addEventListener('pointerenter', () => {
+                button.style.borderColor = 'rgba(255,255,255,0.65)';
+                button.style.color = '#fff';
+            });
+            button.addEventListener('pointerleave', () => this.syncVueCompatHeaderControls());
+            return button;
+        };
+
+        const helpButton = createButton('help', '?', 'Resolution Master help');
+        const toggleButton = createButton('toggle', '−', 'Minimize Resolution Master controls');
+        helpButton.addEventListener('click', event => {
+            event.stopPropagation();
+            this.showHelpDialog();
+        });
+        toggleButton.addEventListener('click', event => {
+            event.stopPropagation();
+            this.handleSectionHeaderClick('extraControlsHeader');
+            this.syncVueCompatHeaderControls();
+        });
+
+        container.append(helpButton, toggleButton);
+        this._vueCompatHeaderControls = {
+            container,
+            headerElement,
+            headerPosition: headerElement.style.position,
+            headerPaddingRight: headerElement.style.paddingRight,
+            helpButton,
+            toggleButton
+        };
+        headerElement.style.position = 'relative';
+        headerElement.style.paddingRight = '62px';
+        headerElement.append(container);
+        this.syncVueCompatHeaderControls();
+    },
+
+    syncVueCompatHeaderControls() {
+        const controls = this._vueCompatHeaderControls;
+        if (!controls) return;
+
+        const isCompact = Boolean(this.collapsedSections?.extraControls);
+        controls.helpButton.style.background = 'rgba(255,255,255,0.08)';
+        controls.helpButton.style.borderColor = 'rgba(255,255,255,0.25)';
+        controls.helpButton.style.color = '#cfcfcf';
+        controls.toggleButton.textContent = isCompact ? '+' : '−';
+        controls.toggleButton.title = isCompact
+            ? 'Expand Resolution Master controls'
+            : 'Minimize Resolution Master controls';
+        controls.toggleButton.setAttribute('aria-label', controls.toggleButton.title);
+        controls.toggleButton.style.background = isCompact
+            ? 'rgba(90,170,255,0.45)'
+            : 'rgba(255,255,255,0.08)';
+        controls.toggleButton.style.borderColor = isCompact
+            ? 'rgba(120,190,255,0.85)'
+            : 'rgba(255,255,255,0.25)';
+        controls.toggleButton.style.color = isCompact ? '#fff' : '#cfcfcf';
+    },
+
+    teardownVueCompatHeaderControls() {
+        const controls = this._vueCompatHeaderControls;
+        if (!controls) return;
+
+        controls.container.remove();
+        controls.headerElement.style.position = controls.headerPosition;
+        controls.headerElement.style.paddingRight = controls.headerPaddingRight;
+        this._vueCompatHeaderControls = null;
+    },
+
+    teardownVueCompatCanvasLayout() {
+        const layout = this._vueCompatLayout;
+        if (layout) {
+            layout.widgetsGrid.style.marginTop = layout.gridMarginTop;
+            layout.widgetsGrid.style.position = layout.gridPosition;
+            layout.widgetsGrid.style.zIndex = layout.gridZIndex;
+            layout.slotsElement.style.position = layout.slotsPosition;
+            layout.slotsElement.style.zIndex = layout.slotsZIndex;
+            layout.slotsElement.style.pointerEvents = layout.slotsPointerEvents;
+            for (const [slotDot, pointerEvents] of layout.slotDotPointerEvents) {
+                slotDot.style.pointerEvents = pointerEvents;
+            }
+        }
+        this.teardownVueCompatHeaderControls();
+        this._vueCompatLayout = null;
+        this._vueCompatSlotOffset = 0;
+        this._vueCompatAutoSizedContentHeight = null;
+    },
+
+    bindVueCompatCanvasEvents(canvasElement) {
+        if (!canvasElement?.addEventListener || this._vueCompatCanvasElement === canvasElement) return;
+        this.teardownVueCompatCanvasEvents();
+
+        const handlePointerMove = (e) => {
+            if (this.node.capture) return;
+            this.normalizeVueCompatPointerEvent(e);
+            this.withVueCompatWidgetSize(() => this.handleMouseHover(e, null, this.app?.canvas));
+        };
+        const handlePointerLeave = () => {
+            if (this.tooltipTimer) {
+                clearTimeout(this.tooltipTimer);
+                this.tooltipTimer = null;
+            }
+            this.hoverElement = null;
+            this.tooltipElement = null;
+            this.showTooltip = false;
+            this.requestCanvasUpdate(true);
+        };
+
+        canvasElement.addEventListener("pointermove", handlePointerMove);
+        canvasElement.addEventListener("pointerleave", handlePointerLeave);
+        this._vueCompatCanvasElement = canvasElement;
+        this._vueCompatCanvasHandlers = { handlePointerMove, handlePointerLeave };
+    },
+
+    teardownVueCompatCanvasEvents() {
+        if (this._vueCompatHeightRedrawFrame != null) {
+            if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this._vueCompatHeightRedrawFrame);
+            } else {
+                clearTimeout(this._vueCompatHeightRedrawFrame);
+            }
+            this._vueCompatHeightRedrawFrame = null;
+        }
+        const element = this._vueCompatCanvasElement;
+        const handlers = this._vueCompatCanvasHandlers;
+        if (element && handlers) {
+            element.removeEventListener("pointermove", handlers.handlePointerMove);
+            element.removeEventListener("pointerleave", handlers.handlePointerLeave);
+        }
+        this._vueCompatCanvasElement = null;
+        this._vueCompatCanvasHandlers = null;
+        this.teardownVueCompatCanvasLayout();
+    },
+
+    installVueNodesCompatibilityWidget() {
+        if (this.vueCompatWidget || !this.node.addCustomWidget) return;
+
+        const self = this;
+        const widget = {
+            name: VUE_COMPAT_WIDGET_NAME,
+            type: VUE_COMPAT_WIDGET_NAME,
+            value: null,
+            serialize: false,
+            options: {},
+            computeSize(width) {
+                if (!self.isVueNodesMode()) return [0, -4];
+                return [width, self.getVueCompatWidgetHeight()];
+            },
+            computeLayoutSize() {
+                if (!self.isVueNodesMode()) {
+                    return { minWidth: 0, minHeight: 0, maxHeight: 0 };
+                }
+                const height = self.getVueCompatWidgetHeight();
+                return {
+                    minWidth: 330,
+                    minHeight: height,
+                    maxHeight: self.collapsedSections?.extraControls ? 100000 : height
+                };
+            },
+            draw(ctx, _node, width, y, height) {
+                if (!self.isVueNodesMode()) return;
+
+                self._vueCompatWidgetWidth = width;
+                self.bindVueCompatCanvasEvents(ctx.canvas);
+                self.updateVueCompatCanvasLayout(ctx.canvas);
+                const minimumHeight = self.getVueCompatWidgetHeight();
+                const renderedCanvasHeight = Number(height)
+                    || Number(widget.computedHeight)
+                    || minimumHeight;
+                const contentHeight = self.collapsedSections?.extraControls
+                    ? Math.max(minimumHeight, renderedCanvasHeight)
+                    : minimumHeight;
+                self._vueCompatWidgetHeight = contentHeight;
+                if (self.collapsedSections?.extraControls) {
+                    self._vueCompatAutoSizedContentHeight = null;
+                } else {
+                    self.applyVueCompatAutoSize(minimumHeight);
+                }
+                self.withVueCompatWidgetSize(() => {
+                    ctx.save();
+                    ctx.translate(0, 1 - y);
+                    self.drawInterface(ctx);
+                    ctx.restore();
+                });
+            },
+            mouse(e, pos, node) {
+                if (!self.isVueNodesMode()) return false;
+
+                self.normalizeVueCompatPointerEvent(e, pos);
+
+                const canvas = self.app?.canvas
+                    || node.graph?.list_of_graphcanvas?.[0]
+                    || globalThis.LGraphCanvas?.active_canvas
+                    || null;
+
+                try {
+                    return self.withVueCompatWidgetSize(() => {
+                        if (node.capture && (e.type === "pointerup" || e.type === "mouseup" || e.buttons === 0)) {
+                            return self.handleMouseUp(e);
+                        }
+                        if (node.capture) {
+                            return self.handleMouseMove(e, null, canvas);
+                        }
+                        if (e.type === "pointerdown" || e.type === "mousedown") {
+                            return node.onMouseDown?.(e, pos, canvas) ?? false;
+                        }
+                        return false;
+                    });
+                } finally {
+                    self.requestVueCompatWidgetDraw(true);
+                }
+            }
+        };
+
+        this.vueCompatWidget = this.node.addCustomWidget(widget) || widget;
+        log.debug('Installed ResolutionMaster Nodes 2.0 compatibility widget', {
+            nodeId: this.node.id ?? null
+        });
     },
 
     ensureMinimumSize() {
@@ -56,7 +488,7 @@ export const nodeLifecycleMethods = {
         }
         const sectionHeights = {
             actions: this.collapsedSections?.actions ? 25 : 55,
-            scaling: this.collapsedSections?.scaling ? 25 : 130,
+            scaling: this.collapsedSections?.scaling ? 25 : 155,
             autoDetect: this.collapsedSections?.autoDetect ? 25 : 135,
             presets: this.collapsedSections?.presets ? 25 : 55
         };
@@ -86,6 +518,10 @@ export const nodeLifecycleMethods = {
         return this.collapsedSections?.extraControls ? 8 : 20;
     },
 
+    getVueCompatBottomOverlayClearance() {
+        return this.isVueNodesMode() && this.collapsedSections?.extraControls ? 25 : 0;
+    },
+
     getManualCanvasHeight(currentY = this.getManualContentStartY(), useAvailableHeight = true) {
         if (!this.collapsedSections?.extraControls) {
             return 200;
@@ -97,7 +533,7 @@ export const nodeLifecycleMethods = {
 
         const spacing = this.getManualSpacing();
         const bottomContentHeight = this.collapsedSections?.extraControls
-            ? 15 + this.getManualBottomPadding()
+            ? 15 + this.getManualBottomPadding() + this.getVueCompatBottomOverlayClearance()
             : this.getCanvasInfoGap() + 15 + spacing + this.getManualBottomPadding();
         const availableHeight = this.node.size[1] - currentY - bottomContentHeight;
         return Math.max(200, availableHeight);
@@ -179,6 +615,7 @@ export const nodeLifecycleMethods = {
         node.size = [330, 400];
         node.min_size = [330, 200];
         this.applyCompactSlotLabels();
+        this.installVueNodesCompatibilityWidget();
         if (node.outputs) {
             node.outputs.forEach(output => {
                 output.hidden = false;
@@ -267,7 +704,7 @@ export const nodeLifecycleMethods = {
         this.batchSizeWidget = batchSizeWidget;
         // Latent type is manually controlled via LAT selector.
         node.onDrawForeground = function(ctx) {
-            if (this.flags.collapsed) return;
+            if (this.flags.collapsed || self.isVueNodesMode()) return;
             self.ensureMinimumSize();
             self.drawInterface(ctx);
         };
@@ -324,15 +761,19 @@ export const nodeLifecycleMethods = {
             return result;
         };
         node.onResize = function() {
-            if (!self._isApplyingAutoSize) {
+            if (!self._isApplyingAutoSize && !self.isVueNodesMode()) {
                 self.storePreferredHeight(this.size[1]);
             }
-            self.ensureMinimumSize();
+            if (!self.isVueNodesMode()) {
+                self.ensureMinimumSize();
+            }
+            self.requestVueCompatWidgetDraw(true);
             self.requestCanvasUpdate(true);
         };
         const origOnRemoved = node.onRemoved;
         node.onRemoved = function() {
             self.stopAutoDetect();
+            self.teardownVueCompatCanvasEvents();
             if (self.tooltipTimer) {
                 clearTimeout(self.tooltipTimer);
                 self.tooltipTimer = null;
@@ -390,6 +831,8 @@ export const nodeLifecycleMethods = {
                 widget.hidden = true;
                 widget.type = "hidden";
                 widget.computeSize = () => [0, -4];
+                widget.options = widget.options || {};
+                widget.options.canvasOnly = true;
             }
         });
         this.syncBackendFallbackWidgets();

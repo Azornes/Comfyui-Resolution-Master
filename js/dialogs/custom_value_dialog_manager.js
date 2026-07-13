@@ -299,7 +299,7 @@ export class CustomValueDialogManager {
         }
         
         this.closeCustomInputDialog();
-        this.app?.graph?.setDirtyCanvas(true);
+        this.rm.requestCanvasUpdate(true);
         
         log.debug(`Applied custom ${valueType}: ${value}`);
     }

@@ -32,6 +32,7 @@ export const canvasMethods = {
                     try {
                         this._canvasUpdateScheduled = false;
                         this._pendingCanvasUpdate = false;
+                        this.requestVueCompatWidgetDraw(true);
                         this.app?.graph?.setDirtyCanvas(true);
                     } finally {
                         performanceDiagnostics.end(dirtyToken);
