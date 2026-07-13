@@ -508,6 +508,9 @@ export const nodeLifecycleMethods = {
 
                 try {
                     return self.withVueCompatWidgetSize(() => {
+                        if (node.capture && (e.type === "pointerdown" || e.type === "mousedown")) {
+                            self.handleMouseUp(e);
+                        }
                         if (node.capture && (e.type === "pointerup" || e.type === "mouseup" || e.buttons === 0)) {
                             return self.handleMouseUp(e);
                         }

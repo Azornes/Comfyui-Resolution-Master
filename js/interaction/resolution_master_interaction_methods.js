@@ -280,6 +280,13 @@ export const interactionMethods = {
     },
 
     captureNodePointer(canvas) {
+        if (this.isVueNodesMode?.()) {
+            this.clearCanvasPointerDrag();
+            this._usingCanvasPointerCallbacks = false;
+            this._capturedPointerCanvas = null;
+            return;
+        }
+
         const pointer = this.getCanvasPointer(canvas);
         if (pointer && ("onDrag" in pointer || "finally" in pointer)) {
             const activeCanvas = canvas
@@ -327,6 +334,13 @@ export const interactionMethods = {
     },
 
     releaseNodePointer(canvas) {
+        if (this.isVueNodesMode?.()) {
+            this.clearCanvasPointerDrag();
+            this._usingCanvasPointerCallbacks = false;
+            this._capturedPointerCanvas = null;
+            return;
+        }
+
         const pointer = this.getCanvasPointer(canvas);
         if (pointer && ("onDrag" in pointer || "finally" in pointer)) {
             this.clearCanvasPointerDrag();
