@@ -122,6 +122,47 @@ export const nodeLifecycleMethods = {
         widget.triggerDraw?.();
     },
 
+    prepareVueCompatCanvasDraw(ctx, width, height, widget) {
+        if (!this.isVueNodesMode() || !this.collapsedSections?.extraControls) {
+            return { ctx, height };
+        }
+
+        const canvasElement = ctx?.canvas;
+        const canvasHost = canvasElement?.parentElement;
+        if (!canvasElement || !canvasHost) return { ctx, height };
+
+        const releaseHostMinimum = () => {
+            if (canvasHost.isConnected !== false) {
+                canvasHost.style.minHeight = "0px";
+            }
+        };
+        releaseHostMinimum();
+        if (typeof queueMicrotask === "function") {
+            queueMicrotask(releaseHostMinimum);
+        }
+
+        const minimumHeight = this.getVueCompatWidgetHeight();
+        const hostHeight = Math.floor(Number(canvasHost.clientHeight) || 0);
+        const targetHeight = Math.max(minimumHeight, hostHeight);
+        const currentHeight = Number(height) || minimumHeight;
+        if (!Number.isFinite(targetHeight) || Math.abs(targetHeight - currentHeight) <= 1) {
+            return { ctx, height: currentHeight };
+        }
+
+        widget.computedHeight = targetHeight;
+        const pixelRatio = Math.max(
+            1,
+            Number(canvasElement.width) / Math.max(1, Number(width) || canvasElement.clientWidth || 1)
+        );
+        canvasElement.height = Math.max(1, Math.ceil((targetHeight + 2) * pixelRatio));
+        const resizedContext = canvasElement.getContext?.("2d");
+        if (!resizedContext) return { ctx, height: currentHeight };
+
+        resizedContext.scale(pixelRatio, pixelRatio);
+        this.scheduleVueCompatHeightRedraw();
+        return { ctx: resizedContext, height: targetHeight };
+    },
+
     normalizeVueCompatPointerEvent(e, pos = null) {
         if (!e || !this.isVueNodesMode()) return e;
 
@@ -150,30 +191,56 @@ export const nodeLifecycleMethods = {
     updateVueCompatCanvasLayout(canvasElement) {
         const widgetsGrid = canvasElement?.closest?.('[data-testid="node-widgets"]');
         const slotsElement = widgetsGrid?.previousElementSibling;
-        if (!widgetsGrid || !slotsElement) return;
+        const bodyElement = widgetsGrid?.parentElement;
+        if (!widgetsGrid || !slotsElement || !bodyElement) return;
 
         if (this._vueCompatLayout?.widgetsGrid !== widgetsGrid) {
             this.teardownVueCompatCanvasLayout();
+            const canvasHost = canvasElement.parentElement;
+            const badgeElement = Array.from(bodyElement.children).find(element =>
+                element !== slotsElement
+                && element !== widgetsGrid
+                && element.classList?.contains('h-5')
+                && element.classList?.contains('text-muted-foreground')
+            ) || null;
             this._vueCompatLayout = {
+                bodyElement,
                 widgetsGrid,
                 slotsElement,
+                canvasHost,
+                badgeElement,
+                bodyPosition: bodyElement.style.position,
+                canvasHostMinHeight: canvasHost?.style.minHeight ?? '',
                 gridMarginTop: widgetsGrid.style.marginTop,
                 gridPosition: widgetsGrid.style.position,
                 gridZIndex: widgetsGrid.style.zIndex,
                 slotsPosition: slotsElement.style.position,
+                slotsTop: slotsElement.style.top,
+                slotsLeft: slotsElement.style.left,
+                slotsRight: slotsElement.style.right,
+                slotsWidth: slotsElement.style.width,
                 slotsZIndex: slotsElement.style.zIndex,
                 slotsPointerEvents: slotsElement.style.pointerEvents,
+                badgeDisplay: badgeElement?.style.display ?? '',
                 slotDotPointerEvents: new Map()
             };
         }
 
         const slotHeight = Math.max(0, Number(slotsElement.offsetHeight) || 0);
-        widgetsGrid.style.marginTop = slotHeight > 0 ? `-${slotHeight}px` : "";
+        bodyElement.style.position = "relative";
+        widgetsGrid.style.marginTop = "";
         widgetsGrid.style.position = "relative";
         widgetsGrid.style.zIndex = "1";
-        slotsElement.style.position = "relative";
+        slotsElement.style.position = "absolute";
+        slotsElement.style.top = "0";
+        slotsElement.style.left = "0";
+        slotsElement.style.right = "0";
+        slotsElement.style.width = "100%";
         slotsElement.style.zIndex = "2";
         slotsElement.style.pointerEvents = "none";
+        if (this._vueCompatLayout.badgeElement) {
+            this._vueCompatLayout.badgeElement.style.display = "none";
+        }
         for (const slotDot of slotsElement.querySelectorAll?.('[data-testid="slot-connection-dot"]') || []) {
             if (!this._vueCompatLayout.slotDotPointerEvents.has(slotDot)) {
                 this._vueCompatLayout.slotDotPointerEvents.set(slotDot, slotDot.style.pointerEvents);
@@ -311,12 +378,25 @@ export const nodeLifecycleMethods = {
     teardownVueCompatCanvasLayout() {
         const layout = this._vueCompatLayout;
         if (layout) {
+            if (layout.bodyElement) {
+                layout.bodyElement.style.position = layout.bodyPosition ?? "";
+            }
+            if (layout.canvasHost) {
+                layout.canvasHost.style.minHeight = layout.canvasHostMinHeight ?? "";
+            }
             layout.widgetsGrid.style.marginTop = layout.gridMarginTop;
             layout.widgetsGrid.style.position = layout.gridPosition;
             layout.widgetsGrid.style.zIndex = layout.gridZIndex;
             layout.slotsElement.style.position = layout.slotsPosition;
+            layout.slotsElement.style.top = layout.slotsTop ?? "";
+            layout.slotsElement.style.left = layout.slotsLeft ?? "";
+            layout.slotsElement.style.right = layout.slotsRight ?? "";
+            layout.slotsElement.style.width = layout.slotsWidth ?? "";
             layout.slotsElement.style.zIndex = layout.slotsZIndex;
             layout.slotsElement.style.pointerEvents = layout.slotsPointerEvents;
+            if (layout.badgeElement) {
+                layout.badgeElement.style.display = layout.badgeDisplay;
+            }
             for (const [slotDot, pointerEvents] of layout.slotDotPointerEvents) {
                 slotDot.style.pointerEvents = pointerEvents;
             }
@@ -400,6 +480,9 @@ export const nodeLifecycleMethods = {
                 self._vueCompatWidgetWidth = width;
                 self.bindVueCompatCanvasEvents(ctx.canvas);
                 self.updateVueCompatCanvasLayout(ctx.canvas);
+                const preparedDraw = self.prepareVueCompatCanvasDraw(ctx, width, height, widget);
+                ctx = preparedDraw.ctx;
+                height = preparedDraw.height;
                 const minimumHeight = self.getVueCompatWidgetHeight();
                 const renderedCanvasHeight = Number(height)
                     || Number(widget.computedHeight)
