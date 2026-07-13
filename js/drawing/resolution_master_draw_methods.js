@@ -35,13 +35,15 @@ export const drawingMethods = {
                 this.draw2DCanvas(ctx, margin, currentY, node.size[0] - margin * 2, canvasHeight, canvasPadding);
                 currentY += canvasHeight + this.getCanvasInfoGap();
 
+                const canvasInfoY = this.lastCanvasBounds
+                    ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
+                    : currentY;
+                const maxVueInfoY = node.size[1]
+                    - this.getVueCompatBottomOverlayClearance()
+                    - this.getManualBottomPadding();
                 const infoY = this.isVueNodesMode() && this.collapsedSections.extraControls
-                    ? node.size[1]
-                        - this.getVueCompatBottomOverlayClearance()
-                        - this.getManualBottomPadding()
-                    : this.lastCanvasBounds
-                        ? this.lastCanvasBounds.y + this.lastCanvasBounds.h + 18
-                        : currentY;
+                    ? Math.min(canvasInfoY, maxVueInfoY)
+                    : canvasInfoY;
                 this.drawInfoText(ctx, infoY);
                 currentY += 15 + spacing;
 

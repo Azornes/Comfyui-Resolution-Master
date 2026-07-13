@@ -383,10 +383,6 @@ export const nodeLifecycleMethods = {
             value: null,
             serialize: false,
             options: {},
-            computeSize(width) {
-                if (!self.isVueNodesMode()) return [0, -4];
-                return [width, self.getVueCompatWidgetHeight()];
-            },
             computeLayoutSize() {
                 if (!self.isVueNodesMode()) {
                     return { minWidth: 0, minHeight: 0, maxHeight: 0 };
