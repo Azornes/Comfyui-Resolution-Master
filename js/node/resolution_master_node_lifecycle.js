@@ -48,7 +48,7 @@ export const nodeLifecycleMethods = {
     },
 
     getVueCompatBottomBadgeClearance() {
-        return this.isVueNodesMode() && this.collapsedSections?.extraControls ? 23 : 0;
+        return this.isVueNodesMode() && this.collapsedSections?.extraControls ? -23 : 0;
     },
 
     scheduleVueCompatHeightRedraw() {
