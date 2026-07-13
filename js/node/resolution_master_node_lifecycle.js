@@ -47,6 +47,10 @@ export const nodeLifecycleMethods = {
             : minimumHeight;
     },
 
+    getVueCompatBottomBadgeClearance() {
+        return this.isVueNodesMode() && this.collapsedSections?.extraControls ? 23 : 0;
+    },
+
     scheduleVueCompatHeightRedraw() {
         if (this._vueCompatHeightRedrawFrame != null) return;
 
@@ -143,7 +147,10 @@ export const nodeLifecycleMethods = {
 
         const minimumHeight = this.getVueCompatWidgetHeight();
         const hostHeight = Math.floor(Number(canvasHost.clientHeight) || 0);
-        const targetHeight = Math.max(minimumHeight, hostHeight);
+        const targetHeight = Math.max(
+            minimumHeight,
+            hostHeight - this.getVueCompatBottomBadgeClearance()
+        );
         const currentHeight = Number(height) || minimumHeight;
         if (!Number.isFinite(targetHeight) || Math.abs(targetHeight - currentHeight) <= 1) {
             return { ctx, height: currentHeight };
@@ -197,18 +204,11 @@ export const nodeLifecycleMethods = {
         if (this._vueCompatLayout?.widgetsGrid !== widgetsGrid) {
             this.teardownVueCompatCanvasLayout();
             const canvasHost = canvasElement.parentElement;
-            const badgeElement = Array.from(bodyElement.children).find(element =>
-                element !== slotsElement
-                && element !== widgetsGrid
-                && element.classList?.contains('h-5')
-                && element.classList?.contains('text-muted-foreground')
-            ) || null;
             this._vueCompatLayout = {
                 bodyElement,
                 widgetsGrid,
                 slotsElement,
                 canvasHost,
-                badgeElement,
                 bodyPosition: bodyElement.style.position,
                 canvasHostMinHeight: canvasHost?.style.minHeight ?? '',
                 gridMarginTop: widgetsGrid.style.marginTop,
@@ -221,7 +221,6 @@ export const nodeLifecycleMethods = {
                 slotsWidth: slotsElement.style.width,
                 slotsZIndex: slotsElement.style.zIndex,
                 slotsPointerEvents: slotsElement.style.pointerEvents,
-                badgeDisplay: badgeElement?.style.display ?? '',
                 slotDotPointerEvents: new Map()
             };
         }
@@ -238,9 +237,6 @@ export const nodeLifecycleMethods = {
         slotsElement.style.width = "100%";
         slotsElement.style.zIndex = "2";
         slotsElement.style.pointerEvents = "none";
-        if (this._vueCompatLayout.badgeElement) {
-            this._vueCompatLayout.badgeElement.style.display = "none";
-        }
         for (const slotDot of slotsElement.querySelectorAll?.('[data-testid="slot-connection-dot"]') || []) {
             if (!this._vueCompatLayout.slotDotPointerEvents.has(slotDot)) {
                 this._vueCompatLayout.slotDotPointerEvents.set(slotDot, slotDot.style.pointerEvents);
@@ -394,9 +390,6 @@ export const nodeLifecycleMethods = {
             layout.slotsElement.style.width = layout.slotsWidth ?? "";
             layout.slotsElement.style.zIndex = layout.slotsZIndex;
             layout.slotsElement.style.pointerEvents = layout.slotsPointerEvents;
-            if (layout.badgeElement) {
-                layout.badgeElement.style.display = layout.badgeDisplay;
-            }
             for (const [slotDot, pointerEvents] of layout.slotDotPointerEvents) {
                 slotDot.style.pointerEvents = pointerEvents;
             }
