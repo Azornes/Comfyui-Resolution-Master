@@ -195,6 +195,47 @@ export const nodeLifecycleMethods = {
         return e;
     },
 
+    forwardVueCompatNodePointerEvent(e) {
+        if (!this.isVueNodesMode() || !e?.type) return false;
+
+        const nodeElement = this._vueCompatCanvasElement?.closest?.('[data-node-id]');
+        const EventConstructor = e.type.startsWith('pointer')
+            ? globalThis.PointerEvent
+            : globalThis.MouseEvent;
+        if (!nodeElement?.dispatchEvent || typeof EventConstructor !== 'function') return false;
+
+        const forwardedEvent = new EventConstructor(e.type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            view: globalThis.window,
+            detail: e.detail ?? 0,
+            screenX: e.screenX ?? 0,
+            screenY: e.screenY ?? 0,
+            clientX: e.clientX ?? 0,
+            clientY: e.clientY ?? 0,
+            ctrlKey: Boolean(e.ctrlKey),
+            shiftKey: Boolean(e.shiftKey),
+            altKey: Boolean(e.altKey),
+            metaKey: Boolean(e.metaKey),
+            button: e.button ?? 0,
+            buttons: e.buttons ?? 0,
+            relatedTarget: e.relatedTarget ?? null,
+            pointerId: e.pointerId ?? 1,
+            width: e.width ?? 1,
+            height: e.height ?? 1,
+            pressure: e.pressure ?? 0,
+            tangentialPressure: e.tangentialPressure ?? 0,
+            tiltX: e.tiltX ?? 0,
+            tiltY: e.tiltY ?? 0,
+            twist: e.twist ?? 0,
+            pointerType: e.pointerType || 'mouse',
+            isPrimary: e.isPrimary ?? true
+        });
+        nodeElement.dispatchEvent(forwardedEvent);
+        return true;
+    },
+
     updateVueCompatCanvasLayout(canvasElement) {
         const widgetsGrid = canvasElement?.closest?.('[data-testid="node-widgets"]');
         const slotsElement = widgetsGrid?.previousElementSibling;
@@ -443,6 +484,7 @@ export const nodeLifecycleMethods = {
         }
         this._vueCompatCanvasElement = null;
         this._vueCompatCanvasHandlers = null;
+        this._vueCompatForwardingNodePointer = false;
         this.teardownVueCompatCanvasLayout();
     },
 
@@ -501,6 +543,20 @@ export const nodeLifecycleMethods = {
 
                 self.normalizeVueCompatPointerEvent(e, pos);
 
+                const isPointerDown = e.type === "pointerdown" || e.type === "mousedown";
+                const isPointerEnd = e.type === "pointerup"
+                    || e.type === "mouseup"
+                    || e.type === "pointercancel"
+                    || e.buttons === 0;
+                if (isPointerDown && self._vueCompatForwardingNodePointer) {
+                    self._vueCompatForwardingNodePointer = false;
+                }
+                if (self._vueCompatForwardingNodePointer) {
+                    const forwarded = self.forwardVueCompatNodePointerEvent(e);
+                    if (isPointerEnd) self._vueCompatForwardingNodePointer = false;
+                    return forwarded;
+                }
+
                 const canvas = self.app?.canvas
                     || node.graph?.list_of_graphcanvas?.[0]
                     || globalThis.LGraphCanvas?.active_canvas
@@ -508,7 +564,7 @@ export const nodeLifecycleMethods = {
 
                 try {
                     return self.withVueCompatWidgetSize(() => {
-                        if (node.capture && (e.type === "pointerdown" || e.type === "mousedown")) {
+                        if (node.capture && isPointerDown) {
                             self.handleMouseUp(e);
                         }
                         if (node.capture && (e.type === "pointerup" || e.type === "mouseup" || e.buttons === 0)) {
@@ -517,8 +573,13 @@ export const nodeLifecycleMethods = {
                         if (node.capture) {
                             return self.handleMouseMove(e, null, canvas);
                         }
-                        if (e.type === "pointerdown" || e.type === "mousedown") {
-                            return node.onMouseDown?.(e, pos, canvas) ?? false;
+                        if (isPointerDown) {
+                            const handled = node.onMouseDown?.(e, pos, canvas) ?? false;
+                            if (handled) return handled;
+                            self._vueCompatForwardingNodePointer = true;
+                            const forwarded = self.forwardVueCompatNodePointerEvent(e);
+                            if (!forwarded) self._vueCompatForwardingNodePointer = false;
+                            return forwarded;
                         }
                         return false;
                     });
