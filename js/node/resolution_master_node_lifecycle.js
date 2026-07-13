@@ -147,27 +147,37 @@ export const nodeLifecycleMethods = {
 
         const minimumHeight = this.getVueCompatWidgetHeight();
         const hostHeight = Math.floor(Number(canvasHost.clientHeight) || 0);
-        const targetHeight = Math.max(
-            minimumHeight,
-            hostHeight - this.getVueCompatBottomBadgeClearance()
-        );
         const currentHeight = Number(height) || minimumHeight;
-        if (!Number.isFinite(targetHeight) || Math.abs(targetHeight - currentHeight) <= 1) {
+        const layoutHeight = Math.max(minimumHeight, hostHeight || currentHeight);
+        const drawingHeight = Math.max(
+            minimumHeight,
+            layoutHeight - this.getVueCompatBottomBadgeClearance()
+        );
+        if (!Number.isFinite(drawingHeight)) {
             return { ctx, height: currentHeight };
         }
 
-        widget.computedHeight = targetHeight;
+        const layoutHeightChanged = Math.abs((Number(widget.computedHeight) || 0) - layoutHeight) > 1;
+        if (layoutHeightChanged) {
+            widget.computedHeight = layoutHeight;
+        }
         const pixelRatio = Math.max(
             1,
             Number(canvasElement.width) / Math.max(1, Number(width) || canvasElement.clientWidth || 1)
         );
-        canvasElement.height = Math.max(1, Math.ceil((targetHeight + 2) * pixelRatio));
+        const backingHeight = Math.max(1, Math.ceil((drawingHeight + 2) * pixelRatio));
+        if (Math.abs(Number(canvasElement.height) - backingHeight) <= 1) {
+            if (layoutHeightChanged) this.scheduleVueCompatHeightRedraw();
+            return { ctx, height: drawingHeight };
+        }
+
+        canvasElement.height = backingHeight;
         const resizedContext = canvasElement.getContext?.("2d");
         if (!resizedContext) return { ctx, height: currentHeight };
 
         resizedContext.scale(pixelRatio, pixelRatio);
-        this.scheduleVueCompatHeightRedraw();
-        return { ctx: resizedContext, height: targetHeight };
+        if (layoutHeightChanged) this.scheduleVueCompatHeightRedraw();
+        return { ctx: resizedContext, height: drawingHeight };
     },
 
     normalizeVueCompatPointerEvent(e, pos = null) {
