@@ -2,6 +2,7 @@
 
 import torch
 import comfy.model_management
+from comfy_api.latest import io
 
 try:
     from .core.auto_detect import (
@@ -28,66 +29,58 @@ except ImportError:
 log = create_module_logger(__name__)
 
 
-class ResolutionMaster:
-    def __init__(self):
-        self.device = comfy.model_management.intermediate_device()
-        log.debug("Initialized node on device", self.device)
-
+class ResolutionMaster(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "mode": (
-                    ["Manual", "Manual Sliders", "Common Resolutions", "Aspect Ratios"],
-                    {"tooltip": "Choose how to control the output size. Manual mode uses the Resolution Master canvas."}
+    def define_schema(cls) -> io.Schema:
+        return io.Schema(
+            node_id="ResolutionMaster",
+            display_name="Resolution Master",
+            category="utils/azToolkit",
+            description="Interactive resolution, scaling, preset, and latent-size helper with optional input-image auto-detection.",
+            inputs=[
+                io.Combo.Input(
+                    "mode",
+                    options=["Manual", "Manual Sliders", "Common Resolutions", "Aspect Ratios"],
+                    tooltip="Choose how to control the output size. Manual mode uses the Resolution Master canvas.",
                 ),
-                "latent_type": (
-                    ["latent_4x8", "latent_128x16"],
-                    {"default": "latent_4x8", "tooltip": "Choose the latent type. Use 4x8 for most models, or 128x16 for Flux.2."}
+                io.Combo.Input(
+                    "latent_type",
+                    options=["latent_4x8", "latent_128x16"],
+                    default="latent_4x8",
+                    tooltip="Choose the latent type. Use 4x8 for most models, or 128x16 for Flux.2.",
                 ),
-                "width": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Final output width in pixels."}),
-                "height": ("INT", {"default": 512, "min": 0, "max": 32768, "step": 64, "tooltip": "Final output height in pixels."}),
-                "auto_detect": ("BOOLEAN", {"default": False, "label_on": "Auto-detect from input", "label_off": "Manual", "tooltip": "Detect the size from the connected input image."}),
-                "auto_detect_source": ("STRING", {"default": "backend", "tooltip": "Technical setting used by the Resolution Master interface."}),
-                "auto_detect_width": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Detected input width used by auto-detect."}),
-                "auto_detect_height": ("INT", {"default": 0, "min": 0, "max": 32768, "tooltip": "Detected input height used by auto-detect."}),
-                "auto_fit_on_change": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, fit it to the closest preset automatically."}),
-                "auto_resize_on_change": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, resize it automatically using the selected scaling mode."}),
-                "auto_snap_on_change": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, round its size to the selected snap step."}),
-                "smart_fit": ("BOOLEAN", {"default": False, "tooltip": "Fit to the closest preset aspect ratio while keeping the size close to the current resolution."}),
-                "use_custom_calc": ("BOOLEAN", {"default": False, "tooltip": "When a new image is detected, apply the selected model or category size rules automatically."}),
-                "preserve_scaling_ratio": ("BOOLEAN", {"default": False, "tooltip": "Keep the image proportions while scaling."}),
-                "selected_category": ("STRING", {"default": "", "tooltip": "Selected preset category."}),
-                "snap_value": ("INT", {"default": 64, "min": 1, "max": 32768, "tooltip": "Snap step used when rounding width and height."}),
-                "upscale_value": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 100.0, "tooltip": "Manual scale multiplier."}),
-                "target_resolution": ("INT", {"default": 1080, "min": 1, "max": 32768, "tooltip": "Target p-resolution used for scaling."}),
-                "target_megapixels": ("FLOAT", {"default": 2.0, "min": 0.0, "max": 1000.0, "tooltip": "Target megapixels used for scaling."}),
-                "auto_detect_presets_json": ("STRING", {"default": "{}", "tooltip": "Technical preset data used by auto-detect."}),
-                "rescale_mode": ("STRING", {"default": "resolution", "tooltip": "Scaling mode used for the Rescale Factor output."}),
-                "rescale_value": ("FLOAT", {"default": 1.0, "step": 0.001, "min": 0.0, "max": 100.0, "tooltip": "Current Rescale Factor value shown by the interface."}),
-                "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096, "tooltip": "How many latent images to create in one batch."}),
-            },
-            "optional": {
-                "input_image": ("IMAGE", {"tooltip": "Optional image used for auto-detecting width and height."}),
-            },
-            "hidden": {
-                "unique_id": "UNIQUE_ID",
-                "prompt": "PROMPT",
-            },
-        }
-
-    RETURN_TYPES = ("INT", "INT", "FLOAT", "INT", "LATENT")
-    RETURN_NAMES = ("width", "height", "rescale_factor", "batch_size", "latent")
-    OUTPUT_TOOLTIPS = (
-        "Final output width in pixels.",
-        "Final output height in pixels.",
-        "Scale factor calculated from the selected scaling mode.",
-        "Number of latent images created in one batch.",
-        "Empty latent created with the selected size, batch size, and latent type.",
-    )
-    DESCRIPTION = "Interactive resolution, scaling, preset, and latent-size helper with optional input-image auto-detection."
-    FUNCTION = "main"
-    CATEGORY = "utils/azToolkit"
+                io.Int.Input("width", default=512, min=0, max=32768, step=64, tooltip="Final output width in pixels."),
+                io.Int.Input("height", default=512, min=0, max=32768, step=64, tooltip="Final output height in pixels."),
+                io.Boolean.Input("auto_detect", default=False, label_on="Auto-detect from input", label_off="Manual", tooltip="Detect the size from the connected input image."),
+                io.String.Input("auto_detect_source", default="backend", tooltip="Technical setting used by the Resolution Master interface."),
+                io.Int.Input("auto_detect_width", default=0, min=0, max=32768, tooltip="Detected input width used by auto-detect."),
+                io.Int.Input("auto_detect_height", default=0, min=0, max=32768, tooltip="Detected input height used by auto-detect."),
+                io.Boolean.Input("auto_fit_on_change", default=False, tooltip="When a new image is detected, fit it to the closest preset automatically."),
+                io.Boolean.Input("auto_resize_on_change", default=False, tooltip="When a new image is detected, resize it automatically using the selected scaling mode."),
+                io.Boolean.Input("auto_snap_on_change", default=False, tooltip="When a new image is detected, round its size to the selected snap step."),
+                io.Boolean.Input("smart_fit", default=False, tooltip="Fit to the closest preset aspect ratio while keeping the size close to the current resolution."),
+                io.Boolean.Input("use_custom_calc", default=False, tooltip="When a new image is detected, apply the selected model or category size rules automatically."),
+                io.Boolean.Input("preserve_scaling_ratio", default=False, tooltip="Keep the image proportions while scaling."),
+                io.String.Input("selected_category", default="", tooltip="Selected preset category."),
+                io.Int.Input("snap_value", default=64, min=1, max=32768, tooltip="Snap step used when rounding width and height."),
+                io.Float.Input("upscale_value", default=1.0, min=0.0, max=100.0, tooltip="Manual scale multiplier."),
+                io.Int.Input("target_resolution", default=1080, min=1, max=32768, tooltip="Target p-resolution used for scaling."),
+                io.Float.Input("target_megapixels", default=2.0, min=0.0, max=1000.0, tooltip="Target megapixels used for scaling."),
+                io.String.Input("auto_detect_presets_json", default="{}", tooltip="Technical preset data used by auto-detect."),
+                io.String.Input("rescale_mode", default="resolution", tooltip="Scaling mode used for the Rescale Factor output."),
+                io.Float.Input("rescale_value", default=1.0, step=0.001, min=0.0, max=100.0, tooltip="Current Rescale Factor value shown by the interface."),
+                io.Int.Input("batch_size", default=1, min=1, max=4096, tooltip="How many latent images to create in one batch."),
+                io.Image.Input("input_image", optional=True, tooltip="Optional image used for auto-detecting width and height."),
+            ],
+            outputs=[
+                io.Int.Output("width", tooltip="Final output width in pixels."),
+                io.Int.Output("height", tooltip="Final output height in pixels."),
+                io.Float.Output("rescale_factor", tooltip="Scale factor calculated from the selected scaling mode."),
+                io.Int.Output("batch_size", tooltip="Number of latent images created in one batch."),
+                io.Latent.Output("latent", tooltip="Empty latent created with the selected size, batch size, and latent type."),
+            ],
+            hidden=[io.Hidden.unique_id, io.Hidden.prompt],
+        )
 
     @staticmethod
     def detect_image_dimensions(input_image):
@@ -120,8 +113,9 @@ class ResolutionMaster:
         selected_image = source_node.get("inputs", {}).get("selected_image", "")
         return cls._is_empty_local_image_gallery_selection(selected_image)
 
-    def main(
-        self,
+    @classmethod
+    def execute(
+        cls,
         mode,
         latent_type,
         width,
@@ -146,11 +140,15 @@ class ResolutionMaster:
         rescale_value,
         batch_size=1,
         input_image=None,
-        unique_id=None,
-        prompt=None,
-    ):
+    ) -> io.NodeOutput:
+        unique_id = cls.hidden.unique_id
+        prompt = cls.hidden.prompt
+        device = comfy.model_management.intermediate_device()
+
         log.debug(
             "Executing",
+            "device=",
+            device,
             "mode=",
             mode,
             "latent_type=",
@@ -164,7 +162,7 @@ class ResolutionMaster:
         )
 
         frontend_source_empty = auto_detect_source == "frontend-empty"
-        local_image_gallery_empty = self.is_empty_local_image_gallery_input(prompt, unique_id)
+        local_image_gallery_empty = cls.is_empty_local_image_gallery_input(prompt, unique_id)
 
         if auto_detect and (frontend_source_empty or local_image_gallery_empty):
             log.debug(
@@ -175,7 +173,7 @@ class ResolutionMaster:
                 local_image_gallery_empty,
             )
         elif auto_detect and input_image is not None:
-            detected_dimensions = self.detect_image_dimensions(input_image)
+            detected_dimensions = cls.detect_image_dimensions(input_image)
             if detected_dimensions is not None:
                 detected_width, detected_height = detected_dimensions
                 store_detected_dimensions(unique_id, detected_width, detected_height)
@@ -230,9 +228,9 @@ class ResolutionMaster:
         )
 
         if latent_type == "latent_128x16":
-            latent = torch.zeros([batch_size, 128, height // 16, width // 16], device=self.device)
+            latent = torch.zeros([batch_size, 128, height // 16, width // 16], device=device)
         else:
-            latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
+            latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=device)
 
         log.debug(
             "Returning result",
@@ -245,7 +243,7 @@ class ResolutionMaster:
             "batch_size=",
             batch_size,
         )
-        return (width, height, rescale_factor, batch_size, {"samples": latent})
+        return io.NodeOutput(width, height, rescale_factor, batch_size, {"samples": latent})
 
 
 register_dimension_routes()

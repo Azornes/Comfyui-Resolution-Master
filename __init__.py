@@ -1,14 +1,16 @@
+from comfy_api.latest import ComfyExtension, io
+
 from .aztoolkit import ResolutionMaster
 
 
-NODE_CLASS_MAPPINGS = {
-    "ResolutionMaster": ResolutionMaster
-}
+class ResolutionMasterExtension(ComfyExtension):
+    async def get_node_list(self) -> list[type[io.ComfyNode]]:
+        return [ResolutionMaster]
 
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "ResolutionMaster": "Resolution Master"
-}
+
+async def comfy_entrypoint() -> ResolutionMasterExtension:
+    return ResolutionMasterExtension()
 
 WEB_DIRECTORY = "./js"
 
-__all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS", "WEB_DIRECTORY"]
+__all__ = ["WEB_DIRECTORY", "comfy_entrypoint"]

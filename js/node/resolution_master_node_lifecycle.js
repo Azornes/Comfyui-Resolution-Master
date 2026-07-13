@@ -2,12 +2,29 @@ import { createModuleLogger } from "../log_system/log_funcs.js";
 import { DEFAULT_NODE_PROPERTIES } from "./default_node_properties.js";
 
 const log = createModuleLogger('resolution_master_node_lifecycle');
+const RESOLUTION_MASTER_AUX_ID = "Azornes/Comfyui-Resolution-Master";
 
 export const nodeLifecycleMethods = {
     initializeProperties() {
         Object.entries(DEFAULT_NODE_PROPERTIES).forEach(([key, defaultValue]) => {
             this.node.properties[key] = this.node.properties[key] ?? defaultValue;
         });
+        this.ensureCanonicalPackageMetadata();
+    },
+
+    ensureCanonicalPackageMetadata(serializedNode = null) {
+        const applyAuxId = properties => {
+            if (!properties || typeof properties !== "object" || properties.cnr_id) return;
+            properties.aux_id = RESOLUTION_MASTER_AUX_ID;
+        };
+
+        this.node.properties = this.node.properties || {};
+        applyAuxId(this.node.properties);
+
+        if (serializedNode && typeof serializedNode === "object") {
+            serializedNode.properties = serializedNode.properties || {};
+            applyAuxId(serializedNode.properties);
+        }
     },
 
     ensureMinimumSize() {
@@ -302,7 +319,9 @@ export const nodeLifecycleMethods = {
         node.onSerialize = function() {
             self.syncAutoDetectSourceState();
             self.syncBackendFallbackWidgets();
-            if (origOnSerialize) return origOnSerialize.apply(this, arguments);
+            const result = origOnSerialize?.apply(this, arguments);
+            self.ensureCanonicalPackageMetadata(arguments[0]);
+            return result;
         };
         node.onResize = function() {
             if (!self._isApplyingAutoSize) {
