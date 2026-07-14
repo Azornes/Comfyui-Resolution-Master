@@ -76,7 +76,7 @@ def find_closest_preset(width, height, presets):
             preset_aspect = orientation_width / orientation_height
             preset_pixels = orientation_width * orientation_height
             aspect_diff = abs(input_aspect - preset_aspect)
-            if aspect_diff < 0.01 or aspect_diff < closest_aspect_diff:
+            if aspect_diff < closest_aspect_diff + 0.01:
                 pixel_diff = abs(math.log(input_pixels / preset_pixels))
                 if aspect_diff < closest_aspect_diff or (
                     abs(aspect_diff - closest_aspect_diff) < 0.01 and pixel_diff < closest_pixel_diff
@@ -140,7 +140,7 @@ def apply_custom_calculation(width, height, category, presets):
         target_height = math.sqrt(target_pixels / aspect)
         return {"width": round(target_height * aspect), "height": round(target_height)}
 
-    if category in ("SDXL", "HiDream Dev"):
+    if category in ("SDXL", "HiDream Dev", "Krea 2 Turbo", "Krea 2 RAW"):
         closest = find_closest_preset(width, height, presets)
         if not closest:
             return {"width": width, "height": height}
