@@ -140,7 +140,7 @@ def apply_custom_calculation(width, height, category, presets):
         target_height = math.sqrt(target_pixels / aspect)
         return {"width": round(target_height * aspect), "height": round(target_height)}
 
-    if category in ("SDXL", "HiDream Dev"):
+    if category in ("SDXL", "HiDream Dev", "Krea 2 Turbo", "Krea 2 RAW"):
         closest = find_closest_preset(width, height, presets)
         if not closest:
             return {"width": width, "height": height}

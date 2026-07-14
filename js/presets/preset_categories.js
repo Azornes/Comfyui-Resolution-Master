@@ -97,7 +97,6 @@ export const presetCategories = {
         '9:16 Portrait (1024)': { width: 720, height: 1280 },
         '21:9 Ultrawide (1024)': { width: 1344, height: 576 },
         '9:21 Ultra Portrait (1024)': { width: 576, height: 1344 },
-
         // === Base 1280 ===
         '1:1 Square (1280)': { width: 1280, height: 1280 },
         '9:7 Landscape (1280)': { width: 1440, height: 1120 },
@@ -110,7 +109,6 @@ export const presetCategories = {
         '9:16 Portrait (1280)': { width: 864, height: 1536 },
         '21:9 Ultrawide (1280)': { width: 1680, height: 720 },
         '9:21 Ultra Portrait (1280)': { width: 720, height: 1680 },
-
         // === Base 1536 ===
         '1:1 Square (1536)': { width: 1536, height: 1536 },
         '9:7 Landscape (1536)': { width: 1728, height: 1344 },
@@ -123,8 +121,8 @@ export const presetCategories = {
         '9:16 Portrait (1536)': { width: 1152, height: 2048 },
         '21:9 Ultrawide (1536)': { width: 2016, height: 864 },
         '9:21 Ultra Portrait (1536)': { width: 864, height: 2016 },
-  },
-  'Krea 2 Turbo': {
+    },
+    'Krea 2 Turbo': {
         // === Base 1024 (official Krea aspect ratios) ===
         '1:1 Square (1024)': { width: 1024, height: 1024 },
         '4:3 Landscape (1024)': { width: 1184, height: 896 },
@@ -135,7 +133,6 @@ export const presetCategories = {
         '3:4 Portrait (1024)': { width: 896, height: 1184 },
         '2:3 Portrait (1024)': { width: 832, height: 1248 },
         '9:16 Portrait (1024)': { width: 768, height: 1376 },
-
         // === Base 1536 (official ratios x1.5) ===
         '1:1 Square (1536)': { width: 1536, height: 1536 },
         '4:3 Landscape (1536)': { width: 1776, height: 1344 },
@@ -146,7 +143,6 @@ export const presetCategories = {
         '3:4 Portrait (1536)': { width: 1344, height: 1776 },
         '2:3 Portrait (1536)': { width: 1248, height: 1872 },
         '9:16 Portrait (1536)': { width: 1152, height: 2064 },
-
         // === Base 2048 (official ratios x2, ~4.2 MP) ===
         '1:1 Square (2048)': { width: 2048, height: 2048 },
         '4:3 Landscape (2048)': { width: 2368, height: 1792 },
@@ -177,7 +173,6 @@ export const presetCategories = {
         'Instagram Landscape': { width: 1080, height: 566 },
         'Instagram Stories/Reels': { width: 1080, height: 1920 },
         'Instagram Profile': { width: 320, height: 320 },
-
         // Facebook
         'Facebook Post': { width: 1200, height: 630 },
         'Facebook Cover Page': { width: 820, height: 312 },
@@ -185,34 +180,28 @@ export const presetCategories = {
         'Facebook Personal Cover': { width: 1200, height: 445 },
         'Facebook Profile': { width: 180, height: 180 },
         'Facebook Stories': { width: 1080, height: 1920 },
-
         // X (Twitter)
         'Twitter Post': { width: 1200, height: 675 },
         'Twitter Header': { width: 1500, height: 500 },
         'Twitter Profile': { width: 400, height: 400 },
-
         // YouTube
         'YouTube Thumbnail': { width: 1280, height: 720 },
         'YouTube Banner': { width: 2560, height: 1440 },
         'YouTube Channel Icon': { width: 800, height: 800 },
         'YouTube Shorts': { width: 1080, height: 1920 },
-
         // LinkedIn
         'LinkedIn Post': { width: 1200, height: 627 },
         'LinkedIn Cover Profile': { width: 1584, height: 396 },
         'LinkedIn Company Logo': { width: 300, height: 300 },
         'LinkedIn Company Background': { width: 1128, height: 191 },
-
         // TikTok
         'TikTok Video': { width: 1080, height: 1920 },
         'TikTok Profile': { width: 200, height: 200 },
-
         // Pinterest
         'Pinterest Standard Pin': { width: 1000, height: 1500 },
         'Pinterest Max Pin': { width: 1000, height: 2100 },
         'Pinterest Profile': { width: 165, height: 165 },
         'Pinterest Board Cover': { width: 222, height: 150 },
-
         // Snapchat
         'Snapchat Story/Ads': { width: 1080, height: 1920 },
         'Snapchat Profile': { width: 1080, height: 1080 }
@@ -225,12 +214,10 @@ export const presetCategories = {
         'A5 Portrait': { width: 1748, height: 2480 },
         'A6 Portrait': { width: 1240, height: 1748 },
         'Business Card EU': { width: 1004, height: 590 },
-
         // North American Standards
         'Letter Portrait': { width: 2550, height: 3300 },
         'Legal Portrait': { width: 2550, height: 4200 },
         'Tabloid': { width: 3300, height: 5100 },
-
         // Photo Print Standards
         '4x6 Photo': { width: 1200, height: 1800 },
         '5x7 Photo': { width: 1500, height: 2100 },
@@ -247,11 +234,9 @@ export const presetCategories = {
         'DCI 4K Scope': { width: 4096, height: 1716 },
         'DCI Full 2K': { width: 2048, height: 1080 },
         'DCI Full 4K': { width: 4096, height: 2160 },
-
         // IMAX Formats
         'IMAX Digital': { width: 4096, height: 3020 }, // example resolution, varies by source
         'IMAX 1.90:1': { width: 4096, height: 2160 },
-
         // Classic Cinema Formats (approximate digital equivalents)
         'Ultra Panavision 70': { width: 7680, height: 2782 }, // approximate digital equivalent
         'Cinerama': { width: 7680, height: 2965 }, // approximate digital equivalent
@@ -259,7 +244,6 @@ export const presetCategories = {
         'Academy Original': { width: 1474, height: 1072 }, // closer to original
         'Silent Film 1.33:1': { width: 1440, height: 1080 }, // modern transfer standard
         'Silent Film Classic': { width: 1334, height: 1000 }, // classic variant
-
         // Legacy Formats
         '2.39:1 Anamorphic': { width: 2048, height: 858 }, // general anamorphic (same as DCI Scope)
         '1.85:1 Standard': { width: 1998, height: 1080 },
