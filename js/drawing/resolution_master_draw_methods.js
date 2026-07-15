@@ -719,6 +719,8 @@ export const drawingMethods = {
             return "💡 HiDream Dev: Uses the closest HiDream Dev preset size.";
         } else if (category === "Qwen-Image") {
             return "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
+        } else if (category === "ZImageTurbo") {
+            return "💡 ZImageTurbo Mode: Uses the closest active preset size while preserving orientation. Built-in presets use official resolutions.";
         } else if (['Standard', 'Social Media', 'Print', 'Cinema', 'Display Resolutions'].includes(category)) {
             return "💡 Calc Mode: Uses the closest preset aspect ratio while keeping the size close to your current resolution.";
         }
