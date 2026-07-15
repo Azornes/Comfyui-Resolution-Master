@@ -22,6 +22,7 @@ export class JSONEditorDialog {
     async show() {
         // Get current JSON
         const currentJSON = this.parentDialog.manager.exportToJSON();
+        let stopEditorTooltips = () => {};
         log.debug('Opening JSON editor dialog', {
             jsonLength: currentJSON.length
         });
@@ -51,6 +52,7 @@ export class JSONEditorDialog {
                 this.editor.destroy();
                 this.editor = null;
             }
+            stopEditorTooltips();
             tooltipManager.destroy();
             wrapper.close();
         });
@@ -139,6 +141,7 @@ export class JSONEditorDialog {
         
         // Add drag-and-drop functionality for JSON files
         this.setupDragAndDrop(editorContainer, validationMsg);
+        stopEditorTooltips = this.replaceNativeEditorTooltips(editorContainer, tooltipManager);
         
         content.appendChild(editorContainer);
         dialog.appendChild(content);
@@ -151,6 +154,7 @@ export class JSONEditorDialog {
                 this.editor.destroy();
                 this.editor = null;
             }
+            stopEditorTooltips();
             tooltipManager.destroy();
             wrapper.close();
         });
@@ -178,6 +182,63 @@ export class JSONEditorDialog {
             script.onerror = reject;
             document.head.appendChild(script);
         });
+    }
+
+    /**
+     * Routes JSONEditor/Ace title tooltips through the dialog tooltip manager.
+     * Ace recreates controls while editing, so new and updated title attributes
+     * must be handled continuously to avoid native and managed tooltips overlapping.
+     *
+     * @param {HTMLElement} container - JSONEditor root element
+     * @param {TooltipManager} tooltipManager - Dialog tooltip manager
+     * @returns {Function} Cleanup callback
+     */
+    replaceNativeEditorTooltips(container, tooltipManager) {
+        const attachedElements = new WeakSet();
+
+        const replaceTitle = (element) => {
+            const tooltipText = element?.getAttribute?.('title');
+            if (!tooltipText) return;
+
+            element.dataset.tooltipText = tooltipText;
+            element.removeAttribute('title');
+
+            if (!attachedElements.has(element)) {
+                tooltipManager.attach(element);
+                attachedElements.add(element);
+            }
+        };
+
+        const replaceTitlesInTree = (root) => {
+            replaceTitle(root);
+            root?.querySelectorAll?.('[title]').forEach(replaceTitle);
+        };
+
+        replaceTitlesInTree(container);
+
+        if (typeof MutationObserver === 'undefined') {
+            return () => {};
+        }
+
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes') {
+                    replaceTitle(mutation.target);
+                    return;
+                }
+
+                mutation.addedNodes.forEach(replaceTitlesInTree);
+            });
+        });
+
+        observer.observe(container, {
+            subtree: true,
+            childList: true,
+            attributes: true,
+            attributeFilter: ['title']
+        });
+
+        return () => observer.disconnect();
     }
 
     /**
@@ -296,16 +357,25 @@ export class JSONEditorDialog {
      * @returns {HTMLElement} Info element
      */
     createInfoMessage() {
-        const infoDiv = document.createElement('div');
-        infoDiv.className = 'resolution-master-json-editor-info';
-        infoDiv.innerHTML = `
-            💡 <strong>Direct JSON editing</strong><br>
+        const infoDetails = document.createElement('details');
+        infoDetails.className = 'resolution-master-json-editor-info';
+
+        const summary = document.createElement('summary');
+        summary.className = 'resolution-master-json-editor-info-summary';
+        summary.innerHTML = '💡 <strong>Direct JSON editing</strong>';
+
+        const content = document.createElement('div');
+        content.className = 'resolution-master-json-editor-info-content';
+        content.innerHTML = `
             Edit the JSON below to modify custom presets and hidden built-in presets.<br>
             You can also drag & drop a .json file onto the editor to load it.<br>
             Changes will replace current configuration when you click "Apply Changes".
         `;
-        
-        return infoDiv;
+
+        infoDetails.appendChild(summary);
+        infoDetails.appendChild(content);
+
+        return infoDetails;
     }
 
     /**

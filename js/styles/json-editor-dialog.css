@@ -7,8 +7,14 @@
 
 /* Dialog Container - Component-specific sizing */
 .resolution-master-json-editor-dialog {
-    width: 90vw;
-    height: 90vh;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 0;
+    transform: none;
     display: flex;
     flex-direction: column;
     z-index: var(--z-json-editor);
@@ -21,18 +27,67 @@
 
 /* Info Message */
 .resolution-master-json-editor-info {
-    padding: var(--spacing-12) var(--spacing-20);
     background: var(--bg-primary-10);
     border-bottom: 1px solid var(--bg-primary-30);
     color: var(--color-primary);
     font-size: var(--font-md);
+}
+
+.resolution-master-json-editor-info-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-8);
+    padding: var(--spacing-6) var(--spacing-20);
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+}
+
+.resolution-master-json-editor-info-summary::-webkit-details-marker {
+    display: none;
+}
+
+.resolution-master-json-editor-info-summary::before {
+    content: '▶';
+    font-size: var(--font-sm);
+    transition: transform 0.15s ease;
+}
+
+.resolution-master-json-editor-info[open] > .resolution-master-json-editor-info-summary::before {
+    transform: rotate(90deg);
+}
+
+.resolution-master-json-editor-info-summary::after {
+    content: 'Show instructions';
+    margin-left: auto;
+    color: var(--color-gray-300);
+    font-size: var(--font-sm);
+}
+
+.resolution-master-json-editor-info[open] > .resolution-master-json-editor-info-summary::after {
+    content: 'Hide instructions';
+}
+
+.resolution-master-json-editor-info-summary:hover {
+    background: var(--bg-primary-10);
+}
+
+.resolution-master-json-editor-info-summary:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+}
+
+.resolution-master-json-editor-info-content {
+    padding: var(--spacing-4) var(--spacing-20) var(--spacing-12);
+    border-top: 1px solid var(--bg-primary-30);
     line-height: 1.5;
 }
 
 /* Content Area */
 .resolution-master-json-editor-content {
     flex: 1;
-    padding: var(--spacing-20);
+    min-height: 0;
+    padding: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -41,9 +96,10 @@
 /* Editor Container */
 .resolution-master-json-editor-container {
     flex: 1;
+    min-height: 0;
     display: flex;
     border: 1px solid var(--color-gray-700);
-    border-radius: var(--radius-lg);
+    border-radius: 0;
     overflow: hidden;
     background: var(--color-bg-dark-3);
     transition: all 0.2s ease;
@@ -119,6 +175,14 @@
     display: block;
     white-space: pre;
     color: var(--color-gray-100);
+}
+
+/* Keep validation text vertically centered with balanced spacing. */
+.resolution-master-json-editor-validation {
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: var(--spacing-5) var(--spacing-20);
 }
 
 /* Validation States - border colors for container */
