@@ -522,6 +522,15 @@ export const interactionMethods = {
             }
         }
         this.tooltipMousePos = { x: e.canvasX, y: e.canvasY };
+        if (this.isVueNodesMode?.()) {
+            this._vueCompatTooltipPointerPosition = {
+                clientX: e.clientX,
+                clientY: e.clientY
+            };
+            if (newHover === this.hoverElement && this.showTooltip && this.tooltipElement === newHover) {
+                this.positionVueCompatTooltip?.(this._vueCompatTooltipPointerPosition);
+            }
+        }
         if (newHover !== this.hoverElement) {
             this.hoverElement = newHover;
             this.handleTooltipHover(newHover, e);
@@ -542,13 +551,12 @@ export const interactionMethods = {
         }
         if (element && this.tooltips[element]) {
             const initialMousePos = { x: e.canvasX, y: e.canvasY };
-            const initialClientPos = { clientX: e.clientX, clientY: e.clientY };
             this.tooltipTimer = setTimeout(() => {
                 this.tooltipElement = element;
                 this.showTooltip = true;
                 this.tooltipFixedPos = initialMousePos;
                 if (this.isVueNodesMode?.()) {
-                    this.showVueCompatTooltip?.(element, initialClientPos);
+                    this.showVueCompatTooltip?.(element, this._vueCompatTooltipPointerPosition);
                 } else {
                     this.requestCanvasUpdate(true);
                 }

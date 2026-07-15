@@ -210,6 +210,10 @@ test("Vue tooltip is rendered in the document overlay and constrained to the vie
         assert.equal(tooltip.style.top, "40px");
         assert.equal(tooltip.style.visibility, "visible");
 
+        controller.positionVueCompatTooltip({ clientX: 20, clientY: 150 });
+        assert.equal(tooltip.style.left, "35px");
+        assert.equal(tooltip.style.top, "100px");
+
         controller.hideVueCompatTooltip();
         assert.equal(tooltip.style.display, "none");
 

@@ -507,6 +507,7 @@ export const nodeLifecycleMethods = {
                 this.tooltipTimer = null;
             }
             this.hideVueCompatTooltip();
+            this._vueCompatTooltipPointerPosition = null;
             this.hoverElement = null;
             this.tooltipElement = null;
             this.showTooltip = false;
@@ -557,6 +558,18 @@ export const nodeLifecycleMethods = {
         tooltip.style.left = "0px";
         tooltip.style.top = "0px";
 
+        this.positionVueCompatTooltip(pointerPosition);
+        tooltip.style.visibility = "visible";
+    },
+
+    positionVueCompatTooltip(pointerPosition) {
+        const tooltip = this._vueCompatTooltip;
+        const clientX = Number(pointerPosition?.clientX);
+        const clientY = Number(pointerPosition?.clientY);
+        if (!tooltip || !Number.isFinite(clientX) || !Number.isFinite(clientY) || typeof document === "undefined") {
+            return;
+        }
+
         const tooltipRect = tooltip.getBoundingClientRect();
         const viewportWidth = document.documentElement?.clientWidth || globalThis.innerWidth || 0;
         const viewportHeight = document.documentElement?.clientHeight || globalThis.innerHeight || 0;
@@ -579,7 +592,6 @@ export const nodeLifecycleMethods = {
 
         tooltip.style.left = `${Math.round(left)}px`;
         tooltip.style.top = `${Math.round(top)}px`;
-        tooltip.style.visibility = "visible";
     },
 
     hideVueCompatTooltip() {
@@ -591,6 +603,7 @@ export const nodeLifecycleMethods = {
     teardownVueCompatTooltip() {
         this._vueCompatTooltip?.remove?.();
         this._vueCompatTooltip = null;
+        this._vueCompatTooltipPointerPosition = null;
     },
 
     teardownVueCompatCanvasEvents() {
