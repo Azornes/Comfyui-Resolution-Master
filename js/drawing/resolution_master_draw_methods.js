@@ -8,6 +8,7 @@ const log = createModuleLogger("resolution_master_draw_methods");
 const OUTPUT_VALUE_VISUAL_RIGHT_INSET = 3;
 const OUTPUT_VALUE_HIT_RIGHT_INSET = 12;
 const OUTPUT_VALUE_VERTICAL_GAP = 4;
+const OUTPUT_VALUE_CANVAS_TOP_INSET = 1;
 const SECTION_BACKGROUND_COLOR = "rgba(0,0,0,0.2)";
 
 export const drawingMethods = {
@@ -225,7 +226,12 @@ export const drawingMethods = {
                 : LiteGraph.NODE_SLOT_HEIGHT;
             const [y_offset_1, y_offset_2, y_offset_3, y_offset_4, y_offset_5] = slotCenters;
             const valueAreaWidth = 60; 
-            const valueAreaHeight = Math.max(14, slotSpacing - OUTPUT_VALUE_VERTICAL_GAP);
+            const preferredValueAreaHeight = Math.max(14, slotSpacing - OUTPUT_VALUE_VERTICAL_GAP);
+            const availableFirstSlotHeight = Math.max(
+                8,
+                2 * (y_offset_1 - OUTPUT_VALUE_CANVAS_TOP_INSET)
+            );
+            const valueAreaHeight = Math.min(preferredValueAreaHeight, availableFirstSlotHeight);
             const outputValueRight = node.size[0] - OUTPUT_VALUE_VISUAL_RIGHT_INSET;
             const valueAreaX = outputValueRight - valueAreaWidth;
             const outputValueCenterX = valueAreaX + valueAreaWidth / 2;
