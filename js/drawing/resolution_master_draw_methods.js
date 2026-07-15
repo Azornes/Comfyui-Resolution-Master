@@ -19,6 +19,7 @@ export const drawingMethods = {
             const props = node.properties;
             const margin = 10;
             const spacing = this.getManualSpacing();
+            this.sliderKnobAreas = {};
 
             let currentY = this.getManualContentStartY();
 
@@ -348,7 +349,7 @@ export const drawingMethods = {
         const sliderWidth = node.size[0] - sliderX - valueWidth - margin;
 
         this.controls.snapSlider = { x: sliderX, y, w: sliderWidth, h: 28 };
-        this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.action_slider_snap_min, props.action_slider_snap_max, props.action_slider_snap_step);
+        this.drawSlider(ctx, sliderX, y, sliderWidth, 28, props.snapValue, props.action_slider_snap_min, props.action_slider_snap_max, props.action_slider_snap_step, 'snapSlider');
         const snapValueX = sliderX + sliderWidth + gap;
         this.controls.snapValueArea = { x: snapValueX, y, w: valueWidth, h: 28 };
 
@@ -852,7 +853,7 @@ export const drawingMethods = {
         ctx.fillText(label, margin, y);
 
         this.controls[controlName] = { x: margin, y: y + 10, w, h: 25 };
-        this.drawSlider(ctx, margin, y + 10, w, 25, value, min, max, step);
+        this.drawSlider(ctx, margin, y + 10, w, 25, value, min, max, step, controlName);
 
         ctx.textAlign = "right";
         ctx.fillText(value.toString(), node.size[0] - margin, y + 25);
@@ -947,7 +948,7 @@ export const drawingMethods = {
         }
     },
 
-    drawSlider(ctx, x, y, w, h, value, min, max, step) {
+    drawSlider(ctx, x, y, w, h, value, min, max, step, controlName = null) {
         ctx.fillStyle = "#222";
         ctx.beginPath();
         ctx.roundRect(x, y + h / 2 - 3, w, 6, 3);
@@ -955,17 +956,33 @@ export const drawingMethods = {
         const pos = Math.max(0, Math.min(1, (value - min) / (max - min)));
         const knobX = x + w * pos;
         const knobY = y + h / 2;
+        if (controlName) {
+            this.sliderKnobAreas = this.sliderKnobAreas || {};
+            this.sliderKnobAreas[controlName] = {
+                x: knobX - 10,
+                y: knobY - 10,
+                w: 20,
+                h: 20
+            };
+        }
+        const isKnobHovered = controlName && this.hoverElement === controlName;
 
+        ctx.save();
+        if (isKnobHovered) {
+            ctx.shadowColor = "rgba(255, 255, 255, 0.32)";
+            ctx.shadowBlur = 6;
+        }
         const grad = ctx.createLinearGradient(knobX - 7, knobY - 7, knobX + 7, knobY + 7);
-        grad.addColorStop(0, "#e0e0e0");
-        grad.addColorStop(1, "#c0c0c0");
+        grad.addColorStop(0, isKnobHovered ? "#fafafa" : "#e0e0e0");
+        grad.addColorStop(1, isKnobHovered ? "#dddddd" : "#c0c0c0");
         ctx.fillStyle = grad;
-        ctx.strokeStyle = "#111";
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = isKnobHovered ? "rgba(255, 255, 255, 0.72)" : "#111";
+        ctx.lineWidth = isKnobHovered ? 1.4 : 1;
         ctx.beginPath();
         ctx.arc(knobX, knobY, 8, 0, 2 * Math.PI);
         ctx.fill();
         ctx.stroke();
+        ctx.restore();
     },
 
     drawDropdown(ctx, x, y, w, h, text, hover = false) {
@@ -1169,7 +1186,7 @@ export const drawingMethods = {
         if (config.controlType === 'slider') {
             this.controls[config.mainControl] = { x: currentX, y, w: layout.sliderWidth, h: 28 };
             this.drawSlider(ctx, currentX, y, layout.sliderWidth, 28,
-                          props[config.valueProperty], config.min, config.max, config.step);
+                          props[config.valueProperty], config.min, config.max, config.step, config.mainControl);
             currentX += layout.sliderWidth + layout.gap;
         } else if (config.controlType === 'dropdown') {
             this.controls[config.mainControl] = { x: currentX, y, w: layout.dropdownWidth, h: 28 };

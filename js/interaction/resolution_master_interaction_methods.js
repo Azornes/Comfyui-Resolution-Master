@@ -513,8 +513,16 @@ export const interactionMethods = {
         } else if (this.controls.canvas2dTopHandle && this.isPointInControl(relX, relY, this.controls.canvas2dTopHandle)) {
             newHover = 'canvas2dTopHandle';
         } else {
+            for (const sliderName in this.sliderKnobAreas || {}) {
+                if (this.isPointInControl(relX, relY, this.sliderKnobAreas[sliderName])) {
+                    newHover = sliderName;
+                    break;
+                }
+            }
             for (const element in this.controls) {
-                if (element !== 'canvas2dRightHandle' && element !== 'canvas2dTopHandle' &&
+                if (!newHover
+                    && !element.endsWith('Slider')
+                    && element !== 'canvas2dRightHandle' && element !== 'canvas2dTopHandle' &&
                     this.isPointInControl(relX, relY, this.controls[element])) {
                     newHover = element;
                     break;

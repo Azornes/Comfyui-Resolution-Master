@@ -220,3 +220,67 @@ test("scaling numeric values use the persistent editable value background", () =
     assert.equal(ctx.rectangles[0].fillStyle, "rgba(0,0,0,0)");
     assert.equal(ctx.rectangles[0].strokeStyle, "rgba(205, 210, 220, 0.18)");
 });
+
+test("slider knob gets a brighter gradient and glow on direct hover", () => {
+    const gradients = [];
+    let knobPaint = null;
+    let currentShape = null;
+    const stateStack = [];
+    const ctx = {
+        fillStyle: "",
+        strokeStyle: "",
+        lineWidth: 1,
+        shadowColor: "",
+        shadowBlur: 0,
+        save() {
+            stateStack.push({
+                fillStyle: this.fillStyle,
+                strokeStyle: this.strokeStyle,
+                lineWidth: this.lineWidth,
+                shadowColor: this.shadowColor,
+                shadowBlur: this.shadowBlur
+            });
+        },
+        restore() {
+            Object.assign(this, stateStack.pop());
+        },
+        beginPath() {
+            currentShape = null;
+        },
+        roundRect() {
+            currentShape = "track";
+        },
+        arc() {
+            currentShape = "knob";
+        },
+        fill() {
+            if (currentShape === "knob") {
+                knobPaint = {
+                    fillStyle: this.fillStyle,
+                    shadowColor: this.shadowColor,
+                    shadowBlur: this.shadowBlur
+                };
+            }
+        },
+        stroke() {},
+        createLinearGradient() {
+            const gradient = {
+                stops: [],
+                addColorStop(offset, color) {
+                    this.stops.push([offset, color]);
+                }
+            };
+            gradients.push(gradient);
+            return gradient;
+        }
+    };
+    const controller = { hoverElement: "snapSlider", sliderKnobAreas: {} };
+    Object.assign(controller, drawingMethods);
+
+    controller.drawSlider(ctx, 0, 0, 100, 28, 50, 0, 100, 1, "snapSlider");
+
+    assert.deepEqual(controller.sliderKnobAreas.snapSlider, { x: 40, y: 4, w: 20, h: 20 });
+    assert.deepEqual(gradients[0].stops, [[0, "#fafafa"], [1, "#dddddd"]]);
+    assert.equal(knobPaint.shadowColor, "rgba(255, 255, 255, 0.32)");
+    assert.equal(knobPaint.shadowBlur, 6);
+});
