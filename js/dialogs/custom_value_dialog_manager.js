@@ -1,5 +1,6 @@
 // custom_value_dialog_manager.js - Manages custom value input dialogs for ResolutionMaster
 import { createModuleLogger } from "../log_system/log_funcs.js";
+import { createModalWrapper } from "../utils/dialog_helper.js";
 
 const log = createModuleLogger('custom_value_dialog_manager');
 
@@ -10,6 +11,7 @@ export class CustomValueDialogManager {
         this.customInputDialog = null;
         this.customInputOverlay = null;
         this.inputDialogActive = false;
+        this.closeWrapper = null;
     }
     
     /**
@@ -83,28 +85,32 @@ export class CustomValueDialogManager {
         this.inputDialogActive = true;
         log.debug(`Creating dialog for ${valueType}, current: ${currentValue}`);
         
-        // Create overlay
-        const overlay = document.createElement('div');
-        this.customInputOverlay = overlay;
-        overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 9999;
-        `;
-        overlay.addEventListener('mousedown', () => this.closeCustomInputDialog());
-        document.body.appendChild(overlay);
+        // Create overlay and dialog container via dialog_helper
+        const wrapper = createModalWrapper({
+            className: 'litegraph-custom-input-dialog',
+            overlayStyle: `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 9999;
+            `,
+            dialogStyle: `
+                position: fixed;
+                background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+                border: 2px solid #555; border-radius: 8px; padding: 20px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 10000;
+                font-family: Arial, sans-serif; min-width: 280px;
+            `,
+            onClose: () => {
+                this.customInputDialog = null;
+                this.customInputOverlay = null;
+                this.inputDialogActive = false;
+                this.closeWrapper = null;
+            }
+        });
 
-        // Create dialog container
-        const dialog = document.createElement('div');
-        this.customInputDialog = dialog;
-        dialog.className = 'litegraph-custom-input-dialog';
-        dialog.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent clicks inside from closing
-        dialog.style.cssText = `
-            position: fixed;
-            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-            border: 2px solid #555; border-radius: 8px; padding: 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.8); z-index: 10000;
-            font-family: Arial, sans-serif; min-width: 280px;
-        `;
+        this.customInputOverlay = wrapper.overlay;
+        this.customInputDialog = wrapper.dialog;
+        this.closeWrapper = wrapper.close;
+        const dialog = wrapper.dialog;
         
         // Position dialog
         const x = e.clientX ? e.clientX + 20 : (window.innerWidth - 280) / 2;
@@ -128,8 +134,6 @@ export class CustomValueDialogManager {
                 <button id="applyBtn" style="padding: 8px 16px; border: 1px solid #5af; border-radius: 4px; background: #5af; color: #fff; cursor: pointer; font-size: 12px;">Apply</button>
             </div>
         `;
-        
-        document.body.appendChild(dialog);
         
         // Get elements
         const input = dialog.querySelector('#customValueInput');
@@ -222,15 +226,20 @@ export class CustomValueDialogManager {
      * Closes and cleans up the custom input dialog
      */
     closeCustomInputDialog() {
-        if (this.customInputDialog) {
-            document.body.removeChild(this.customInputDialog);
-            this.customInputDialog = null;
+        if (this.closeWrapper) {
+            this.closeWrapper();
+            this.closeWrapper = null;
+        } else {
+            if (this.customInputDialog) {
+                document.body.removeChild(this.customInputDialog);
+                this.customInputDialog = null;
+            }
+            if (this.customInputOverlay) {
+                document.body.removeChild(this.customInputOverlay);
+                this.customInputOverlay = null;
+            }
+            this.inputDialogActive = false;
         }
-        if (this.customInputOverlay) {
-            document.body.removeChild(this.customInputOverlay);
-            this.customInputOverlay = null;
-        }
-        this.inputDialogActive = false;
     }
     
     /**

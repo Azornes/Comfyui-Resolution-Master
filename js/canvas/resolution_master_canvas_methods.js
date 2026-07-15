@@ -194,56 +194,55 @@ export const canvasMethods = {
         );
     },
 
-    updateCanvasValueWidth(x, w, ctrlKey) {
-        const diagnosticsToken = performanceDiagnostics.start("updateCanvasValueWidth");
+    updateCanvasValueDimension(axis, coord, size, ctrlKey) {
+        const axisUpper = axis.toUpperCase();
+        const diagnosticsToken = performanceDiagnostics.start(`updateCanvasValueDimension${axisUpper}`);
         try {
             const node = this.node;
             const props = node.properties;
+            const isX = axis === 'x';
 
-            let vX = Math.max(0, Math.min(1, x / w));
+            let val = isX ? coord / size : 1 - coord / size;
+            val = Math.max(0, Math.min(1, val));
+
             if (!ctrlKey) {
-                let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
-                vX = Math.round(vX / sX) * sX;
+                const step = props[`canvas_step_${axis}`];
+                const min = props[`canvas_min_${axis}`];
+                const max = props[`canvas_max_${axis}`];
+                const range = max - min;
+                const stepScale = step / range;
+                val = Math.round(val / stepScale) * stepScale;
             }
 
-            node.intpos.x = vX;
+            node.intpos[axis] = val;
 
-            let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
+            const min = props[`canvas_min_${axis}`];
+            const max = props[`canvas_max_${axis}`];
+            let newVal = min + (max - min) * val;
 
-            const rnX = Math.pow(10, props.canvas_decimals_x);
-            newX = Math.round(rnX * newX) / rnX;
-            if (props.valueX !== newX) {
-                this.setDimensions(newX, this.heightWidget.value, { syncPosition: false });
+            const decimals = props[`canvas_decimals_${axis}`];
+            const rn = Math.pow(10, decimals);
+            newVal = Math.round(rn * newVal) / rn;
+
+            const propName = isX ? 'valueX' : 'valueY';
+            if (props[propName] !== newVal) {
+                if (isX) {
+                    this.setDimensions(newVal, this.heightWidget.value, { syncPosition: false });
+                } else {
+                    this.setDimensions(this.widthWidget.value, newVal, { syncPosition: false });
+                }
             }
         } finally {
             performanceDiagnostics.end(diagnosticsToken);
         }
     },
 
+    updateCanvasValueWidth(x, w, ctrlKey) {
+        this.updateCanvasValueDimension('x', x, w, ctrlKey);
+    },
+
     updateCanvasValueHeight(y, h, ctrlKey) {
-        const diagnosticsToken = performanceDiagnostics.start("updateCanvasValueHeight");
-        try {
-            const node = this.node;
-            const props = node.properties;
-
-            let vY = Math.max(0, Math.min(1, 1 - y / h));
-            if (!ctrlKey) {
-                let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
-                vY = Math.round(vY / sY) * sY;
-            }
-
-            node.intpos.y = vY;
-
-            let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-
-            const rnY = Math.pow(10, props.canvas_decimals_y);
-            newY = Math.round(rnY * newY) / rnY;
-            if (props.valueY !== newY) {
-                this.setDimensions(this.widthWidget.value, newY, { syncPosition: false });
-            }
-        } finally {
-            performanceDiagnostics.end(diagnosticsToken);
-        }
+        this.updateCanvasValueDimension('y', y, h, ctrlKey);
     },
 
     isPointInControl(x, y, control) {

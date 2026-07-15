@@ -1,6 +1,7 @@
 // rename_dialog_manager.js - Rename dialogs for categories and presets
 
 import { getIconHtml } from "../../utils/icon_utils.js";
+import { createModalWrapper } from "../../utils/dialog_helper.js";
 
 /**
  * Manager for rename dialogs (categories and presets)
@@ -15,19 +16,13 @@ export class RenameDialogManager {
      * @param {string} currentCategoryName - Current category name
      */
     showRenameCategoryDialog(currentCategoryName) {
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'resolution-master-rename-dialog-overlay';
-        overlay.addEventListener('mousedown', () => {
-            document.body.removeChild(overlay);
-            document.body.removeChild(dialog);
+        // Create overlay and dialog container via dialog_helper
+        const wrapper = createModalWrapper({
+            className: 'resolution-master-rename-dialog',
+            overlayClassName: 'resolution-master-rename-dialog-overlay'
         });
-        document.body.appendChild(overlay);
-
-        // Create dialog container
-        const dialog = document.createElement('div');
-        dialog.className = 'resolution-master-rename-dialog';
-        dialog.addEventListener('mousedown', (e) => e.stopPropagation()); // Prevent clicks inside from closing
+        const overlay = wrapper.overlay;
+        const dialog = wrapper.dialog;
         
         // Create dialog content
         dialog.innerHTML = `
@@ -42,8 +37,6 @@ export class RenameDialogManager {
                 <button id="renameApplyBtn" class="resolution-master-rename-dialog-apply-btn">Apply</button>
             </div>
         `;
-        
-        document.body.appendChild(dialog);
         
         // Get elements
         const input = dialog.querySelector('#renameCategoryInput');
@@ -106,8 +99,7 @@ export class RenameDialogManager {
             if (success) {
                 // Success - update selected category and refresh dialog
                 this.parentDialog.selectedCategory = trimmedNewName;
-                document.body.removeChild(overlay);
-                document.body.removeChild(dialog);
+                wrapper.close();
                 this.parentDialog.renderDialog();
             } else {
                 // Failed - show error in validation message
@@ -121,14 +113,12 @@ export class RenameDialogManager {
             if (e.key === 'Enter' && validateInput()) {
                 applyRename();
             } else if (e.key === 'Escape') {
-                document.body.removeChild(overlay);
-                document.body.removeChild(dialog);
+                wrapper.close();
             }
         });
         
         cancelBtn.addEventListener('click', () => {
-            document.body.removeChild(overlay);
-            document.body.removeChild(dialog);
+            wrapper.close();
         });
         
         applyBtn.addEventListener('click', applyRename);

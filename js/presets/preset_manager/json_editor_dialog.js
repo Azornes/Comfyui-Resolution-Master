@@ -3,6 +3,7 @@
 import { TooltipManager } from './tooltip_manager.js';
 import { presetManagerTooltips } from '../../config/resolution_master_tooltips.js';
 import { createModuleLogger } from "../../log_system/log_funcs.js";
+import { createModalWrapper } from "../../utils/dialog_helper.js";
 
 const log = createModuleLogger('json_editor_dialog');
 
@@ -25,13 +26,14 @@ export class JSONEditorDialog {
             jsonLength: currentJSON.length
         });
         
-        // Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'resolution-master-json-editor-overlay';
-        
-        // Create dialog container
-        const dialog = document.createElement('div');
-        dialog.className = 'resolution-master-json-editor-dialog';
+        // Create overlay and dialog container via dialog_helper
+        const wrapper = createModalWrapper({
+            className: 'resolution-master-json-editor-dialog',
+            overlayClassName: 'resolution-master-json-editor-overlay',
+            clickAwayToClose: false
+        });
+        const overlay = wrapper.overlay;
+        const dialog = wrapper.dialog;
         
         // Create tooltip manager
         const tooltipManager = new TooltipManager({
@@ -50,8 +52,7 @@ export class JSONEditorDialog {
                 this.editor = null;
             }
             tooltipManager.destroy();
-            document.body.removeChild(overlay);
-            document.body.removeChild(dialog);
+            wrapper.close();
         });
         dialog.appendChild(header);
         
@@ -151,14 +152,9 @@ export class JSONEditorDialog {
                 this.editor = null;
             }
             tooltipManager.destroy();
-            document.body.removeChild(overlay);
-            document.body.removeChild(dialog);
+            wrapper.close();
         });
         dialog.appendChild(footer);
-        
-        // Add to DOM
-        document.body.appendChild(overlay);
-        document.body.appendChild(dialog);
         
         // Attach tooltips to buttons (after adding to DOM)
         const closeBtn = dialog.querySelector('#json-editor-close-btn');

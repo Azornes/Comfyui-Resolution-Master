@@ -18,6 +18,7 @@ import { JSONEditorDialog } from './json_editor_dialog.js';
 import { PresetListRenderer } from './preset_list_renderer.js';
 import { PresetAddViewRenderer } from './preset_add_view_renderer.js';
 import { TooltipManager } from './tooltip_manager.js';
+import { createModalWrapper } from "../../utils/dialog_helper.js";
 
 const log = createModuleLogger('preset_manager_dialog');
 
@@ -146,18 +147,19 @@ export class PresetManagerDialog {
         this.selectedPresetsForDeletion.clear(); // Clear selection when opening dialog
         this.lastClickedPresetKey = null; // Reset last clicked for shift-click
 
-        // Create overlay
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'resolution-master-preset-manager-overlay';
+        // Create overlay and container via dialog_helper
+        const wrapper = createModalWrapper({
+            className: 'resolution-master-preset-manager-dialog',
+            overlayClassName: 'resolution-master-preset-manager-overlay',
+            clickAwayToClose: false // Manual overlay click check below
+        });
+        this.overlay = wrapper.overlay;
+        this.container = wrapper.dialog;
+        this.closeWrapper = wrapper.close;
+
         this.overlay.addEventListener('mousedown', (e) => {
             if (e.target === this.overlay) this.hide();
         });
-        document.body.appendChild(this.overlay);
-
-        // Create container
-        this.container = document.createElement('div');
-        this.container.className = 'resolution-master-preset-manager-dialog';
-        document.body.appendChild(this.container);
 
         this.renderDialog();
     }
@@ -846,11 +848,16 @@ export class PresetManagerDialog {
             this.registerTooltips();
         }
 
-        if (this.container && this.container.parentNode) {
-            document.body.removeChild(this.container);
-        }
-        if (this.overlay && this.overlay.parentNode) {
-            document.body.removeChild(this.overlay);
+        if (this.closeWrapper) {
+            this.closeWrapper();
+            this.closeWrapper = null;
+        } else {
+            if (this.container && this.container.parentNode) {
+                document.body.removeChild(this.container);
+            }
+            if (this.overlay && this.overlay.parentNode) {
+                document.body.removeChild(this.overlay);
+            }
         }
 
         this.container = null;

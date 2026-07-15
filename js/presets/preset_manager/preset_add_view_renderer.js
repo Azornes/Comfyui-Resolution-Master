@@ -2,6 +2,7 @@
 
 import { AspectRatioUtils } from "../aspect_ratio_utils.js";
 import { getIconHtml } from "../../utils/icon_utils.js";
+import { aspectRatioString } from "../../canvas/aspect_ratio_math.js";
 
 /**
  * Renderer for the add/edit preset view
@@ -386,14 +387,11 @@ export class PresetAddViewRenderer {
                 previewShape.style.border = `2px solid ${borderColor}`;
                 previewShape.style.background = bgColor;
                 
-                const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
-                const divisor = gcd(width, height);
-                const ratioW = width / divisor;
-                const ratioH = height / divisor;
+                const ratioStr = aspectRatioString(width, height);
                 
                 previewText.innerHTML = `
                     <div style="color: ${textColor};">${width}×${height}</div>
-                    <div style="font-size: 10px; color: #888;">${ratioW}:${ratioH}</div>
+                    <div style="font-size: 10px; color: #888;">${ratioStr}</div>
                 `;
                 
                 if (previewCanvas.parentElement) {
