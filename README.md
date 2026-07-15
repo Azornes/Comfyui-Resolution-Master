@@ -74,6 +74,7 @@ Extensive preset library organized by use case:
 | **SDXL** | Stable Diffusion XL generation | Enforces officially supported fixed resolutions for optimal generation quality |
 | **Flux** | Flux image workflows | Uses 32px increments, keeps dimensions between 320px and 2560px, and limits output to 4.0 MP |
 | **Flux.2** | Flux.2 workflows | Uses Flux.2-specific preset matching and supports the `latent_128x16` latent type |
+| **Krea 2** | Krea 2 Turbo/RAW workflows | Finds the closest Krea 2 preset by dimensions and aspect ratio (multiples of 16, 1K–2K for Turbo, 1K for RAW) |
 | **WAN** | Video generation | Supports 320p to 820p, uses 16px increments, keeps video-friendly ratios, and recommends 480p or 720p |
 | **HiDream Dev** | HiDream preset matching | Finds the closest HiDream Dev preset by dimensions and aspect ratio, including flipped orientations |
 | **Qwen-Image** | Qwen-Image workflows | Keeps images in the ~0.6 MP to 4.2 MP range, preserving valid inputs and scaling out-of-range inputs |

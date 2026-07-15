@@ -709,6 +709,8 @@ export const drawingMethods = {
             return "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
         } else if (category === "Flux.2") {
             return "💡 FLUX.2 Mode: Round to: 16px | Edge range: 320-3840px | Max resolution: 6.0 MP";
+        } else if (category === "Krea 2 Turbo" || category === "Krea 2 RAW") {
+            return "💡 Krea 2 Mode: Uses the closest Krea 2 preset size (multiples of 16).";
         } else if (category === "WAN" && this.widthWidget && this.heightWidget) {
             const pixels = this.widthWidget.value * this.heightWidget.value;
             const model = pixels < 600000 ? "480p" : "720p";
