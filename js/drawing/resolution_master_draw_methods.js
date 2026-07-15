@@ -5,6 +5,10 @@ import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 import { getModelInfoMessage } from "../calculations/model_profiles.js";
 
 const log = createModuleLogger("resolution_master_draw_methods");
+const OUTPUT_VALUE_VISUAL_RIGHT_INSET = 3;
+const OUTPUT_VALUE_HIT_RIGHT_INSET = 12;
+const OUTPUT_VALUE_VERTICAL_GAP = 4;
+const SECTION_BACKGROUND_COLOR = "rgba(0,0,0,0.2)";
 
 export const drawingMethods = {
     drawInterface(ctx) {
@@ -92,7 +96,7 @@ export const drawingMethods = {
     },
 
     drawSection(ctx, title, x, y, w, h) {
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fillStyle = SECTION_BACKGROUND_COLOR;
         ctx.strokeStyle = "rgba(255,255,255,0.1)";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -110,7 +114,7 @@ export const drawingMethods = {
         const isCollapsed = this.collapsedSections[sectionKey] || false;
         const headerHeight = 25;
         const totalHeight = isCollapsed ? headerHeight : headerHeight + contentHeight;
-        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fillStyle = SECTION_BACKGROUND_COLOR;
         ctx.strokeStyle = "rgba(255,255,255,0.1)";
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -207,10 +211,10 @@ export const drawingMethods = {
             const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
             const y_offset_4 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 3.5);
             const valueAreaWidth = 60; 
-            const batchSizeAreaWidth = 35; 
-            const valueAreaHeight = 20;
-            const valueAreaX = node.size[0] - valueAreaWidth - 5;
-            const batchSizeAreaX = node.size[0] - batchSizeAreaWidth - 5;
+            const valueAreaHeight = Math.max(14, LiteGraph.NODE_SLOT_HEIGHT - OUTPUT_VALUE_VERTICAL_GAP);
+            const outputValueRight = node.size[0] - OUTPUT_VALUE_VISUAL_RIGHT_INSET;
+            const valueAreaX = outputValueRight - valueAreaWidth;
+            const outputValueCenterX = valueAreaX + valueAreaWidth / 2;
             this.drawOutputValueArea(ctx, 'widthValueArea', valueAreaX, y_offset_1 - valueAreaHeight/2,
                 valueAreaWidth, valueAreaHeight, this.widthWidget.value.toString(), y_offset_1,
                 [136, 153, 255], "#89F", "#89F");
@@ -218,30 +222,31 @@ export const drawingMethods = {
                 valueAreaWidth, valueAreaHeight, this.heightWidget.value.toString(), y_offset_2,
                 [248, 136, 153], "#F89", "#F89");
             ctx.fillStyle = "#9F8";
-            ctx.fillText(props.rescaleValue.toFixed(2), node.size[0] - 20, y_offset_3);
-            this.drawOutputValueArea(ctx, 'batchSizeValueArea', batchSizeAreaX, y_offset_4 - valueAreaHeight/2,
-                batchSizeAreaWidth, valueAreaHeight, this.batchSizeWidget.value.toString(), y_offset_4,
+            ctx.textAlign = "center";
+            this.drawVerticallyCenteredText(ctx, props.rescaleValue.toFixed(2), outputValueCenterX, y_offset_3);
+            this.drawOutputValueArea(ctx, 'batchSizeValueArea', valueAreaX, y_offset_4 - valueAreaHeight/2,
+                valueAreaWidth, valueAreaHeight, this.batchSizeWidget.value.toString(), y_offset_4,
                 [255, 136, 187], "#FAB", "#F8B");
             const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
 
             // Create clickable area for LAT selector
-            const latAreaWidth = 50;
+            const latAreaWidth = valueAreaWidth;
             const latAreaHeight = 28;
-            const latAreaX = node.size[0] - latAreaWidth - 5;
+            const latAreaX = valueAreaX;
 
             this.controls.latValueArea = {
                 x: latAreaX,
                 y: y_offset_5 - 10,
-                w: latAreaWidth,
+                w: latAreaWidth - (OUTPUT_VALUE_HIT_RIGHT_INSET - OUTPUT_VALUE_VISUAL_RIGHT_INSET),
                 h: latAreaHeight
             };
 
-            this.drawValueAreaHoverBackground(ctx, 'latValueArea', latAreaX, y_offset_5 - 10, latAreaWidth, latAreaHeight, [248, 136, 187]);
+            this.drawEditableOutputBackground(ctx, 'latValueArea', latAreaX, y_offset_5 - 10, latAreaWidth, latAreaHeight, [248, 136, 187]);
 
             ctx.fillStyle = this.hoverElement === 'latValueArea' ? "#FAB" : "#F8B"; 
             ctx.font = "bold 12px Arial";
-            ctx.textAlign = "right";
-            ctx.fillText("LAT", node.size[0] - 20, y_offset_5);
+            ctx.textAlign = "center";
+            ctx.fillText("LAT", outputValueCenterX, y_offset_5);
 
             // Draw latent type info in smaller gray font below LAT
             if (this.latentTypeWidget) {
@@ -249,18 +254,56 @@ export const drawingMethods = {
                 const shortType = String(latentType).replace('latent_', '');
                 ctx.fillStyle = this.hoverElement === 'latValueArea' ? "#999" : "#777"; 
                 ctx.font = "9px Arial";
-                ctx.textAlign = "right";
-                ctx.fillText(shortType, node.size[0] - 20, y_offset_5 + 12);
+                ctx.textAlign = "center";
+                ctx.fillText(shortType, outputValueCenterX, y_offset_5 + 12);
             }
         }
     },
 
     drawOutputValueArea(ctx, controlName, x, y, w, h, text, textY, hoverColor, activeTextColor, textColor) {
-        const node = this.node;
-        this.controls[controlName] = { x, y, w, h };
-        this.drawValueAreaHoverBackground(ctx, controlName, x, y, w, h, hoverColor);
+        this.controls[controlName] = {
+            x,
+            y,
+            w: w - (OUTPUT_VALUE_HIT_RIGHT_INSET - OUTPUT_VALUE_VISUAL_RIGHT_INSET),
+            h
+        };
+        this.drawEditableOutputBackground(ctx, controlName, x, y, w, h, hoverColor);
         ctx.fillStyle = this.hoverElement === controlName ? activeTextColor : textColor;
-        ctx.fillText(text, node.size[0] - 20, textY);
+        ctx.textAlign = "center";
+        this.drawVerticallyCenteredText(ctx, text, x + w / 2, textY);
+    },
+
+    drawVerticallyCenteredText(ctx, text, x, centerY) {
+        ctx.save();
+        ctx.textBaseline = "alphabetic";
+        const metrics = ctx.measureText(text);
+        const ascent = Number(metrics.actualBoundingBoxAscent);
+        const descent = Number(metrics.actualBoundingBoxDescent);
+
+        if (Number.isFinite(ascent) && Number.isFinite(descent)) {
+            ctx.fillText(text, x, centerY + (ascent - descent) / 2);
+        } else {
+            ctx.textBaseline = "middle";
+            ctx.fillText(text, x, centerY);
+        }
+        ctx.restore();
+    },
+
+    drawEditableOutputBackground(ctx, controlName, x, y, w, h, color, borderRadius = 5) {
+        const isHovered = this.hoverElement === controlName;
+        ctx.save();
+        ctx.fillStyle = isHovered
+            ? `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.12)`
+            : SECTION_BACKGROUND_COLOR;
+        ctx.strokeStyle = isHovered
+            ? `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.9)`
+            : "rgba(205, 210, 220, 0.28)";
+        ctx.lineWidth = isHovered ? 1.4 : 1;
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, borderRadius);
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
     },
 
     drawPrimaryControls(ctx, y) {
