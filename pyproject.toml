@@ -11,3 +11,8 @@ Repository = "https://github.com/Azornes/Comfyui-Resolution-Master"
 PublisherId = "azornes"
 DisplayName = "Comfyui-Resolution-Master"
 Icon = ""
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--confcutdir=tests"
+asyncio_default_fixture_loop_scope = "function"
