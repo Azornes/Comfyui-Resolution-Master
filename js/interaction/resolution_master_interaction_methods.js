@@ -534,6 +534,7 @@ export const interactionMethods = {
             clearTimeout(this.tooltipTimer);
             this.tooltipTimer = null;
         }
+        this.hideVueCompatTooltip?.();
         if (this.showTooltip) {
             this.showTooltip = false;
             this.tooltipElement = null;
@@ -541,11 +542,16 @@ export const interactionMethods = {
         }
         if (element && this.tooltips[element]) {
             const initialMousePos = { x: e.canvasX, y: e.canvasY };
+            const initialClientPos = { clientX: e.clientX, clientY: e.clientY };
             this.tooltipTimer = setTimeout(() => {
                 this.tooltipElement = element;
                 this.showTooltip = true;
                 this.tooltipFixedPos = initialMousePos;
-                this.requestCanvasUpdate(true);
+                if (this.isVueNodesMode?.()) {
+                    this.showVueCompatTooltip?.(element, initialClientPos);
+                } else {
+                    this.requestCanvasUpdate(true);
+                }
             }, this.tooltipDelay);
         }
     },

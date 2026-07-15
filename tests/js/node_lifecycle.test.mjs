@@ -175,6 +175,57 @@ test("Vue output slot centers are measured relative to the widget canvas", () =>
 });
 
 
+test("Vue tooltip is rendered in the document overlay and constrained to the viewport", () => {
+    const previousDocument = globalThis.document;
+    const tooltip = {
+        dataset: {},
+        style: {},
+        textContent: "",
+        removed: false,
+        getBoundingClientRect() {
+            return { width: 120, height: 40 };
+        },
+        remove() {
+            this.removed = true;
+        }
+    };
+    globalThis.document = {
+        documentElement: { clientWidth: 300, clientHeight: 200 },
+        createElement() {
+            return tooltip;
+        },
+        body: {
+            appendChild() {}
+        }
+    };
+
+    try {
+        const controller = createLifecycleController();
+        controller.tooltips = { widthValueArea: "Click to enter width manually." };
+
+        controller.showVueCompatTooltip("widthValueArea", { clientX: 280, clientY: 20 });
+
+        assert.equal(tooltip.textContent, "Click to enter width manually.");
+        assert.equal(tooltip.style.left, "145px");
+        assert.equal(tooltip.style.top, "40px");
+        assert.equal(tooltip.style.visibility, "visible");
+
+        controller.hideVueCompatTooltip();
+        assert.equal(tooltip.style.display, "none");
+
+        controller.teardownVueCompatTooltip();
+        assert.equal(tooltip.removed, true);
+        assert.equal(controller._vueCompatTooltip, null);
+    } finally {
+        if (previousDocument === undefined) {
+            delete globalThis.document;
+        } else {
+            globalThis.document = previousDocument;
+        }
+    }
+});
+
+
 test("LiteGraph lifecycle hooks synchronize serialization and clean up on removal", () => {
     const events = [];
     const widthWidget = { name: "width", value: 640 };

@@ -88,7 +88,10 @@ export const drawingMethods = {
                 this.drawSliderMode(ctx, currentY);
             }
 
-            if (this.showTooltip && this.tooltipElement && this.tooltips[this.tooltipElement]) {
+            if (!this.isVueNodesMode?.()
+                && this.showTooltip
+                && this.tooltipElement
+                && this.tooltips[this.tooltipElement]) {
                 this.drawTooltip(ctx);
             }
         } finally {
