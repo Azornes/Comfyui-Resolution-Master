@@ -184,6 +184,18 @@ class ScalingTests(unittest.TestCase):
     def test_target_resolution_from_scale_uses_sixteen_by_nine_pixel_equivalent(self):
         self.assertEqual(calculate_target_resolution_from_scale(512, 512, 2.0), 768)
 
+    def test_auto_resize_uses_identical_rescale_logic(self):
+        # Verify that for different modes, apply_auto_resize scales exactly by calculate_rescale_factor
+        width, height = 800, 600
+        for mode in ("manual", "megapixels", "resolution"):
+            upscale_value = 1.6
+            target_resolution = 720
+            target_megapixels = 1.2
+            factor = calculate_rescale_factor(width, height, mode, upscale_value, target_resolution, target_megapixels)
+            resized = apply_auto_resize(width, height, mode, upscale_value, target_resolution, target_megapixels, False)
+            self.assertEqual(resized["width"], round(width * factor))
+            self.assertEqual(resized["height"], round(height * factor))
+
 
 class ModelCalculationTests(unittest.TestCase):
     def test_flux_applies_megapixel_dimension_and_multiple_constraints(self):

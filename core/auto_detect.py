@@ -324,14 +324,7 @@ def calculate_scaled_dimensions(width, height, scale, preserve_ratio):
 
 
 def apply_auto_resize(width, height, rescale_mode, upscale_value, target_resolution, target_megapixels, preserve_ratio):
-    current_pixels = max(1, width * height)
-    if rescale_mode == "manual":
-        scale = max(0.0, upscale_value)
-    elif rescale_mode == "megapixels":
-        scale = math.sqrt(max(0.0, target_megapixels) * 1000000 / current_pixels)
-    else:
-        target_pixels = (target_resolution * (16 / 9)) * target_resolution
-        scale = math.sqrt(target_pixels / current_pixels)
+    scale = calculate_rescale_factor(width, height, rescale_mode, upscale_value, target_resolution, target_megapixels)
     return calculate_scaled_dimensions(width, height, scale, preserve_ratio)
 
 

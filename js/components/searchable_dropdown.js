@@ -498,45 +498,7 @@ export class SearchableDropdown {
         }
         
         if (this.isExpanded) {
-            // Get current dimensions BEFORE making any changes
-            const currentRect = this.container.getBoundingClientRect();
-            const currentItemsHeight = this.itemsContainer.getBoundingClientRect().height;
-            
-            // Calculate overhead (everything except the items container)
-            const overhead = currentRect.height - currentItemsHeight;
-            
-            // Calculate how much height we need for all items (no extra padding)
-            const neededHeight = this.filteredItems.length * this.ITEM_HEIGHT;
-            
-            // Determine the actual expanded height we'll use for items
-            const maxAllowedItemsHeight = window.innerHeight - this.EXPANDED_BOTTOM_MARGIN - overhead;
-            const expandedItemsHeight = Math.min(neededHeight, maxAllowedItemsHeight);
-            
-            // Calculate the total container height (items + overhead)
-            const totalContainerHeight = expandedItemsHeight + overhead;
-            
-            // Use viewport-relative position (getBoundingClientRect gives us position relative to viewport)
-            const currentViewportTop = currentRect.top;
-            
-            // Calculate what the bottom would be if we expand from current viewport position
-            const potentialBottom = currentViewportTop + totalContainerHeight;
-            
-            // If it would overflow viewport, calculate new position BEFORE setting heights
-            if (potentialBottom > window.innerHeight - this.EXPANDED_BOTTOM_MARGIN) {
-                // Calculate new viewport-relative top position
-                let newViewportTop = window.innerHeight - totalContainerHeight - this.EXPANDED_BOTTOM_MARGIN;
-                // Ensure it doesn't go above screen top
-                newViewportTop = Math.max(10, newViewportTop);
-                
-                // Convert viewport-relative position to document-relative position
-                const newDocumentTop = newViewportTop + window.pageYOffset;
-                this.container.style.top = `${newDocumentTop}px`;
-            }
-            
-            // Now apply the expanded heights
-            this.itemsContainer.style.maxHeight = `${expandedItemsHeight}px`;
-            this.container.style.maxHeight = `${totalContainerHeight}px`;
-            this.expandButton.textContent = 'Show Less';
+            this.applyExpandedState();
         } else {
             // Collapse back to default
             this.itemsContainer.style.maxHeight = `${this.DEFAULT_MAX_HEIGHT}px`;

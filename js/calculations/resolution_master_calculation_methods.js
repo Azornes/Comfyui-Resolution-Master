@@ -161,29 +161,29 @@ export const calculationMethods = {
         this.applyBackendCalculationResult(result, { updatePreset: false });
     },
 
-    async handleScale() {
-        log.info('Manual scale requested', {
-            nodeId: this.node?.id ?? null,
-            rescaleMode: 'manual'
-        });
-        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'manual' });
+    async handleScaleMode(mode) {
+        if (mode === 'manual') {
+            log.info('Manual scale requested', {
+                nodeId: this.node?.id ?? null,
+                rescaleMode: 'manual'
+            });
+        }
+        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: mode });
         if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
             this.updateRescaleValue();
         }
+    },
+
+    async handleScale() {
+        return this.handleScaleMode('manual');
     },
 
     async handleResolutionScale() {
-        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'resolution' });
-        if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
-            this.updateRescaleValue();
-        }
+        return this.handleScaleMode('resolution');
     },
 
     async handleMegapixelsScale() {
-        const result = await this.requestBackendCalculation('auto_resize', { rescale_mode: 'megapixels' });
-        if (this.applyBackendCalculationResult(result, { updatePreset: false, applyRescale: false })) {
-            this.updateRescaleValue();
-        }
+        return this.handleScaleMode('megapixels');
     },
 
     async handleAutoFit() {

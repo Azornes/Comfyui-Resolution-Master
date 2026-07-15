@@ -1,4 +1,5 @@
 // aspect_ratio_utils.js - Shared utilities for aspect ratio calculations and rendering
+import { gcd } from "../canvas/aspect_ratio_math.js";
 
 /**
  * Utility class for aspect ratio calculations and icon generation
@@ -12,7 +13,6 @@ export class AspectRatioUtils {
      * @returns {string} Aspect ratio string (e.g., "16:9")
      */
     static calculateAspectRatio(width, height) {
-        const gcd = (a, b) => b === 0 ? a : gcd(b, a % b);
         const divisor = gcd(width, height);
         const w = width / divisor;
         const h = height / divisor;

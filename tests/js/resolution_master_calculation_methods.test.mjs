@@ -61,3 +61,39 @@ test("applyPreset rejects a hidden preset referenced by stale UI state", async (
     assert.equal(context.heightWidget.value, 480);
     assert.equal(context.node.properties.selectedPreset, "Visible");
 });
+
+
+test("handleScale, handleResolutionScale, handleMegapixelsScale request backend and update rescale value", async () => {
+    const requests = [];
+    let rescaleValueUpdated = 0;
+    const context = {
+        node: {
+            id: 7,
+            properties: {
+                rescaleMode: "resolution"
+            }
+        },
+        handleScaleMode: calculationMethods.handleScaleMode,
+        async requestBackendCalculation(action, payload) {
+            requests.push({ action, payload });
+            return { ok: true, width: 960, height: 540, rescale_factor: 1.5 };
+        },
+        applyBackendCalculationResult(result, options) {
+            assert.deepEqual(options, { updatePreset: false, applyRescale: false });
+            return true;
+        },
+        updateRescaleValue() {
+            rescaleValueUpdated += 1;
+        }
+    };
+
+    await calculationMethods.handleScale.call(context);
+    await calculationMethods.handleResolutionScale.call(context);
+    await calculationMethods.handleMegapixelsScale.call(context);
+
+    assert.equal(requests.length, 3);
+    assert.equal(requests[0].payload.rescale_mode, "manual");
+    assert.equal(requests[1].payload.rescale_mode, "resolution");
+    assert.equal(requests[2].payload.rescale_mode, "megapixels");
+    assert.equal(rescaleValueUpdated, 3);
+});
