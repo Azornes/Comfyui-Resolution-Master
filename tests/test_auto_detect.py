@@ -3,6 +3,12 @@ import math
 import unittest
 
 from core.auto_detect import (
+    CALCULATION_CONFIG_VERSION,
+    CALCULATION_CONFIG_VERSION_KEY,
+    CALCULATION_PRESETS_KEY,
+    CALCULATION_PROFILE_KEY,
+    CALCULATION_STRATEGIES,
+    LEGACY_MODEL_PROFILES,
     apply_auto_resize,
     apply_auto_snap,
     apply_custom_calculation,
@@ -10,6 +16,7 @@ from core.auto_detect import (
     calculate_resolution,
     calculate_target_resolution_from_scale,
     find_closest_preset,
+    load_calculation_config,
     load_presets,
 )
 
@@ -91,6 +98,56 @@ class PresetLoadingTests(unittest.TestCase):
         self.assertEqual(load_presets("[]"), {})
         self.assertEqual(load_presets("not-json"), {})
         self.assertEqual(load_presets(None), {})
+
+    def test_calculation_config_extracts_profile_and_presets(self):
+        config_json = json.dumps(
+            {
+                CALCULATION_CONFIG_VERSION_KEY: CALCULATION_CONFIG_VERSION,
+                CALCULATION_PROFILE_KEY: {
+                    "strategy": "closest_preset",
+                    "options": {},
+                },
+                CALCULATION_PRESETS_KEY: {
+                    "square": {"width": 1024, "height": 1024},
+                },
+            }
+        )
+
+        presets, profile = load_calculation_config(config_json)
+
+        self.assertEqual(presets["square"]["width"], 1024)
+        self.assertEqual(profile["strategy"], "closest_preset")
+
+
+class CalculationStrategyRegistryTests(unittest.TestCase):
+    def test_every_legacy_profile_uses_a_registered_strategy(self):
+        for category, profile in LEGACY_MODEL_PROFILES.items():
+            with self.subTest(category=category):
+                self.assertIn(profile["strategy"], CALCULATION_STRATEGIES)
+
+    def test_profile_can_enable_a_future_category_without_backend_branch(self):
+        config_json = json.dumps(
+            {
+                CALCULATION_CONFIG_VERSION_KEY: CALCULATION_CONFIG_VERSION,
+                CALCULATION_PROFILE_KEY: {
+                    "strategy": "closest_preset",
+                    "options": {},
+                },
+                CALCULATION_PRESETS_KEY: {
+                    "landscape": {"width": 1216, "height": 832},
+                },
+            }
+        )
+
+        result = calculate_resolution(
+            "custom_calc",
+            800,
+            1200,
+            selected_category="Future Model",
+            presets_json=config_json,
+        )
+
+        self.assertEqual((result["width"], result["height"]), (832, 1216))
 
 
 class ScalingTests(unittest.TestCase):

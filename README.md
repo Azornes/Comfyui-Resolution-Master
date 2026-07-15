@@ -81,6 +81,23 @@ Extensive preset library organized by use case:
 | **Qwen-Image** | Qwen-Image workflows | Keeps images in the ~0.6 MP to 4.2 MP range, preserving valid inputs and scaling out-of-range inputs |
 | **ZImageTurbo** | Z-Image-Turbo workflows | Selects the closest active category resolution by aspect ratio and pixel count while preserving orientation; the built-in list uses official resolutions |
 
+### Adding a Model Profile
+
+Model-specific behavior is declared in `js/calculations/model_profiles.js`. To add
+a model that uses an existing calculation strategy:
+
+1. Add its resolutions to `js/presets/preset_categories.js`.
+2. Add one profile containing its strategy, options, and information message.
+3. Add focused tests for the model's expected resolutions.
+
+The frontend includes the profile in the existing preset JSON sent to Python, so
+no backend category branch or workflow schema change is required. If a model
+needs a genuinely new algorithm, register one reusable strategy in
+`core/auto_detect.py` and add its name to the frontend strategy contract. The
+contract tests ensure every built-in category has a supported profile and an
+information message. The backend legacy profile map exists only to keep older
+saved workflows working.
+
 ---
 
 ## 🚀 Installation

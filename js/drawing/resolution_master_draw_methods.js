@@ -2,6 +2,7 @@ import { aspectRatioString } from "../canvas/aspect_ratio_math.js";
 import { formatClosestPResolution } from "../scaling/scaling_math.js";
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
+import { getModelInfoMessage } from "../calculations/model_profiles.js";
 
 const log = createModuleLogger("resolution_master_draw_methods");
 
@@ -700,31 +701,11 @@ export const drawingMethods = {
     },
 
     getCalcInfoMessage() {
-        const props = this.node.properties;
-        const category = props.selectedCategory;
-
-        if (category === "SDXL") {
-            return "💡 SDXL Mode: Uses the closest SDXL preset size.";
-        } else if (category === "Flux") {
-            return "💡 FLUX Mode: Round to: 32px | Edge range: 320-2560px | Max resolution: 4.0 MP";
-        } else if (category === "Flux.2") {
-            return "💡 FLUX.2 Mode: Round to: 16px | Edge range: 320-3840px | Max resolution: 6.0 MP";
-        } else if (category === "Krea 2 Turbo" || category === "Krea 2 RAW") {
-            return "💡 Krea 2 Mode: Uses the closest Krea 2 preset size (multiples of 16).";
-        } else if (category === "WAN" && this.widthWidget && this.heightWidget) {
-            const pixels = this.widthWidget.value * this.heightWidget.value;
-            const model = pixels < 600000 ? "480p" : "720p";
-            return `💡 WAN Mode: Suggesting ${model} model | Round to: 16px | Resolution range: 320p-820p`;
-        } else if (category === "HiDream Dev") {
-            return "💡 HiDream Dev: Uses the closest HiDream Dev preset size.";
-        } else if (category === "Qwen-Image") {
-            return "💡 Qwen-Image: Resolution range: ~0.6MP-4.2MP. If input is already in this range, it remains unchanged.";
-        } else if (category === "ZImageTurbo") {
-            return "💡 ZImageTurbo Mode: Uses the closest active preset size while preserving orientation. Built-in presets use official resolutions.";
-        } else if (['Standard', 'Social Media', 'Print', 'Cinema', 'Display Resolutions'].includes(category)) {
-            return "💡 Calc Mode: Uses the closest preset aspect ratio while keeping the size close to your current resolution.";
-        }
-        return "⚠️ Calc Mode: Custom calculation not available for this category)";
+        const message = getModelInfoMessage(this.node.properties.selectedCategory, {
+            width: this.widthWidget?.value,
+            height: this.heightWidget?.value
+        });
+        return message || "⚠️ Calc Mode: Custom calculation not available for this category.";
     },
 
     getMeasureContext() {

@@ -8,6 +8,50 @@ log = create_module_logger(__name__)
 
 
 ASPECT_RATIO_TOLERANCE = 0.01
+CALCULATION_CONFIG_VERSION = 1
+CALCULATION_CONFIG_VERSION_KEY = "__resolutionMasterConfigVersion"
+CALCULATION_PROFILE_KEY = "__resolutionMasterProfile"
+CALCULATION_PRESETS_KEY = "__resolutionMasterPresets"
+
+
+LEGACY_MODEL_PROFILES = {
+    "Standard": {"strategy": "closest_aspect"},
+    "SDXL": {"strategy": "closest_preset"},
+    "Flux": {
+        "strategy": "flux_like",
+        "options": {
+            "max_megapixels": 4.0,
+            "max_dimension": 2560,
+            "min_dimension": 320,
+            "multiple": 32,
+        },
+    },
+    "Flux.2": {
+        "strategy": "flux_like",
+        "options": {
+            "max_megapixels": 6.0,
+            "max_dimension": 3840,
+            "min_dimension": 320,
+            "multiple": 16,
+        },
+    },
+    "WAN": {
+        "strategy": "wan_pixel_range",
+        "options": {"min_pixels": 182080, "max_pixels": 1195560, "multiple": 16},
+    },
+    "HiDream Dev": {"strategy": "closest_preset"},
+    "Qwen-Image": {
+        "strategy": "pixel_range",
+        "options": {"min_pixels": 589824, "max_pixels": 4194304},
+    },
+    "ZImageTurbo": {"strategy": "closest_preset"},
+    "Krea 2 Turbo": {"strategy": "closest_preset"},
+    "Krea 2 RAW": {"strategy": "closest_preset"},
+    "Social Media": {"strategy": "closest_aspect"},
+    "Print": {"strategy": "closest_aspect"},
+    "Cinema": {"strategy": "closest_aspect"},
+    "Display Resolutions": {"strategy": "closest_aspect"},
+}
 
 
 def safe_int(value, default=0):
@@ -24,16 +68,32 @@ def safe_float(value, default=0.0):
         return default
 
 
-def load_presets(presets_json):
+def load_calculation_config(presets_json):
     try:
-        presets = json.loads(presets_json or "{}")
-        if isinstance(presets, dict):
-            return presets
-        log.warning("Ignoring presets JSON because decoded value is not an object")
-        return {}
+        decoded = json.loads(presets_json or "{}")
+        if not isinstance(decoded, dict):
+            log.warning("Ignoring presets JSON because decoded value is not an object")
+            return {}, {}
+
+        if decoded.get(CALCULATION_CONFIG_VERSION_KEY) == CALCULATION_CONFIG_VERSION:
+            presets = decoded.get(CALCULATION_PRESETS_KEY)
+            profile = decoded.get(CALCULATION_PROFILE_KEY)
+            if not isinstance(presets, dict):
+                log.warning("Ignoring calculation presets because config value is not an object")
+                presets = {}
+            if not isinstance(profile, dict):
+                profile = {}
+            return presets, profile
+
+        return decoded, {}
     except (TypeError, ValueError) as error:
         log.warning("Failed to parse presets JSON", error)
-        return {}
+        return {}, {}
+
+
+def load_presets(presets_json):
+    presets, _profile = load_calculation_config(presets_json)
+    return presets
 
 
 def choose_best_scaling_option(current_pixels, option1, option2):
@@ -138,49 +198,95 @@ def apply_flux_like_calculation(width, height, max_mp, max_dim, min_dim, multipl
     }
 
 
-def apply_custom_calculation(width, height, category, presets):
-    if category == "Flux":
-        return apply_flux_like_calculation(width, height, 4.0, 2560, 320, 32)
-    if category == "Flux.2":
-        return apply_flux_like_calculation(width, height, 6.0, 3840, 320, 16)
-    if category == "WAN":
-        target_pixels = max(182080, min(1195560, width * height))
-        aspect = width / height
-        target_height = math.sqrt(target_pixels / aspect)
-        target_width = target_height * aspect
-        return {
-            "width": round(target_width / 16) * 16,
-            "height": round(target_height / 16) * 16,
-        }
-    if category == "Qwen-Image":
-        current_pixels = width * height
-        min_pixels = 589824
-        max_pixels = 4194304
-        if min_pixels <= current_pixels <= max_pixels:
-            return {"width": width, "height": height}
-        target_pixels = min_pixels if current_pixels < min_pixels else max_pixels
-        aspect = width / height
-        target_height = math.sqrt(target_pixels / aspect)
-        return {"width": round(target_height * aspect), "height": round(target_height)}
+def _unchanged_dimensions(width, height):
+    return {"width": width, "height": height}
 
-    if category in ("SDXL", "HiDream Dev", "Krea 2 Turbo", "Krea 2 RAW", "ZImageTurbo"):
-        closest = find_closest_preset(width, height, presets)
-        if not closest:
-            return {"width": width, "height": height}
-        return {"width": closest["width"], "height": closest["height"]}
 
-    if category not in ("Standard", "Social Media", "Print", "Cinema", "Display Resolutions"):
-        return {"width": width, "height": height}
-
+def _apply_closest_preset_strategy(width, height, presets, _options):
     closest = find_closest_preset(width, height, presets)
     if not closest:
-        return {"width": width, "height": height}
+        return _unchanged_dimensions(width, height)
+    return {"width": closest["width"], "height": closest["height"]}
+
+
+def _apply_closest_aspect_strategy(width, height, presets, options):
+    closest = find_closest_preset(width, height, presets)
+    if not closest:
+        return _unchanged_dimensions(width, height)
 
     preset_aspect = closest["width"] / closest["height"]
     current_aspect = width / height
-    if abs(current_aspect - preset_aspect) < 0.01:
-        return {"width": width, "height": height}
+    tolerance = max(0.0, safe_float(options.get("tolerance"), ASPECT_RATIO_TOLERANCE))
+    if abs(current_aspect - preset_aspect) < tolerance:
+        return _unchanged_dimensions(width, height)
     return scale_to_preset_aspect_ratio(width, height, preset_aspect)
+
+
+def _apply_flux_like_strategy(width, height, _presets, options):
+    min_dimension = max(1, safe_int(options.get("min_dimension"), 320))
+    max_dimension = max(min_dimension, safe_int(options.get("max_dimension"), 2560))
+    return apply_flux_like_calculation(
+        width,
+        height,
+        max(0.001, safe_float(options.get("max_megapixels"), 4.0)),
+        max_dimension,
+        min_dimension,
+        max(1, safe_int(options.get("multiple"), 32)),
+    )
+
+
+def _apply_wan_pixel_range_strategy(width, height, _presets, options):
+    min_pixels = max(1, safe_int(options.get("min_pixels"), 182080))
+    max_pixels = max(min_pixels, safe_int(options.get("max_pixels"), 1195560))
+    multiple = max(1, safe_int(options.get("multiple"), 16))
+    target_pixels = max(min_pixels, min(max_pixels, width * height))
+    aspect = width / height
+    target_height = math.sqrt(target_pixels / aspect)
+    target_width = target_height * aspect
+    return {
+        "width": max(multiple, round(target_width / multiple) * multiple),
+        "height": max(multiple, round(target_height / multiple) * multiple),
+    }
+
+
+def _apply_pixel_range_strategy(width, height, _presets, options):
+    current_pixels = width * height
+    min_pixels = max(1, safe_int(options.get("min_pixels"), 589824))
+    max_pixels = max(min_pixels, safe_int(options.get("max_pixels"), 4194304))
+    if min_pixels <= current_pixels <= max_pixels:
+        return _unchanged_dimensions(width, height)
+    target_pixels = min_pixels if current_pixels < min_pixels else max_pixels
+    aspect = width / height
+    target_height = math.sqrt(target_pixels / aspect)
+    return {"width": round(target_height * aspect), "height": round(target_height)}
+
+
+CALCULATION_STRATEGIES = {
+    "closest_aspect": _apply_closest_aspect_strategy,
+    "closest_preset": _apply_closest_preset_strategy,
+    "flux_like": _apply_flux_like_strategy,
+    "pixel_range": _apply_pixel_range_strategy,
+    "wan_pixel_range": _apply_wan_pixel_range_strategy,
+}
+
+
+def apply_custom_calculation(width, height, category, presets, profile=None):
+    resolved_profile = profile if isinstance(profile, dict) and profile.get("strategy") else None
+    if resolved_profile is None:
+        resolved_profile = LEGACY_MODEL_PROFILES.get(category)
+    if not resolved_profile:
+        return _unchanged_dimensions(width, height)
+
+    strategy_name = resolved_profile.get("strategy")
+    strategy = CALCULATION_STRATEGIES.get(strategy_name)
+    if strategy is None:
+        log.warning("Unknown calculation strategy", strategy_name, "for category", category)
+        return _unchanged_dimensions(width, height)
+
+    options = resolved_profile.get("options")
+    if not isinstance(options, dict):
+        options = {}
+    return strategy(width, height, presets, options)
 
 
 def calculate_auto_fit(width, height, category, smart_fit, presets, preserve_scaling_ratio=False):
@@ -326,7 +432,7 @@ def calculate_resolution(
     target_resolution = max(1, safe_int(target_resolution, 1080))
     target_megapixels = max(0.0, safe_float(target_megapixels, 2.0))
     selected_category = selected_category or ""
-    presets = load_presets(presets_json)
+    presets, calculation_profile = load_calculation_config(presets_json)
     selected_preset = None
 
     log.debug(
@@ -363,7 +469,13 @@ def calculate_resolution(
 
     elif action == "custom_calc":
         if selected_category:
-            calculated = apply_custom_calculation(width, height, selected_category, presets)
+            calculated = apply_custom_calculation(
+                width,
+                height,
+                selected_category,
+                presets,
+                calculation_profile,
+            )
             width, height = calculated["width"], calculated["height"]
 
     elif action == "auto_detect":
@@ -389,7 +501,13 @@ def calculate_resolution(
             width, height = snapped["width"], snapped["height"]
 
         if use_custom_calc and selected_category:
-            calculated = apply_custom_calculation(width, height, selected_category, presets)
+            calculated = apply_custom_calculation(
+                width,
+                height,
+                selected_category,
+                presets,
+                calculation_profile,
+            )
             width, height = calculated["width"], calculated["height"]
 
     elif action in ("rescale", "target_resolution_from_scale"):

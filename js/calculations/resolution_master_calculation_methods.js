@@ -3,6 +3,7 @@ import {
     calculateScaleFactor as calculateScaleFactorForDimensions,
     calculateScaledDimensions
 } from "../scaling/scaling_math.js";
+import { createCalculationConfig } from "./model_profiles.js";
 
 const log = createModuleLogger('resolution_master_calculation_methods');
 const RESCALE_VALUE_MIN = 0;
@@ -25,7 +26,7 @@ export const calculationMethods = {
             Object.entries(categoryPresets).filter(([, preset]) => !preset?.isHidden)
         );
         try {
-            return JSON.stringify(activePresets);
+            return JSON.stringify(createCalculationConfig(category, activePresets));
         } catch (error) {
             log.warn('Failed to serialize calculation presets:', error);
             return "{}";

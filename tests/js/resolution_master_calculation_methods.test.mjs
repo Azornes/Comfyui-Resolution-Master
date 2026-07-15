@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { calculationMethods } from "../../js/calculations/resolution_master_calculation_methods.js";
+import {
+    CALCULATION_CONFIG_KEYS,
+    CALCULATION_CONFIG_VERSION
+} from "../../js/calculations/model_profiles.js";
 
 
 test("calculation preset JSON excludes hidden presets and retains custom overrides", () => {
@@ -18,8 +22,11 @@ test("calculation preset JSON excludes hidden presets and retains custom overrid
         }
     };
 
-    const presets = JSON.parse(calculationMethods.getCategoryPresetsJSON.call(context));
+    const config = JSON.parse(calculationMethods.getCategoryPresetsJSON.call(context));
+    const presets = config[CALCULATION_CONFIG_KEYS.presets];
 
+    assert.equal(config[CALCULATION_CONFIG_KEYS.version], CALCULATION_CONFIG_VERSION);
+    assert.equal(config[CALCULATION_CONFIG_KEYS.profile].strategy, "closest_aspect");
     assert.deepEqual(Object.keys(presets), ["Visible", "Custom"]);
     assert.equal(presets.Custom.isCustom, true);
 });
