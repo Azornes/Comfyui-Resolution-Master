@@ -53,6 +53,8 @@ export const presetCategories = {
         '21:9 Ultrawide': { width: 2912, height: 1248 },
     },
     'WAN': {
+       // Official T2I Preset
+       '1:1 Square-1024 (T2I)': { width: 1024, height: 1024 },
        // Community Presets
        '16:9 Landscape-1280': { width: 1280, height: 720 },
        '16:9 Landscape-832': { width: 832, height: 480 },
@@ -78,8 +80,11 @@ export const presetCategories = {
     'Qwen-Image': {
         '1:1 Square (Default)': { width: 1328, height: 1328 },
         '16:9 Landscape': { width: 1664, height: 928 },
+        '9:16 Portrait': { width: 928, height: 1664 },
         '4:3 Landscape': { width: 1472, height: 1104 },
+        '3:4 Portrait (Official)': { width: 1104, height: 1472 },
         '3:2 Landscape': { width: 1584, height: 1056 },
+        '2:3 Portrait': { width: 1056, height: 1584 },
         // Tests Presets
         '1:1 Square-1024': { width: 1024, height: 1024 },
         '3:4 Portrait': { width: 768, height: 1024 }
