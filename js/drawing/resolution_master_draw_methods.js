@@ -206,12 +206,26 @@ export const drawingMethods = {
         ctx.textBaseline = "middle";
 
         if (this.widthWidget && this.heightWidget && this.batchSizeWidget) {
-            const y_offset_1 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 0.5);
-            const y_offset_2 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 1.5);
-            const y_offset_3 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 2.5);
-            const y_offset_4 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 3.5);
+            const classicSlotCenters = Array.from(
+                { length: 5 },
+                (_, index) => 5 + LiteGraph.NODE_SLOT_HEIGHT * (index + 0.5)
+            );
+            const vueSlotCenters = this.isVueNodesMode?.()
+                && this._vueCompatOutputSlotCenters?.length >= classicSlotCenters.length
+                ? this._vueCompatOutputSlotCenters
+                : null;
+            const slotCenters = vueSlotCenters || classicSlotCenters;
+            const slotSteps = slotCenters
+                .slice(1)
+                .map((center, index) => center - slotCenters[index])
+                .filter(step => Number.isFinite(step) && step > 0)
+                .sort((first, second) => first - second);
+            const slotSpacing = slotSteps.length
+                ? slotSteps[Math.floor(slotSteps.length / 2)]
+                : LiteGraph.NODE_SLOT_HEIGHT;
+            const [y_offset_1, y_offset_2, y_offset_3, y_offset_4, y_offset_5] = slotCenters;
             const valueAreaWidth = 60; 
-            const valueAreaHeight = Math.max(14, LiteGraph.NODE_SLOT_HEIGHT - OUTPUT_VALUE_VERTICAL_GAP);
+            const valueAreaHeight = Math.max(14, slotSpacing - OUTPUT_VALUE_VERTICAL_GAP);
             const outputValueRight = node.size[0] - OUTPUT_VALUE_VISUAL_RIGHT_INSET;
             const valueAreaX = outputValueRight - valueAreaWidth;
             const outputValueCenterX = valueAreaX + valueAreaWidth / 2;
@@ -227,7 +241,6 @@ export const drawingMethods = {
             this.drawOutputValueArea(ctx, 'batchSizeValueArea', valueAreaX, y_offset_4 - valueAreaHeight/2,
                 valueAreaWidth, valueAreaHeight, this.batchSizeWidget.value.toString(), y_offset_4,
                 [255, 136, 187], "#FAB", "#F8B");
-            const y_offset_5 = 5 + (LiteGraph.NODE_SLOT_HEIGHT * 4.5);
 
             // Create clickable area for LAT selector
             const latAreaWidth = valueAreaWidth;

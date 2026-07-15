@@ -146,6 +146,35 @@ test("Vue pointer normalization converts widget-local coordinates to node coordi
 });
 
 
+test("Vue output slot centers are measured relative to the widget canvas", () => {
+    const controller = createLifecycleController({ outputs: Array.from({ length: 5 }, () => ({})) });
+    const canvasElement = {
+        clientWidth: 330,
+        clientHeight: 200,
+        getBoundingClientRect() {
+            return { left: 100, top: 200, width: 660, height: 400 };
+        }
+    };
+    const createDot = (left, top) => ({
+        getBoundingClientRect() {
+            return { left, top, width: 10, height: 10 };
+        }
+    });
+    const slotDots = [
+        createDot(90, 220),
+        createDot(740, 220),
+        createDot(740, 264),
+        createDot(740, 308),
+        createDot(740, 352),
+        createDot(740, 396)
+    ];
+
+    controller.updateVueCompatOutputSlotCenters(canvasElement, slotDots, 110);
+
+    assert.deepEqual(controller._vueCompatOutputSlotCenters, [12.5, 34.5, 56.5, 78.5, 100.5]);
+});
+
+
 test("LiteGraph lifecycle hooks synchronize serialization and clean up on removal", () => {
     const events = [];
     const widthWidget = { name: "width", value: 640 };

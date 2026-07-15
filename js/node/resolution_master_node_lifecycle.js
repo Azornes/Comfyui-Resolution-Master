@@ -288,14 +288,53 @@ export const nodeLifecycleMethods = {
         slotsElement.style.width = "100%";
         slotsElement.style.zIndex = "2";
         slotsElement.style.pointerEvents = "none";
-        for (const slotDot of slotsElement.querySelectorAll?.('[data-testid="slot-connection-dot"]') || []) {
+        const slotDots = Array.from(slotsElement.querySelectorAll?.('[data-testid="slot-connection-dot"]') || []);
+        for (const slotDot of slotDots) {
             if (!this._vueCompatLayout.slotDotPointerEvents.has(slotDot)) {
                 this._vueCompatLayout.slotDotPointerEvents.set(slotDot, slotDot.style.pointerEvents);
             }
             slotDot.style.pointerEvents = "auto";
         }
+        this.updateVueCompatOutputSlotCenters(canvasElement, slotDots, slotHeight);
         this.ensureVueCompatHeaderControls(widgetsGrid);
         this._vueCompatSlotOffset = slotHeight;
+    },
+
+    updateVueCompatOutputSlotCenters(canvasElement, slotDots, slotHeight = 0) {
+        const canvasWidth = Math.max(0, Number(canvasElement?.clientWidth) || 0);
+        const canvasHeight = Math.max(0, Number(canvasElement?.clientHeight) || 0);
+        const signature = `${canvasWidth}:${canvasHeight}:${slotHeight}:${slotDots.length}`;
+        if (signature === this._vueCompatOutputSlotLayoutSignature && this._vueCompatOutputSlotCenters?.length) {
+            return;
+        }
+
+        const canvasRect = canvasElement?.getBoundingClientRect?.();
+        if (!canvasRect || canvasRect.width <= 0 || canvasRect.height <= 0) {
+            this._vueCompatOutputSlotCenters = null;
+            this._vueCompatOutputSlotLayoutSignature = null;
+            return;
+        }
+
+        const renderedScaleY = canvasHeight > 0 ? canvasRect.height / canvasHeight : 1;
+        const canvasCenterX = canvasRect.left + canvasRect.width / 2;
+        const outputCount = this.node.outputs?.length || 0;
+        const centers = slotDots
+            .map(slotDot => slotDot.getBoundingClientRect?.())
+            .filter(rect => rect && rect.width >= 0 && rect.height >= 0)
+            .filter(rect => rect.left + rect.width / 2 >= canvasCenterX)
+            .map(rect => ((rect.top + rect.height / 2) - canvasRect.top) / renderedScaleY)
+            .filter(Number.isFinite)
+            .sort((first, second) => first - second);
+
+        this._vueCompatOutputSlotCenters = outputCount > 0
+            ? centers.slice(0, outputCount)
+            : centers;
+        const hasCompleteOutputLayout = outputCount > 0
+            ? this._vueCompatOutputSlotCenters.length >= outputCount
+            : this._vueCompatOutputSlotCenters.length > 0;
+        this._vueCompatOutputSlotLayoutSignature = hasCompleteOutputLayout
+            ? signature
+            : null;
     },
 
     ensureVueCompatHeaderControls(widgetsGrid) {
@@ -448,6 +487,8 @@ export const nodeLifecycleMethods = {
         this.teardownVueCompatHeaderControls();
         this._vueCompatLayout = null;
         this._vueCompatSlotOffset = 0;
+        this._vueCompatOutputSlotCenters = null;
+        this._vueCompatOutputSlotLayoutSignature = null;
         this._vueCompatAutoSizedContentHeight = null;
     },
 

@@ -141,3 +141,23 @@ test("hover strengthens the editable output pill", () => {
         globalThis.LiteGraph = originalLiteGraph;
     }
 });
+
+test("Nodes 2.0 output pills follow the measured DOM slot centers", () => {
+    const originalLiteGraph = globalThis.LiteGraph;
+    globalThis.LiteGraph = { NODE_SLOT_HEIGHT: 20, vueNodesMode: true };
+
+    try {
+        const controller = createController();
+        controller.isVueNodesMode = () => true;
+        controller._vueCompatOutputSlotCenters = [12, 35, 58, 81, 104];
+        const ctx = createCanvasContext();
+        controller.drawOutputValues(ctx);
+
+        assert.equal(ctx.rectangles[0].y + ctx.rectangles[0].h / 2, 12);
+        assert.equal(ctx.rectangles[1].y + ctx.rectangles[1].h / 2, 35);
+        assert.equal(ctx.rectangles[2].y + ctx.rectangles[2].h / 2, 81);
+        assert.equal(ctx.text.find(entry => entry.value === "LAT")?.y, 104);
+    } finally {
+        globalThis.LiteGraph = originalLiteGraph;
+    }
+});
