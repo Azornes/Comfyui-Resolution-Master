@@ -47,6 +47,31 @@ export const nodeLifecycleMethods = {
             : minimumHeight;
     },
 
+    getVueCompatMinimumWidth() {
+        return Math.max(0, Number(this.node.min_size?.[0]) || 330);
+    },
+
+    applyVueCompatMinimumWidth() {
+        if (!this.isVueNodesMode()) return false;
+
+        const minimumWidth = this.getVueCompatMinimumWidth();
+        const currentWidth = Number(this.node.size?.[0]) || 0;
+        if (currentWidth >= minimumWidth) return false;
+
+        const currentHeight = Number(this.node.size?.[1]) || this.node.min_size?.[1] || 200;
+        this._isApplyingAutoSize = true;
+        try {
+            if (typeof this.node.setSize === "function") {
+                this.node.setSize([minimumWidth, currentHeight]);
+            } else {
+                this.node.size = [minimumWidth, currentHeight];
+            }
+        } finally {
+            this._isApplyingAutoSize = false;
+        }
+        return true;
+    },
+
     getVueCompatBottomBadgeClearance() {
         return this.isVueNodesMode() && this.collapsedSections?.extraControls ? -23 : 0;
     },
@@ -72,11 +97,16 @@ export const nodeLifecycleMethods = {
             Math.ceil(Number(widgetHeight) || 0),
             this.node.min_size?.[1] || 200
         );
-        if (this._vueCompatAutoSizedContentHeight === targetHeight) return;
+        const targetWidth = Math.max(
+            Number(this.node.size?.[0]) || 0,
+            this.getVueCompatMinimumWidth()
+        );
+        const widthMatches = Math.abs((Number(this.node.size?.[0]) || 0) - targetWidth) <= 1;
+        const heightMatches = Math.abs((Number(this.node.size?.[1]) || 0) - targetHeight) <= 1;
+        if (this._vueCompatAutoSizedContentHeight === targetHeight && widthMatches && heightMatches) return;
 
         this._vueCompatAutoSizedContentHeight = targetHeight;
-        const targetWidth = Math.max(Number(this.node.size?.[0]) || 0, 330);
-        if (Math.abs((Number(this.node.size?.[1]) || 0) - targetHeight) <= 1) return;
+        if (widthMatches && heightMatches) return;
 
         this._isApplyingAutoSize = true;
         try {
@@ -119,6 +149,7 @@ export const nodeLifecycleMethods = {
             this._vueCompatWidgetHeight = height;
             if (this.collapsedSections?.extraControls) {
                 this._vueCompatAutoSizedContentHeight = null;
+                this.applyVueCompatMinimumWidth();
             } else {
                 this.applyVueCompatAutoSize(height);
             }
@@ -255,13 +286,16 @@ export const nodeLifecycleMethods = {
         if (this._vueCompatLayout?.widgetsGrid !== widgetsGrid) {
             this.teardownVueCompatCanvasLayout();
             const canvasHost = canvasElement.parentElement;
+            const nodeElement = widgetsGrid.closest?.(".lg-node") || null;
             this._vueCompatLayout = {
                 bodyElement,
                 widgetsGrid,
                 slotsElement,
                 canvasHost,
+                nodeElement,
                 bodyPosition: bodyElement.style.position,
                 canvasHostMinHeight: canvasHost?.style.minHeight ?? '',
+                nodeMinWidth: nodeElement?.style.minWidth ?? '',
                 gridMarginTop: widgetsGrid.style.marginTop,
                 gridPosition: widgetsGrid.style.position,
                 gridZIndex: widgetsGrid.style.zIndex,
@@ -277,6 +311,9 @@ export const nodeLifecycleMethods = {
         }
 
         const slotHeight = Math.max(0, Number(slotsElement.offsetHeight) || 0);
+        if (this._vueCompatLayout.nodeElement) {
+            this._vueCompatLayout.nodeElement.style.minWidth = `${this.getVueCompatMinimumWidth()}px`;
+        }
         bodyElement.style.position = "relative";
         widgetsGrid.style.marginTop = "";
         widgetsGrid.style.position = "relative";
@@ -470,6 +507,9 @@ export const nodeLifecycleMethods = {
             if (layout.canvasHost) {
                 layout.canvasHost.style.minHeight = layout.canvasHostMinHeight ?? "";
             }
+            if (layout.nodeElement) {
+                layout.nodeElement.style.minWidth = layout.nodeMinWidth ?? "";
+            }
             layout.widgetsGrid.style.marginTop = layout.gridMarginTop;
             layout.widgetsGrid.style.position = layout.gridPosition;
             layout.widgetsGrid.style.zIndex = layout.gridZIndex;
@@ -644,7 +684,7 @@ export const nodeLifecycleMethods = {
                 }
                 const height = self.getVueCompatWidgetHeight();
                 return {
-                    minWidth: 330,
+                    minWidth: self.getVueCompatMinimumWidth(),
                     minHeight: height,
                     maxHeight: self.collapsedSections?.extraControls ? 100000 : height
                 };
@@ -668,6 +708,7 @@ export const nodeLifecycleMethods = {
                 self._vueCompatWidgetHeight = contentHeight;
                 if (self.collapsedSections?.extraControls) {
                     self._vueCompatAutoSizedContentHeight = null;
+                    self.applyVueCompatMinimumWidth();
                 } else {
                     self.applyVueCompatAutoSize(minimumHeight);
                 }

@@ -82,6 +82,24 @@ test("Vue auto-sizing enforces minimum width and restores its internal guard", (
 });
 
 
+test("Vue auto-sizing restores minimum width after height was already synchronized", () => {
+    const sizes = [];
+    const controller = createLifecycleController({
+        size: [200, 260],
+        setSize(size) {
+            sizes.push([...size]);
+            this.size = [...size];
+        }
+    });
+    controller._vueCompatAutoSizedContentHeight = 260;
+
+    withLiteGraph({ vueNodesMode: true }, () => controller.applyVueCompatAutoSize(260));
+
+    assert.deepEqual(sizes, [[330, 260]]);
+    assert.deepEqual(controller.node.size, [330, 260]);
+});
+
+
 test("classic LiteGraph mode does not apply Vue-specific auto-sizing", () => {
     const controller = createLifecycleController();
 
@@ -172,6 +190,46 @@ test("Vue output slot centers are measured relative to the widget canvas", () =>
     controller.updateVueCompatOutputSlotCenters(canvasElement, slotDots, 110);
 
     assert.deepEqual(controller._vueCompatOutputSlotCenters, [12.5, 34.5, 56.5, 78.5, 100.5]);
+});
+
+
+test("Vue canvas layout enforces and restores the legacy node minimum width", () => {
+    const controller = createLifecycleController();
+    const nodeElement = { style: { minWidth: "120px" } };
+    const slotsElement = {
+        style: {},
+        offsetHeight: 0,
+        querySelectorAll() {
+            return [];
+        }
+    };
+    const bodyElement = { style: {} };
+    const widgetsGrid = {
+        style: {},
+        previousElementSibling: slotsElement,
+        parentElement: bodyElement,
+        closest() {
+            return nodeElement;
+        }
+    };
+    const canvasElement = {
+        clientWidth: 330,
+        clientHeight: 200,
+        parentElement: { style: {} },
+        closest() {
+            return widgetsGrid;
+        },
+        getBoundingClientRect() {
+            return { left: 0, top: 0, width: 330, height: 200 };
+        }
+    };
+    controller.ensureVueCompatHeaderControls = () => {};
+
+    controller.updateVueCompatCanvasLayout(canvasElement);
+    assert.equal(nodeElement.style.minWidth, "330px");
+
+    controller.teardownVueCompatCanvasLayout();
+    assert.equal(nodeElement.style.minWidth, "120px");
 });
 
 
