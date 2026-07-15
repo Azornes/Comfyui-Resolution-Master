@@ -92,8 +92,8 @@ test("editable outputs have persistent pills while rescale factor remains plain 
         controller.drawOutputValues(ctx);
 
         assert.equal(ctx.rectangles.length, 4);
-        assert.ok(ctx.rectangles.every(rect => rect.fillStyle === "rgba(0,0,0,0.2)"));
-        assert.ok(ctx.rectangles.every(rect => rect.strokeStyle === "rgba(205, 210, 220, 0.28)"));
+        assert.ok(ctx.rectangles.every(rect => rect.fillStyle === "rgba(0,0,0,0)"));
+        assert.ok(ctx.rectangles.every(rect => rect.strokeStyle === "rgba(205, 210, 220, 0.18)"));
         assert.deepEqual(Object.keys(controller.controls), [
             "widthValueArea",
             "heightValueArea",
@@ -134,7 +134,7 @@ test("hover strengthens the editable output pill", () => {
         const ctx = createCanvasContext();
         controller.drawOutputValues(ctx);
 
-        assert.equal(ctx.rectangles[0].fillStyle, "rgba(136, 153, 255, 0.12)");
+        assert.equal(ctx.rectangles[0].fillStyle, "rgba(0,0,0,0)");
         assert.equal(ctx.rectangles[0].strokeStyle, "rgba(136, 153, 255, 0.9)");
         assert.equal(ctx.rectangles[0].lineWidth, 1.4);
     } finally {
@@ -162,4 +162,61 @@ test("Nodes 2.0 output pills follow the measured DOM slot centers", () => {
     } finally {
         globalThis.LiteGraph = originalLiteGraph;
     }
+});
+
+test("custom snap step uses the persistent editable value background", () => {
+    const controller = createController();
+    controller.node.properties = {
+        snapValue: 176,
+        action_slider_snap_min: 1,
+        action_slider_snap_max: 256,
+        action_slider_snap_step: 1
+    };
+    controller.node.size = [330, 400];
+    controller.icons = { swap: {}, snap: {} };
+    controller.drawButton = () => {};
+    controller.drawSlider = () => {};
+    const ctx = createCanvasContext();
+
+    controller.drawPrimaryControls(ctx, 0);
+
+    assert.equal(ctx.rectangles.length, 1);
+    assert.equal(ctx.rectangles[0].fillStyle, "rgba(0,0,0,0)");
+    assert.equal(ctx.rectangles[0].strokeStyle, "rgba(205, 210, 220, 0.18)");
+    assert.equal(ctx.text.find(entry => entry.value === "176")?.x, 297.5);
+});
+
+test("scaling numeric values use the persistent editable value background", () => {
+    const controller = createController();
+    controller.node.properties = { upscaleValue: 1.25, rescaleMode: "manual" };
+    controller.getScalingRowLayout = () => ({
+        btnWidth: 70,
+        sliderWidth: 90,
+        dropdownWidth: 90,
+        valueWidth: 45,
+        previewWidth: 0,
+        radioWidth: 18,
+        gap: 5
+    });
+    controller.drawButton = () => {};
+    controller.drawSlider = () => {};
+    controller.drawRadioButton = () => {};
+    controller.validateWidgets = () => false;
+    const ctx = createCanvasContext();
+
+    controller.drawScalingRowBase(ctx, 10, 20, {
+        buttonControl: "scaleBtn",
+        mainControl: "scaleSlider",
+        controlType: "slider",
+        valueProperty: "upscaleValue",
+        min: 0.1,
+        max: 4,
+        step: 0.05,
+        displayValue: "1.25",
+        rescaleMode: "manual"
+    });
+
+    assert.equal(controller.controls.scaleValueArea.w, 45);
+    assert.equal(ctx.rectangles[0].fillStyle, "rgba(0,0,0,0)");
+    assert.equal(ctx.rectangles[0].strokeStyle, "rgba(205, 210, 220, 0.18)");
 });

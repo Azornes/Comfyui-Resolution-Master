@@ -263,7 +263,7 @@ export const drawingMethods = {
                 h: latAreaHeight
             };
 
-            this.drawEditableOutputBackground(ctx, 'latValueArea', latAreaX, y_offset_5 - 10, latAreaWidth, latAreaHeight, [248, 136, 187]);
+            this.drawEditableValueBackground(ctx, 'latValueArea', latAreaX, y_offset_5 - 10, latAreaWidth, latAreaHeight, [248, 136, 187]);
 
             ctx.fillStyle = this.hoverElement === 'latValueArea' ? "#FAB" : "#F8B"; 
             ctx.font = "bold 12px Arial";
@@ -289,7 +289,7 @@ export const drawingMethods = {
             w: w - (OUTPUT_VALUE_HIT_RIGHT_INSET - OUTPUT_VALUE_VISUAL_RIGHT_INSET),
             h
         };
-        this.drawEditableOutputBackground(ctx, controlName, x, y, w, h, hoverColor);
+        this.drawEditableValueBackground(ctx, controlName, x, y, w, h, hoverColor);
         ctx.fillStyle = this.hoverElement === controlName ? activeTextColor : textColor;
         ctx.textAlign = "center";
         this.drawVerticallyCenteredText(ctx, text, x + w / 2, textY);
@@ -311,15 +311,13 @@ export const drawingMethods = {
         ctx.restore();
     },
 
-    drawEditableOutputBackground(ctx, controlName, x, y, w, h, color, borderRadius = 5) {
+    drawEditableValueBackground(ctx, controlName, x, y, w, h, color, borderRadius = 5) {
         const isHovered = this.hoverElement === controlName;
         ctx.save();
-        ctx.fillStyle = isHovered
-            ? `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.12)`
-            : SECTION_BACKGROUND_COLOR;
+        ctx.fillStyle = "rgba(0,0,0,0)";
         ctx.strokeStyle = isHovered
             ? `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.9)`
-            : "rgba(205, 210, 220, 0.28)";
+            : "rgba(205, 210, 220, 0.18)";
         ctx.lineWidth = isHovered ? 1.4 : 1;
         ctx.beginPath();
         ctx.roundRect(x, y, w, h, borderRadius);
@@ -354,13 +352,13 @@ export const drawingMethods = {
         const snapValueX = sliderX + sliderWidth + gap;
         this.controls.snapValueArea = { x: snapValueX, y, w: valueWidth, h: 28 };
 
-        this.drawValueAreaHoverBackground(ctx, 'snapValueArea', snapValueX, y, valueWidth, 28, [100, 150, 255]);
+        this.drawEditableValueBackground(ctx, 'snapValueArea', snapValueX, y, valueWidth, 28, [100, 150, 255]);
 
         ctx.fillStyle = this.hoverElement === 'snapValueArea' ? "#5af" : "#ccc";
         ctx.font = "12px Arial";
-        ctx.textAlign = "left";
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(props.snapValue.toString(), snapValueX + 10, y + 14);
+        this.drawVerticallyCenteredText(ctx, props.snapValue.toString(), snapValueX + valueWidth / 2, y + 14);
     },
 
     draw2DCanvas(ctx, x, y, w, h, padding = 20) {
@@ -1181,12 +1179,12 @@ export const drawingMethods = {
         const valueAreaControl = config.buttonControl.replace('Btn', 'ValueArea');
         this.controls[valueAreaControl] = { x: currentX, y, w: layout.valueWidth, h: 28 };
 
-        this.drawValueAreaHoverBackground(ctx, valueAreaControl, currentX, y, layout.valueWidth, 28, [100, 150, 255]);
+        this.drawEditableValueBackground(ctx, valueAreaControl, currentX, y, layout.valueWidth, 28, [100, 150, 255]);
         this.setCanvasTextStyle(ctx, {
             fillStyle: this.hoverElement === valueAreaControl ? "#5af" : "#ccc",
             textAlign: "center"
         });
-        ctx.fillText(config.displayValue, currentX + layout.valueWidth / 2, y + 14);
+        this.drawVerticallyCenteredText(ctx, config.displayValue, currentX + layout.valueWidth / 2, y + 14);
         currentX += layout.valueWidth + layout.gap;
         if (this.validateWidgets() && config.previewDimensions) {
             const newW = Math.round(Number(config.previewDimensions.width) || 0);
