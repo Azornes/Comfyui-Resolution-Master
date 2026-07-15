@@ -21,8 +21,11 @@ export const calculationMethods = {
 
     getCategoryPresetsJSON(category = this.node.properties.selectedCategory) {
         const categoryPresets = category ? (this.getAllPresets()[category] || {}) : {};
+        const activePresets = Object.fromEntries(
+            Object.entries(categoryPresets).filter(([, preset]) => !preset?.isHidden)
+        );
         try {
-            return JSON.stringify(categoryPresets);
+            return JSON.stringify(activePresets);
         } catch (error) {
             log.warn('Failed to serialize calculation presets:', error);
             return "{}";
@@ -275,11 +278,12 @@ export const calculationMethods = {
         const props = this.node.properties;
         const allPresets = this.getAllPresets();
         const preset = allPresets[category]?.[presetName];
-        if (!preset) {
-            log.warn('Preset not found while applying preset', {
+        if (!preset || preset.isHidden) {
+            log.warn('Preset is unavailable while applying preset', {
                 nodeId: this.node?.id ?? null,
                 category,
-                presetName
+                presetName,
+                hidden: !!preset?.isHidden
             });
             return;
         }

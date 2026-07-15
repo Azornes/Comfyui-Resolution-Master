@@ -92,7 +92,7 @@ export class CustomPresetsManager {
     /**
      * Gets merged presets (built-in + custom)
      * Custom presets OVERRIDE built-in presets with the same name
-     * Hidden built-in presets are FILTERED OUT
+     * Hidden built-in presets are retained and marked for Preset Manager use
      * @param {Object} builtInPresets - Built-in preset categories
      * @returns {Object} Merged presets with custom indicator and hidden flag
      */
@@ -703,8 +703,18 @@ export class CustomPresetsManager {
                 // Not hidden yet - hide it
                 this.hiddenBuiltInPresets[category].push(name);
                 log.debug(`Hidden built-in preset: ${category}/${name}`);
+
+                const props = this.rm.node.properties;
+                const hasActiveCustomOverride = !!this.customPresets[category]?.[name];
+                if (!hasActiveCustomOverride &&
+                    props.selectedCategory === category &&
+                    props.selectedPreset === name) {
+                    props.selectedPreset = null;
+                }
                 
                 this.saveCustomPresets();
+                this.rm.syncBackendFallbackWidgets?.();
+                this.rm.requestCanvasUpdate?.(true);
                 return true; // Now hidden
             } else {
                 // Already hidden - unhide it
@@ -718,6 +728,8 @@ export class CustomPresetsManager {
                 log.debug(`Unhidden built-in preset: ${category}/${name}`);
                 
                 this.saveCustomPresets();
+                this.rm.syncBackendFallbackWidgets?.();
+                this.rm.requestCanvasUpdate?.(true);
                 return false; // Now visible
             }
         } catch (error) {

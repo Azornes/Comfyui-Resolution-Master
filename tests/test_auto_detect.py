@@ -45,6 +45,16 @@ class FindClosestPresetTests(unittest.TestCase):
 
         self.assertEqual(closest, {"name": "landscape", "width": 700, "height": 1000})
 
+    def test_native_orientation_name_wins_over_flipped_duplicate(self):
+        presets = {
+            "landscape": {"width": 1152, "height": 896},
+            "portrait": {"width": 896, "height": 1152},
+        }
+
+        closest = find_closest_preset(900, 1150, presets)
+
+        self.assertEqual(closest, {"name": "portrait", "width": 896, "height": 1152})
+
     def test_invalid_presets_are_ignored(self):
         presets = {
             "not-an-object": "1024x1024",
@@ -53,6 +63,26 @@ class FindClosestPresetTests(unittest.TestCase):
         }
 
         self.assertIsNone(find_closest_preset(1000, 1000, presets))
+
+    def test_hidden_presets_are_ignored(self):
+        presets = {
+            "hidden-square": {"width": 1024, "height": 1024, "isHidden": True},
+            "visible-landscape": {"width": 1216, "height": 832, "isHidden": False},
+        }
+
+        closest = find_closest_preset(1200, 800, presets)
+
+        self.assertEqual(
+            closest,
+            {"name": "visible-landscape", "width": 1216, "height": 832},
+        )
+        self.assertIsNone(
+            find_closest_preset(
+                1000,
+                1000,
+                {"hidden": {"width": 1024, "height": 1024, "isHidden": True}},
+            )
+        )
 
 
 class PresetLoadingTests(unittest.TestCase):
@@ -145,6 +175,27 @@ class ModelCalculationTests(unittest.TestCase):
         result = apply_custom_calculation(800, 1200, "HiDream Dev", presets)
 
         self.assertEqual(result, {"width": 832, "height": 1216})
+
+    def test_z_image_turbo_uses_active_discrete_presets(self):
+        presets = {
+            "square": {"width": 1024, "height": 1024},
+            "widescreen": {"width": 1280, "height": 720},
+            "hidden-portrait": {"width": 896, "height": 1152, "isHidden": True},
+            "custom-portrait": {"width": 832, "height": 1248, "isCustom": True},
+        }
+
+        self.assertEqual(
+            apply_custom_calculation(1260, 730, "ZImageTurbo", presets),
+            {"width": 1280, "height": 720},
+        )
+        self.assertEqual(
+            apply_custom_calculation(810, 1220, "ZImageTurbo", presets),
+            {"width": 832, "height": 1248},
+        )
+        self.assertEqual(
+            apply_custom_calculation(900, 1200, "ZImageTurbo", {}),
+            {"width": 900, "height": 1200},
+        )
 
     def test_unknown_category_leaves_dimensions_unchanged(self):
         self.assertEqual(

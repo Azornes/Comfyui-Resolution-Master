@@ -68,8 +68,11 @@ def find_closest_preset(width, height, presets):
     candidates = []
 
     for preset_name, preset in presets.items():
-        preset_width = safe_int(preset.get("width") if isinstance(preset, dict) else None)
-        preset_height = safe_int(preset.get("height") if isinstance(preset, dict) else None)
+        if not isinstance(preset, dict) or preset.get("isHidden"):
+            continue
+
+        preset_width = safe_int(preset.get("width"))
+        preset_height = safe_int(preset.get("height"))
         if preset_width <= 0 or preset_height <= 0:
             continue
 
@@ -84,6 +87,7 @@ def find_closest_preset(width, height, presets):
                     "height": orientation_height,
                     "aspect_diff": aspect_diff,
                     "pixel_diff": abs(math.log(input_pixels / preset_pixels)),
+                    "is_flipped": (orientation_width, orientation_height) != (preset_width, preset_height),
                 }
             )
 
@@ -98,7 +102,11 @@ def find_closest_preset(width, height, presets):
     )
     closest = min(
         aspect_matched_candidates,
-        key=lambda candidate: (candidate["pixel_diff"], candidate["aspect_diff"]),
+        key=lambda candidate: (
+            candidate["pixel_diff"],
+            candidate["aspect_diff"],
+            candidate["is_flipped"],
+        ),
     )
     return {"name": closest["name"], "width": closest["width"], "height": closest["height"]}
 
@@ -155,7 +163,7 @@ def apply_custom_calculation(width, height, category, presets):
         target_height = math.sqrt(target_pixels / aspect)
         return {"width": round(target_height * aspect), "height": round(target_height)}
 
-    if category in ("SDXL", "HiDream Dev", "Krea 2 Turbo", "Krea 2 RAW"):
+    if category in ("SDXL", "HiDream Dev", "Krea 2 Turbo", "Krea 2 RAW", "ZImageTurbo"):
         closest = find_closest_preset(width, height, presets)
         if not closest:
             return {"width": width, "height": height}

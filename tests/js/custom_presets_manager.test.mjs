@@ -141,3 +141,40 @@ test("merged presets mark hidden built-ins and let custom presets override them"
     assert.equal(merged.Standard.Portrait.isCustom, false);
     assert.equal(merged.Standard.Portrait.isHidden, false);
 });
+
+
+test("hiding the selected built-in clears selection without changing dimensions", () => {
+    const { rm, manager } = createManager();
+    Object.assign(rm.node.properties, {
+        selectedCategory: "Standard",
+        selectedPreset: "Square",
+        valueX: 1024,
+        valueY: 1024
+    });
+    let syncCount = 0;
+    let canvasUpdateCount = 0;
+    rm.syncBackendFallbackWidgets = () => { syncCount += 1; };
+    rm.requestCanvasUpdate = () => { canvasUpdateCount += 1; };
+
+    assert.equal(manager.toggleBuiltInPresetVisibility("Standard", "Square"), true);
+
+    assert.equal(rm.node.properties.selectedPreset, null);
+    assert.equal(rm.node.properties.valueX, 1024);
+    assert.equal(rm.node.properties.valueY, 1024);
+    assert.equal(syncCount, 1);
+    assert.equal(canvasUpdateCount, 1);
+});
+
+
+test("hiding a built-in keeps an active custom override selected", () => {
+    const { rm, manager } = createManager();
+    manager.addPreset("Standard", "Square", 2048, 2048);
+    Object.assign(rm.node.properties, {
+        selectedCategory: "Standard",
+        selectedPreset: "Square"
+    });
+
+    assert.equal(manager.toggleBuiltInPresetVisibility("Standard", "Square"), true);
+
+    assert.equal(rm.node.properties.selectedPreset, "Square");
+});

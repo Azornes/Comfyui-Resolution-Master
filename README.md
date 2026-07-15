@@ -62,6 +62,7 @@ Extensive preset library organized by use case:
 - **WAN**: Video model presets with resolution recommendations
 - **HiDream Dev**: HiDream model optimized presets
 - **Qwen-Image**: Qwen-Image model optimized presets
+- **ZImageTurbo**: Official discrete Z-Image-Turbo resolutions
 - **Social Media**: Instagram, Twitter, Facebook, YouTube optimized sizes
 - **Print**: Standard print formats (A4, Letter, photo sizes)
 - **Cinema**: Professional film aspect ratios (2.39:1, 1.85:1, etc.)
@@ -78,6 +79,7 @@ Extensive preset library organized by use case:
 | **WAN** | Video generation | Supports 320p to 820p, uses 16px increments, keeps video-friendly ratios, and recommends 480p or 720p |
 | **HiDream Dev** | HiDream preset matching | Finds the closest HiDream Dev preset by dimensions and aspect ratio, including flipped orientations |
 | **Qwen-Image** | Qwen-Image workflows | Keeps images in the ~0.6 MP to 4.2 MP range, preserving valid inputs and scaling out-of-range inputs |
+| **ZImageTurbo** | Z-Image-Turbo workflows | Selects the closest active category resolution by aspect ratio and pixel count while preserving orientation; the built-in list uses official resolutions |
 
 ---
 
@@ -341,7 +343,7 @@ Advanced users can directly edit the preset configuration as JSON:
 #### 🗑️ Deletion Options
 
 - **Individual Delete**: Click 🗑️ button on any custom preset
-- **Hide Built-in Presets**: Click 🗑️ on built-in presets to hide them (they remain in system)
+- **Hide Built-in Presets**: Click 🗑️ on built-in presets to hide them; they remain available in Preset Manager and exports, but are excluded from selectors, Auto-Fit, and Auto-Calc
 - **Unhide**: Click 🗑️ again on hidden presets to restore visibility
 - **Bulk Delete**: 
   - Select multiple presets using checkboxes
