@@ -51,6 +51,8 @@ class ResolutionMasterCanvas {
         this.showTooltip = false;
         this.tooltipMousePos = null; 
         this.detectedDimensions = null;
+        this.restoredAutoDetectDimensions = null;
+        this.autoDetectWorkflowRestorePending = false;
         this.lastBackendDimensionsTimestamp = null;
         this.autoDetectStartedAtMs = null;
         this.dimensionCheckInterval = null;

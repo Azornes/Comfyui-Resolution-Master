@@ -885,6 +885,12 @@ export const nodeLifecycleMethods = {
         node.onPropertyChanged = function(property) {
             self.handlePropertyChange(property);
         };
+        const origOnConfigure = node.onConfigure;
+        node.onConfigure = function() {
+            const result = origOnConfigure?.apply(this, arguments);
+            self.prepareAutoDetectWorkflowRestore();
+            return result;
+        };
         const origOnConnectionsChange = node.onConnectionsChange;
         node.onConnectionsChange = function() {
             const result = origOnConnectionsChange?.apply(this, arguments);

@@ -162,6 +162,9 @@ test("LiteGraph lifecycle hooks synchronize serialization and clean up on remova
             events.push("original-serialize");
             serialized.originalCalled = true;
         },
+        onConfigure() {
+            events.push("original-configure");
+        },
         onRemoved() {
             events.push("original-remove");
         }
@@ -171,6 +174,7 @@ test("LiteGraph lifecycle hooks synchronize serialization and clean up on remova
     controller.installCanvasDragZoomBypass = () => {};
     controller.applyCompactSlotLabels = () => {};
     controller.installVueNodesCompatibilityWidget = () => {};
+    controller.prepareAutoDetectWorkflowRestore = () => events.push("prepare-restore");
     controller.syncAutoDetectSourceState = () => events.push("sync-source");
     controller.syncBackendFallbackWidgets = () => events.push("sync-widgets");
     controller.stopAutoDetect = () => events.push("stop-auto-detect");
@@ -181,6 +185,7 @@ test("LiteGraph lifecycle hooks synchronize serialization and clean up on remova
     controller.initializeProperties();
 
     controller.setupNode();
+    controller.node.onConfigure({});
     const serialized = {};
     controller.node.onSerialize(serialized);
     controller.node.onRemoved();
@@ -189,6 +194,9 @@ test("LiteGraph lifecycle hooks synchronize serialization and clean up on remova
     assert.equal(heightWidget.hidden, true);
     assert.equal(serialized.originalCalled, true);
     assert.equal(serialized.properties.aux_id, "Azornes/Comfyui-Resolution-Master");
+    const configureEventIndex = events.indexOf("original-configure");
+    assert.notEqual(configureEventIndex, -1);
+    assert.equal(events[configureEventIndex + 1], "prepare-restore");
     assert.deepEqual(events.slice(-6), [
         "sync-source",
         "sync-widgets",

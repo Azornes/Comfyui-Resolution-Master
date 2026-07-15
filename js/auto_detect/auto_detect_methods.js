@@ -101,6 +101,62 @@ export const autoDetectMethods = {
             || Math.round(Number(first.height) || 0) !== Math.round(Number(second.height) || 0);
     },
 
+    prepareAutoDetectWorkflowRestore() {
+        this.restoredAutoDetectDimensions = null;
+        this.autoDetectWorkflowRestorePending = !!this.node?.properties?.autoDetect;
+        if (this.autoDetectWorkflowRestorePending) {
+            log.debug('Prepared auto-detect workflow restore without recalculation', {
+                nodeId: this.node?.id ?? null,
+                savedWidth: this.widthWidget?.value ?? this.node?.properties?.valueX ?? null,
+                savedHeight: this.heightWidget?.value ?? this.node?.properties?.valueY ?? null
+            });
+        }
+    },
+
+    shouldPreserveRestoredAutoDetectSettings(dimensions) {
+        if (!dimensions) return false;
+
+        const detectedWidth = Math.round(Number(dimensions.width) || 0);
+        const detectedHeight = Math.round(Number(dimensions.height) || 0);
+
+        if (this.autoDetectWorkflowRestorePending) {
+            this.autoDetectWorkflowRestorePending = false;
+            this.restoredAutoDetectDimensions = {
+                width: detectedWidth,
+                height: detectedHeight
+            };
+            return true;
+        }
+
+        const restored = this.restoredAutoDetectDimensions;
+
+        if (restored) {
+            const matchesRestoredSource = restored.width === detectedWidth
+                && restored.height === detectedHeight;
+            if (!matchesRestoredSource) {
+                this.restoredAutoDetectDimensions = null;
+            }
+            return matchesRestoredSource;
+        }
+
+        const props = this.node?.properties;
+        const savedWidth = Math.round(Number(props?.autoDetectWidth) || 0);
+        const savedHeight = Math.round(Number(props?.autoDetectHeight) || 0);
+        const matchesSavedSource = !this.detectedDimensions
+            && savedWidth > 0
+            && savedHeight > 0
+            && savedWidth === detectedWidth
+            && savedHeight === detectedHeight;
+
+        if (matchesSavedSource) {
+            this.restoredAutoDetectDimensions = {
+                width: savedWidth,
+                height: savedHeight
+            };
+        }
+        return matchesSavedSource;
+    },
+
     shouldPreferBackendDimensions(frontendDimensions, backendDimensions, previousBackendTimestamp) {
         if (!frontendDimensions || !backendDimensions) return false;
         if (!this.haveDifferentDimensions(frontendDimensions, backendDimensions)) return false;
@@ -311,6 +367,8 @@ export const autoDetectMethods = {
 
         const sourceNode = this.getConnectedSourceNode();
         if (shouldSuppressBackendFallback(sourceNode)) {
+            this.autoDetectWorkflowRestorePending = false;
+            this.restoredAutoDetectDimensions = null;
             this.setAutoDetectSource('frontend-empty');
             this.setRawAutoDetectDimensions(null);
         } else if (this.node.properties.autoDetectSource === 'frontend-empty') {
@@ -409,6 +467,8 @@ export const autoDetectMethods = {
                     });
                 }
                 this.detectedDimensions = null;
+                this.autoDetectWorkflowRestorePending = false;
+                this.restoredAutoDetectDimensions = null;
                 this.setAutoDetectSource('backend');
                 this.setRawAutoDetectDimensions(null);
                 return;
@@ -427,6 +487,8 @@ export const autoDetectMethods = {
                 }
                 this.clearLivePreviewPending();
                 this.detectedDimensions = null;
+                this.autoDetectWorkflowRestorePending = false;
+                this.restoredAutoDetectDimensions = null;
                 this.setAutoDetectSource('frontend-empty');
                 this.setRawAutoDetectDimensions(null);
                 return;
@@ -474,24 +536,21 @@ export const autoDetectMethods = {
                 return;
             }
 
-            const props = node.properties;
-            // Restore detected dimensions if the newly detected dimensions match the saved ones on first run.
-            // This prevents overwriting user-modified/downsized settings upon reloading the workflow.
-            if (!this.detectedDimensions && props && props.autoDetectWidth > 0 && props.autoDetectHeight > 0) {
-                if (Math.round(Number(props.autoDetectWidth)) === dimensions.width &&
-                    Math.round(Number(props.autoDetectHeight)) === dimensions.height) {
-                    log.debug('Restoring auto-detect dimensions from saved properties without recalculation', {
-                        nodeId: node.id ?? null,
-                        width: dimensions.width,
-                        height: dimensions.height
-                    });
-                    this.detectedDimensions = dimensions;
-                    this.manuallySetByAutoFit = false;
-                    this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');
-                    this.setRawAutoDetectDimensions(dimensions);
-                    this.requestCanvasUpdate(true);
-                    return;
-                }
+            // Keep saved output settings while the restored source dimensions stay the same.
+            // Preview URLs and frontend/backend signatures can change during workflow loading
+            // without the source image itself changing size.
+            if (this.shouldPreserveRestoredAutoDetectSettings(dimensions)) {
+                log.debug('Keeping saved output settings for restored auto-detect dimensions', {
+                    nodeId: node.id ?? null,
+                    width: dimensions.width,
+                    height: dimensions.height
+                });
+                this.detectedDimensions = dimensions;
+                this.manuallySetByAutoFit = false;
+                this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');
+                this.setRawAutoDetectDimensions(dimensions);
+                this.requestCanvasUpdate(true);
+                return;
             }
 
             this.setAutoDetectSource(dimensions.source === 'frontend' ? 'frontend' : 'backend');

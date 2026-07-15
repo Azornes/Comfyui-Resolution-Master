@@ -192,6 +192,88 @@ test("saved detected dimensions are restored without recalculating the workflow"
 });
 
 
+test("loading a workflow preserves saved output even when technical detected dimensions are stale", async () => {
+    const sourceNode = {
+        id: 9,
+        imgs: [{ naturalWidth: 640, naturalHeight: 480, src: "workflow-preview.png" }],
+        widgets: []
+    };
+    const state = createController(sourceNode);
+    state.controller.node.properties.autoDetectWidth = 320;
+    state.controller.node.properties.autoDetectHeight = 240;
+    state.controller.widthWidget.value = 1024;
+    state.controller.heightWidget.value = 768;
+    state.controller.prepareAutoDetectWorkflowRestore();
+
+    await state.controller.checkForImageDimensions();
+
+    assert.equal(state.requests.length, 0);
+    assert.equal(state.controller.widthWidget.value, 1024);
+    assert.equal(state.controller.heightWidget.value, 768);
+    assert.equal(state.controller.node.properties.autoDetectWidth, 640);
+    assert.equal(state.controller.node.properties.autoDetectHeight, 480);
+    assert.equal(state.controller.autoDetectWorkflowRestorePending, false);
+    assert.deepEqual(state.controller.restoredAutoDetectDimensions, {
+        width: 640,
+        height: 480
+    });
+});
+
+
+test("restored output settings survive same-size signature and source changes", async () => {
+    const preview = {
+        naturalWidth: 640,
+        naturalHeight: 480,
+        src: "saved-preview.png"
+    };
+    const sourceNode = {
+        id: 9,
+        imgs: [preview],
+        widgets: []
+    };
+    const state = createController(sourceNode);
+    state.controller.node.properties.autoDetectWidth = 640;
+    state.controller.node.properties.autoDetectHeight = 480;
+
+    await state.controller.checkForImageDimensions();
+    preview.src = "reloaded-preview.png";
+    await state.controller.checkForImageDimensions();
+
+    assert.equal(state.requests.length, 0);
+    assert.equal(state.controller.detectedDimensions.width, 640);
+    assert.equal(state.controller.detectedDimensions.height, 480);
+    assert.match(state.controller.detectedDimensions.signature, /reloaded-preview\.png/);
+
+    sourceNode.imgs = [];
+    state.controller.getBackendDetectedDimensions = async () => ({
+        width: 640,
+        height: 480,
+        source: "backend",
+        timestamp: 2,
+        signature: "backend:7:2:640x480"
+    });
+    await state.controller.checkForImageDimensions();
+
+    assert.equal(state.requests.length, 0);
+    assert.equal(state.controller.node.properties.autoDetectSource, "backend");
+
+    state.controller.getBackendDetectedDimensions = async () => ({
+        width: 800,
+        height: 600,
+        source: "backend",
+        timestamp: 3,
+        signature: "backend:7:3:800x600"
+    });
+    await state.controller.checkForImageDimensions();
+
+    assert.deepEqual(state.requests, [{
+        action: "auto_detect",
+        payload: { width: 800, height: 600 }
+    }]);
+    assert.equal(state.controller.restoredAutoDetectDimensions, null);
+});
+
+
 test("async source widget callbacks notify watchers and are restored on teardown", async () => {
     const state = createController();
     const originalCallback = async value => `loaded:${value}`;
