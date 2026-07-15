@@ -7,6 +7,9 @@ from .log_system import create_module_logger
 log = create_module_logger(__name__)
 
 
+ASPECT_RATIO_TOLERANCE = 0.01
+
+
 def safe_int(value, default=0):
     try:
         return int(value)
@@ -62,9 +65,7 @@ def find_closest_preset(width, height, presets):
 
     input_aspect = width / height
     input_pixels = width * height
-    closest = None
-    closest_aspect_diff = math.inf
-    closest_pixel_diff = math.inf
+    candidates = []
 
     for preset_name, preset in presets.items():
         preset_width = safe_int(preset.get("width") if isinstance(preset, dict) else None)
@@ -76,16 +77,30 @@ def find_closest_preset(width, height, presets):
             preset_aspect = orientation_width / orientation_height
             preset_pixels = orientation_width * orientation_height
             aspect_diff = abs(input_aspect - preset_aspect)
-            if aspect_diff < closest_aspect_diff + 0.01:
-                pixel_diff = abs(math.log(input_pixels / preset_pixels))
-                if aspect_diff < closest_aspect_diff or (
-                    abs(aspect_diff - closest_aspect_diff) < 0.01 and pixel_diff < closest_pixel_diff
-                ):
-                    closest_aspect_diff = aspect_diff
-                    closest_pixel_diff = pixel_diff
-                    closest = {"name": preset_name, "width": orientation_width, "height": orientation_height}
+            candidates.append(
+                {
+                    "name": preset_name,
+                    "width": orientation_width,
+                    "height": orientation_height,
+                    "aspect_diff": aspect_diff,
+                    "pixel_diff": abs(math.log(input_pixels / preset_pixels)),
+                }
+            )
 
-    return closest
+    if not candidates:
+        return None
+
+    minimum_aspect_diff = min(candidate["aspect_diff"] for candidate in candidates)
+    aspect_matched_candidates = (
+        candidate
+        for candidate in candidates
+        if candidate["aspect_diff"] <= minimum_aspect_diff + ASPECT_RATIO_TOLERANCE
+    )
+    closest = min(
+        aspect_matched_candidates,
+        key=lambda candidate: (candidate["pixel_diff"], candidate["aspect_diff"]),
+    )
+    return {"name": closest["name"], "width": closest["width"], "height": closest["height"]}
 
 
 def apply_flux_like_calculation(width, height, max_mp, max_dim, min_dim, multiple):
