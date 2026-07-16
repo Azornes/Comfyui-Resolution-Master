@@ -32,6 +32,14 @@ export const nodeLifecycleMethods = {
         return globalThis.LiteGraph?.vueNodesMode === true;
     },
 
+    isVueCompatPrimaryCanvas(canvasElement) {
+        const nodeElement = canvasElement?.closest?.(".lg-node");
+        if (!nodeElement) return false;
+
+        const domNodeId = nodeElement.dataset?.nodeId;
+        return domNodeId == null || String(domNodeId) === String(this.node.id);
+    },
+
     getVueCompatWidgetHeight() {
         const neededHeight = Math.ceil(Number(this.calculateNeededHeight()) || 0);
         return Math.max(neededHeight, this.node.min_size?.[1] || 200);
@@ -120,15 +128,15 @@ export const nodeLifecycleMethods = {
         }
     },
 
-    withVueCompatWidgetSize(callback) {
+    withVueCompatWidgetSize(callback, widthOverride = null, heightOverride = null) {
         if (!this.isVueNodesMode() || !Array.isArray(this.node.size)) {
             return callback();
         }
 
         const originalWidth = this.node.size[0];
         const originalHeight = this.node.size[1];
-        const widgetWidth = Number(this._vueCompatWidgetWidth) || originalWidth;
-        const widgetHeight = Number(this._vueCompatWidgetHeight) || originalHeight;
+        const widgetWidth = Number(widthOverride) || Number(this._vueCompatWidgetWidth) || originalWidth;
+        const widgetHeight = Number(heightOverride) || Number(this._vueCompatWidgetHeight) || originalHeight;
 
         this.node.size[0] = widgetWidth;
         this.node.size[1] = widgetHeight;
@@ -155,6 +163,54 @@ export const nodeLifecycleMethods = {
             }
         }
         widget.triggerDraw?.();
+        this.requestVueCompatSurfaceDraws();
+    },
+
+    requestVueCompatSurfaceDraws() {
+        const secondarySurfaces = this._vueCompatSecondarySurfaceStates;
+        const primarySurface = this._vueCompatPrimarySurface;
+        if ((!primarySurface && !secondarySurfaces?.size) || this._vueCompatSurfaceDrawFrame != null) return;
+
+        const redraw = () => {
+            this._vueCompatSurfaceDrawFrame = null;
+            const surfaces = [
+                ...(this._vueCompatPrimarySurface ? [this._vueCompatPrimarySurface] : []),
+                ...(this._vueCompatSecondarySurfaceStates || [])
+            ];
+            for (const surface of surfaces) {
+                if (surface.canvasElement?.isConnected === false || surface.redraw?.() === false) {
+                    if (surface === this._vueCompatPrimarySurface) {
+                        this._vueCompatPrimarySurface = null;
+                    } else {
+                        this._vueCompatSecondarySurfaceStates?.delete?.(surface);
+                    }
+                }
+            }
+        };
+        if (typeof requestAnimationFrame === "function") {
+            this._vueCompatSurfaceDrawFrame = requestAnimationFrame(redraw);
+        } else {
+            this._vueCompatSurfaceDrawFrame = setTimeout(redraw, 0);
+        }
+    },
+
+    resolveVueCompatEventCanvas(e) {
+        const candidates = [
+            e?.currentTarget,
+            e?.target,
+            ...(e?.composedPath?.() || [])
+        ];
+        for (const candidate of candidates) {
+            if (!candidate) continue;
+            if (candidate === this._vueCompatCanvasElement
+                || this._vueCompatSecondarySurfaces?.has?.(candidate)) {
+                return candidate;
+            }
+        }
+        if (this._vueCompatActiveEventCanvas?.isConnected === false) {
+            this._vueCompatActiveEventCanvas = null;
+        }
+        return this._vueCompatActiveEventCanvas || null;
     },
 
     prepareVueCompatCanvasDraw(ctx, width, height, widget) {
@@ -278,6 +334,8 @@ export const nodeLifecycleMethods = {
     },
 
     updateVueCompatCanvasLayout(canvasElement) {
+        if (!this.isVueCompatPrimaryCanvas(canvasElement)) return;
+
         const widgetsGrid = canvasElement?.closest?.('[data-testid="node-widgets"]');
         const slotsElement = widgetsGrid?.previousElementSibling;
         const bodyElement = widgetsGrid?.parentElement;
@@ -533,13 +591,19 @@ export const nodeLifecycleMethods = {
     },
 
     bindVueCompatCanvasEvents(canvasElement) {
+        if (!this.isVueCompatPrimaryCanvas(canvasElement)) return;
         if (!canvasElement?.addEventListener || this._vueCompatCanvasElement === canvasElement) return;
         this.teardownVueCompatCanvasEvents();
 
         const handlePointerMove = (e) => {
             if (this.node.capture) return;
+            this._vueCompatActiveEventCanvas = canvasElement;
             this.normalizeVueCompatPointerEvent(e);
             this.withVueCompatWidgetSize(() => this.handleMouseHover(e, null, this.app?.canvas));
+        };
+        const handlePointerDown = () => {
+            this._vueCompatActiveEventCanvas = canvasElement;
+            this._vueCompatForwardingNodePointer = false;
         };
         const handlePointerLeave = () => {
             if (this.tooltipTimer) {
@@ -547,6 +611,9 @@ export const nodeLifecycleMethods = {
                 this.tooltipTimer = null;
             }
             this.hideVueCompatTooltip();
+            if (this._vueCompatActiveEventCanvas === canvasElement) {
+                this._vueCompatActiveEventCanvas = null;
+            }
             this._vueCompatTooltipPointerPosition = null;
             this.hoverElement = null;
             this.tooltipElement = null;
@@ -554,10 +621,11 @@ export const nodeLifecycleMethods = {
             this.requestCanvasUpdate(true);
         };
 
+        canvasElement.addEventListener("pointerdown", handlePointerDown, true);
         canvasElement.addEventListener("pointermove", handlePointerMove);
         canvasElement.addEventListener("pointerleave", handlePointerLeave);
         this._vueCompatCanvasElement = canvasElement;
-        this._vueCompatCanvasHandlers = { handlePointerMove, handlePointerLeave };
+        this._vueCompatCanvasHandlers = { handlePointerDown, handlePointerMove, handlePointerLeave };
     },
 
     showVueCompatTooltip(element, pointerPosition) {
@@ -658,14 +726,103 @@ export const nodeLifecycleMethods = {
         const element = this._vueCompatCanvasElement;
         const handlers = this._vueCompatCanvasHandlers;
         if (element && handlers) {
+            element.removeEventListener("pointerdown", handlers.handlePointerDown, true);
             element.removeEventListener("pointermove", handlers.handlePointerMove);
             element.removeEventListener("pointerleave", handlers.handlePointerLeave);
         }
         this._vueCompatCanvasElement = null;
         this._vueCompatCanvasHandlers = null;
         this._vueCompatForwardingNodePointer = false;
+        this._vueCompatActiveEventCanvas = null;
         this.teardownVueCompatTooltip();
         this.teardownVueCompatCanvasLayout();
+    },
+
+    bindVueCompatSecondarySurfaceEvents(surface) {
+        const canvasElement = surface?.canvasElement;
+        if (!canvasElement?.addEventListener || surface.pointerHandlers) return;
+
+        const markActive = () => {
+            this._vueCompatActiveEventCanvas = canvasElement;
+            this._vueCompatForwardingNodePointer = false;
+        };
+        const handleHover = (e) => {
+            markActive();
+            if (this.node.capture) return;
+
+            this.normalizeVueCompatPointerEvent(e);
+            const previousControls = this.controls;
+            const previousSliderKnobAreas = this.sliderKnobAreas;
+            this.controls = surface.controls;
+            this.sliderKnobAreas = surface.sliderKnobAreas;
+            try {
+                this.withVueCompatWidgetSize(
+                    () => this.handleMouseHover(e, null, this.app?.canvas),
+                    surface.width,
+                    surface.height
+                );
+            } finally {
+                this.controls = previousControls;
+                this.sliderKnobAreas = previousSliderKnobAreas;
+            }
+        };
+        const clearActive = () => {
+            if (this._vueCompatActiveEventCanvas !== canvasElement) return;
+            this._vueCompatActiveEventCanvas = null;
+            this._vueCompatForwardingNodePointer = false;
+            if (this.tooltipTimer) {
+                clearTimeout(this.tooltipTimer);
+                this.tooltipTimer = null;
+            }
+            this.hideVueCompatTooltip();
+            this._vueCompatTooltipPointerPosition = null;
+            this.hoverElement = null;
+            this.tooltipElement = null;
+            this.showTooltip = false;
+            this.requestCanvasUpdate(true);
+        };
+        const activeEventTypes = ["pointerdown", "pointerup", "pointercancel", "mousedown", "mouseup"];
+        const hoverEventTypes = ["pointermove", "mousemove"];
+        activeEventTypes.forEach(type => canvasElement.addEventListener(type, markActive, true));
+        hoverEventTypes.forEach(type => canvasElement.addEventListener(type, handleHover, true));
+        canvasElement.addEventListener("pointerleave", clearActive, true);
+        canvasElement.addEventListener("mouseleave", clearActive, true);
+        surface.pointerHandlers = {
+            activeEventTypes,
+            hoverEventTypes,
+            markActive,
+            handleHover,
+            clearActive
+        };
+    },
+
+    teardownVueCompatSecondarySurfaces() {
+        if (this._vueCompatSurfaceDrawFrame != null) {
+            if (typeof cancelAnimationFrame === "function") {
+                cancelAnimationFrame(this._vueCompatSurfaceDrawFrame);
+            } else {
+                clearTimeout(this._vueCompatSurfaceDrawFrame);
+            }
+            this._vueCompatSurfaceDrawFrame = null;
+        }
+        for (const surface of this._vueCompatSecondarySurfaceStates || []) {
+            const handlers = surface.pointerHandlers;
+            if (handlers && surface.canvasElement?.removeEventListener) {
+                handlers.activeEventTypes.forEach(type => {
+                    surface.canvasElement.removeEventListener(type, handlers.markActive, true);
+                });
+                handlers.hoverEventTypes.forEach(type => {
+                    surface.canvasElement.removeEventListener(type, handlers.handleHover, true);
+                });
+                surface.canvasElement.removeEventListener("pointerleave", handlers.clearActive, true);
+                surface.canvasElement.removeEventListener("mouseleave", handlers.clearActive, true);
+            }
+        }
+        this._vueCompatSecondarySurfaceStates?.clear?.();
+        this._vueCompatSecondarySurfaces = new WeakMap();
+        this._vueCompatPrimarySurface = null;
+        this._vueCompatActiveEventCanvas = null;
+        this._vueCompatForwardingNodePointer = false;
     },
 
     installVueNodesCompatibilityWidget() {
@@ -692,12 +849,16 @@ export const nodeLifecycleMethods = {
             draw(ctx, _node, width, y, height) {
                 if (!self.isVueNodesMode()) return;
 
-                self._vueCompatWidgetWidth = width;
-                self.bindVueCompatCanvasEvents(ctx.canvas);
-                self.updateVueCompatCanvasLayout(ctx.canvas);
-                const preparedDraw = self.prepareVueCompatCanvasDraw(ctx, width, height, widget);
-                ctx = preparedDraw.ctx;
-                height = preparedDraw.height;
+                const canvasElement = ctx.canvas;
+                const isPrimaryCanvas = self.isVueCompatPrimaryCanvas(canvasElement);
+                if (isPrimaryCanvas) {
+                    self._vueCompatWidgetWidth = width;
+                    self.bindVueCompatCanvasEvents(canvasElement);
+                    self.updateVueCompatCanvasLayout(canvasElement);
+                    const preparedDraw = self.prepareVueCompatCanvasDraw(ctx, width, height, widget);
+                    ctx = preparedDraw.ctx;
+                    height = preparedDraw.height;
+                }
                 const minimumHeight = self.getVueCompatWidgetHeight();
                 const renderedCanvasHeight = Number(height)
                     || Number(widget.computedHeight)
@@ -705,24 +866,94 @@ export const nodeLifecycleMethods = {
                 const contentHeight = self.collapsedSections?.extraControls
                     ? Math.max(minimumHeight, renderedCanvasHeight)
                     : minimumHeight;
-                self._vueCompatWidgetHeight = contentHeight;
-                if (self.collapsedSections?.extraControls) {
-                    self._vueCompatAutoSizedContentHeight = null;
-                    self.applyVueCompatMinimumWidth();
-                } else {
-                    self.applyVueCompatAutoSize(minimumHeight);
+                if (isPrimaryCanvas) {
+                    self._vueCompatWidgetHeight = contentHeight;
+                    if (self.collapsedSections?.extraControls) {
+                        self._vueCompatAutoSizedContentHeight = null;
+                        self.applyVueCompatMinimumWidth();
+                    } else {
+                        self.applyVueCompatAutoSize(minimumHeight);
+                    }
                 }
-                self.withVueCompatWidgetSize(() => {
-                    ctx.save();
-                    ctx.translate(0, 1 - y);
-                    self.drawInterface(ctx);
-                    ctx.restore();
-                });
+
+                const previousControls = self.controls;
+                const previousSliderKnobAreas = self.sliderKnobAreas;
+                const previousSecondaryDrawState = self._drawingVueCompatSecondarySurface;
+                if (!isPrimaryCanvas) {
+                    self.controls = {};
+                    self.sliderKnobAreas = {};
+                    self._drawingVueCompatSecondarySurface = true;
+                }
+                try {
+                    self.withVueCompatWidgetSize(() => {
+                        ctx.save();
+                        try {
+                            ctx.translate(0, 1 - y);
+                            self.drawInterface(ctx);
+                        } finally {
+                            ctx.restore();
+                        }
+                    }, width, contentHeight);
+
+                    self._vueCompatSecondarySurfaces = self._vueCompatSecondarySurfaces || new WeakMap();
+                    self._vueCompatSecondarySurfaceStates = self._vueCompatSecondarySurfaceStates || new Set();
+                    const surface = isPrimaryCanvas
+                        ? (self._vueCompatPrimarySurface || { canvasElement })
+                        : (self._vueCompatSecondarySurfaces.get(canvasElement) || { canvasElement });
+                    Object.assign(surface, {
+                        canvasElement,
+                        controls: self.controls,
+                        sliderKnobAreas: self.sliderKnobAreas,
+                        width,
+                        height: contentHeight,
+                        redraw() {
+                            if (canvasElement.isConnected === false) return false;
+                            const redrawContext = canvasElement.getContext?.("2d") || ctx;
+                            if (!redrawContext) return false;
+                            redrawContext.save?.();
+                            try {
+                                if (typeof redrawContext.setTransform === "function") {
+                                    redrawContext.setTransform(1, 0, 0, 1, 0, 0);
+                                }
+                                redrawContext.clearRect?.(0, 0, canvasElement.width || width, canvasElement.height || contentHeight);
+                            } finally {
+                                redrawContext.restore?.();
+                            }
+                            widget.draw(redrawContext, _node, width, y, height);
+                            return true;
+                        }
+                    });
+                    if (isPrimaryCanvas) {
+                        self._vueCompatPrimarySurface = surface;
+                    } else {
+                        self._vueCompatSecondarySurfaces.set(canvasElement, surface);
+                        self._vueCompatSecondarySurfaceStates.add(surface);
+                        self.bindVueCompatSecondarySurfaceEvents(surface);
+                    }
+                } finally {
+                    if (!isPrimaryCanvas) {
+                        self.controls = previousControls;
+                        self.sliderKnobAreas = previousSliderKnobAreas;
+                        self._drawingVueCompatSecondarySurface = previousSecondaryDrawState;
+                    }
+                }
             },
             mouse(e, pos, node) {
                 if (!self.isVueNodesMode()) return false;
 
                 self.normalizeVueCompatPointerEvent(e, pos);
+
+                const eventCanvas = self.resolveVueCompatEventCanvas(e);
+                const secondarySurface = eventCanvas
+                    ? self._vueCompatSecondarySurfaces?.get?.(eventCanvas)
+                    : null;
+                const previousControls = self.controls;
+                const previousSliderKnobAreas = self.sliderKnobAreas;
+                if (secondarySurface) {
+                    self.controls = secondarySurface.controls;
+                    self.sliderKnobAreas = secondarySurface.sliderKnobAreas;
+                    self._vueCompatForwardingNodePointer = false;
+                }
 
                 const isPointerDown = e.type === "pointerdown" || e.type === "mousedown";
                 const isPointerEnd = e.type === "pointerup"
@@ -732,9 +963,13 @@ export const nodeLifecycleMethods = {
                 if (isPointerDown && self._vueCompatForwardingNodePointer) {
                     self._vueCompatForwardingNodePointer = false;
                 }
-                if (self._vueCompatForwardingNodePointer) {
+                if (!secondarySurface && self._vueCompatForwardingNodePointer) {
                     const forwarded = self.forwardVueCompatNodePointerEvent(e);
                     if (isPointerEnd) self._vueCompatForwardingNodePointer = false;
+                    if (secondarySurface) {
+                        self.controls = previousControls;
+                        self.sliderKnobAreas = previousSliderKnobAreas;
+                    }
                     return forwarded;
                 }
 
@@ -757,14 +992,19 @@ export const nodeLifecycleMethods = {
                         if (isPointerDown) {
                             const handled = node.onMouseDown?.(e, pos, canvas) ?? false;
                             if (handled) return handled;
+                            if (secondarySurface) return false;
                             self._vueCompatForwardingNodePointer = true;
                             const forwarded = self.forwardVueCompatNodePointerEvent(e);
                             if (!forwarded) self._vueCompatForwardingNodePointer = false;
                             return forwarded;
                         }
                         return false;
-                    });
+                    }, secondarySurface?.width, secondarySurface?.height);
                 } finally {
+                    if (secondarySurface) {
+                        self.controls = previousControls;
+                        self.sliderKnobAreas = previousSliderKnobAreas;
+                    }
                     self.requestVueCompatWidgetDraw(true);
                 }
             }
@@ -1097,6 +1337,7 @@ export const nodeLifecycleMethods = {
         node.onRemoved = function() {
             self.stopAutoDetect();
             self.teardownVueCompatCanvasEvents();
+            self.teardownVueCompatSecondarySurfaces();
             if (self.tooltipTimer) {
                 clearTimeout(self.tooltipTimer);
                 self.tooltipTimer = null;

@@ -216,6 +216,7 @@ export const drawingMethods = {
                 (_, index) => 5 + LiteGraph.NODE_SLOT_HEIGHT * (index + 0.5)
             );
             const vueSlotCenters = this.isVueNodesMode?.()
+                && !this._drawingVueCompatSecondarySurface
                 && this._vueCompatOutputSlotCenters?.length >= classicSlotCenters.length
                 ? this._vueCompatOutputSlotCenters
                 : null;

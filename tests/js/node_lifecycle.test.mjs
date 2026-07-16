@@ -153,6 +153,180 @@ test("Vue compatibility widget advertises deterministic layout and is not serial
 });
 
 
+test("Vue Parameters panel draws as an isolated secondary surface", () => {
+    let installedWidget;
+    let primaryBindCalls = 0;
+    let primaryLayoutCalls = 0;
+    let secondaryDrawCalls = 0;
+    const controller = createLifecycleController({
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    const primaryControls = { primary: { x: 1, y: 1, w: 1, h: 1 } };
+    const primaryKnobs = { primarySlider: { x: 1, y: 1, w: 1, h: 1 } };
+    controller.controls = primaryControls;
+    controller.sliderKnobAreas = primaryKnobs;
+    controller._vueCompatWidgetWidth = 330;
+    controller._vueCompatWidgetHeight = 240;
+    controller.bindVueCompatCanvasEvents = () => primaryBindCalls++;
+    controller.updateVueCompatCanvasLayout = () => primaryLayoutCalls++;
+    controller.drawInterface = () => {
+        secondaryDrawCalls++;
+        assert.deepEqual(controller.node.size, [500, 240]);
+        controller.controls = { secondary: { x: 2, y: 2, w: 2, h: 2 } };
+        controller.sliderKnobAreas = { secondarySlider: { x: 2, y: 2, w: 2, h: 2 } };
+    };
+    controller.installVueNodesCompatibilityWidget();
+
+    const canvasListeners = new Map();
+    const secondaryCanvas = {
+        isConnected: true,
+        closest() {
+            return null;
+        },
+        addEventListener(type, handler, capture) {
+            canvasListeners.set(type, { handler, capture });
+        },
+        removeEventListener() {
+        }
+    };
+    const ctx = {
+        canvas: secondaryCanvas,
+        save() {},
+        restore() {},
+        translate() {}
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        installedWidget.draw(ctx, controller.node, 500, 10, 600);
+    });
+
+    assert.equal(primaryBindCalls, 0);
+    assert.equal(primaryLayoutCalls, 0);
+    assert.equal(controller._vueCompatWidgetWidth, 330);
+    assert.equal(controller._vueCompatWidgetHeight, 240);
+    assert.equal(controller.controls, primaryControls);
+    assert.equal(controller.sliderKnobAreas, primaryKnobs);
+    const secondarySurface = controller._vueCompatSecondarySurfaces.get(secondaryCanvas);
+    assert.deepEqual(secondarySurface.controls, { secondary: { x: 2, y: 2, w: 2, h: 2 } });
+    assert.deepEqual(secondarySurface.sliderKnobAreas, { secondarySlider: { x: 2, y: 2, w: 2, h: 2 } });
+    assert.equal(secondarySurface.width, 500);
+    assert.equal(secondarySurface.height, 240);
+    assert.equal(typeof secondarySurface.redraw, "function");
+
+    withLiteGraph({ vueNodesMode: true }, () => secondarySurface.redraw());
+    assert.equal(secondaryDrawCalls, 2);
+
+    let hoverCalls = 0;
+    controller.handleMouseHover = () => {
+        hoverCalls++;
+        assert.deepEqual(controller.controls, { secondary: { x: 2, y: 2, w: 2, h: 2 } });
+    };
+    withLiteGraph({ vueNodesMode: true }, () => {
+        canvasListeners.get("pointermove").handler({ offsetX: 2, offsetY: 2 });
+    });
+    assert.equal(hoverCalls, 1);
+    assert.equal(controller.controls, primaryControls);
+    assert.equal(controller.sliderKnobAreas, primaryKnobs);
+
+    controller.node.onMouseDown = () => {
+        assert.deepEqual(controller.controls, { secondary: { x: 2, y: 2, w: 2, h: 2 } });
+        return true;
+    };
+    controller.requestVueCompatWidgetDraw = () => {};
+    canvasListeners.get("pointerdown").handler();
+    const handled = withLiteGraph({ vueNodesMode: true }, () => installedWidget.mouse({
+        type: "pointerdown",
+        offsetX: 2,
+        offsetY: 2,
+        buttons: 1,
+        currentTarget: null,
+        target: null
+    }, [2, 2], controller.node));
+
+    assert.equal(handled, true);
+    assert.equal(controller.controls, primaryControls);
+    assert.equal(controller.sliderKnobAreas, primaryKnobs);
+    assert.equal(controller._vueCompatForwardingNodePointer, false);
+
+    controller.node.onMouseDown = () => false;
+    const unhandled = withLiteGraph({ vueNodesMode: true }, () => installedWidget.mouse({
+        type: "pointerdown",
+        offsetX: 2,
+        offsetY: 2,
+        buttons: 1,
+        currentTarget: null,
+        target: null
+    }, [2, 2], controller.node));
+
+    assert.equal(unhandled, false);
+    assert.equal(controller._vueCompatForwardingNodePointer, false);
+
+    secondaryCanvas.isConnected = false;
+    assert.equal(controller.resolveVueCompatEventCanvas({}), null);
+    assert.equal(controller._vueCompatActiveEventCanvas, null);
+});
+
+
+test("Vue widget updates explicitly redraw the primary node surface", () => {
+    let installedWidget;
+    let drawCalls = 0;
+    let scheduledDraw = null;
+    const controller = createLifecycleController({
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.drawInterface = () => drawCalls++;
+    controller.installVueNodesCompatibilityWidget();
+
+    const primaryCanvas = {
+        isConnected: true,
+        closest(selector) {
+            return selector === ".lg-node" ? { dataset: { nodeId: "5" } } : null;
+        }
+    };
+    const ctx = {
+        canvas: primaryCanvas,
+        save() {},
+        restore() {},
+        translate() {}
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        installedWidget.draw(ctx, controller.node, 330, 10, 240);
+    });
+    assert.equal(drawCalls, 1);
+    assert.equal(controller._vueCompatPrimarySurface.canvasElement, primaryCanvas);
+
+    const previousAnimationFrame = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = callback => {
+        scheduledDraw = callback;
+        return 1;
+    };
+    try {
+        withLiteGraph({ vueNodesMode: true }, () => {
+            controller.requestVueCompatWidgetDraw();
+            assert.equal(typeof scheduledDraw, "function");
+            scheduledDraw();
+        });
+    } finally {
+        if (previousAnimationFrame === undefined) {
+            delete globalThis.requestAnimationFrame;
+        } else {
+            globalThis.requestAnimationFrame = previousAnimationFrame;
+        }
+    }
+
+    assert.equal(drawCalls, 2);
+});
+
+
 test("Vue pointer normalization converts widget-local coordinates to node coordinates", () => {
     const controller = createLifecycleController();
     const event = { offsetX: 15, offsetY: 25 };
