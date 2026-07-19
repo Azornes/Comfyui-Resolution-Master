@@ -652,10 +652,10 @@ You can either apply this tweak manually or report it to the mixlab authors so i
 
 ---
 
-#### ○ ‎ Incompatibility with Modern Node 2.0 Design (Vue Nodes)
-> This node is **not compatible** with the new Vue Nodes display system.  
+#### ○ ‎ Compatibility with Modern Node 2.0 Design (Vue Nodes)
+> **Modern Node Design (Vue Nodes)** is fully supported starting with **version 2.0.0**.  
 >  
-> 🔧 **How to fix:**  
+> ⚠️ **Note:** Versions prior to 2.0.0 do not support the Vue Nodes display system. If you are using an older version of this node and experience rendering or interaction issues, you will need to disable it:  
 > Go to **Settings → (search) "Vue Nodes" → Disable "Modern Node Design (Vue Nodes)"**.
 
 ---
