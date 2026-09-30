@@ -3,6 +3,18 @@ import test from "node:test";
 
 import { drawingMethods } from "../../js/drawing/resolution_master_draw_methods.js";
 
+test("canvas information shows actual megapixels with two to three decimal places", () => {
+    for (const [width, height, expected] of [
+        [2000, 1000, "2.00 MP"],
+        [3091, 1000, "3.091 MP"],
+        [1359, 1472, "2.00 MP"],
+        [1234, 1001, "1.235 MP"]
+    ]) {
+        const context = { widthWidget: { value: width }, heightWidget: { value: height } };
+        assert.ok(drawingMethods.getInfoText.call(context).includes(`|  ${expected} `));
+    }
+});
+
 
 test("ZImageTurbo calculation info describes active preset matching", () => {
     const context = {

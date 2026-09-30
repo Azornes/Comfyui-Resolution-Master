@@ -1,6 +1,7 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { inlineSvgIcons } from "../utils/icon_utils.js";
 import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
+import { roundSliderValue } from "../utils/slider_precision.js";
 
 const log = createModuleLogger('resolution_master_interaction_methods');
 const DRAG_ZOOM_BYPASS_PATCH_FLAG = '__resolutionMasterDragZoomBypassInstalled';
@@ -826,7 +827,9 @@ export const interactionMethods = {
             let newValue = config.min + value * (config.max - config.min);
             props[config.prop] = Math.round(newValue / config.step) * config.step;
 
-            if (sliderName === 'scaleSlider' || sliderName === 'megapixelsSlider') {
+            if (sliderName === 'megapixelsSlider') {
+                props[config.prop] = roundSliderValue(props[config.prop], config.step);
+            } else if (sliderName === 'scaleSlider') {
                  props[config.prop] = parseFloat(props[config.prop].toFixed(1));
             }
 

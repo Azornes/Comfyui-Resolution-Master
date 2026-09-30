@@ -3,6 +3,7 @@ import { formatClosestPResolution } from "../scaling/scaling_math.js";
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 import { getModelInfoMessage } from "../calculations/model_profiles.js";
+import { formatMegapixels } from "../utils/slider_precision.js";
 
 const log = createModuleLogger("resolution_master_draw_methods");
 const OUTPUT_VALUE_VISUAL_RIGHT_INSET = 3;
@@ -533,7 +534,7 @@ export const drawingMethods = {
         if (this.widthWidget && this.heightWidget) {
             const width = this.widthWidget.value;
             const height = this.heightWidget.value;
-            const mp = ((width * height) / 1000000).toFixed(2);
+            const mp = ((width * height) / 1000000).toFixed(3).replace(/0$/, "");
             const pResolution = formatClosestPResolution(width, height);
             const aspectRatio = aspectRatioString(width, height);
 
@@ -601,7 +602,7 @@ export const drawingMethods = {
             buttonControl: 'megapixelsBtn', mainControl: 'megapixelsSlider', radioControl: 'megapixelsRadio',
             controlType: 'slider', icon: this.icons.megapixels, valueProperty: 'targetMegapixels',
             min: props.megapixels_slider_min, max: props.megapixels_slider_max, step: props.megapixels_slider_step,
-            displayValue: `${props.targetMegapixels.toFixed(1)}MP`,
+            displayValue: formatMegapixels(props.targetMegapixels, props.megapixels_slider_step),
             previewDimensions: this.calculateScalingPreview('megapixels'),
             rescaleMode: 'megapixels'
         });
