@@ -827,10 +827,8 @@ export const interactionMethods = {
             let newValue = config.min + value * (config.max - config.min);
             props[config.prop] = Math.round(newValue / config.step) * config.step;
 
-            if (sliderName === 'megapixelsSlider') {
+            if (sliderName === 'megapixelsSlider' || sliderName === 'scaleSlider') {
                 props[config.prop] = roundSliderValue(props[config.prop], config.step);
-            } else if (sliderName === 'scaleSlider') {
-                 props[config.prop] = parseFloat(props[config.prop].toFixed(1));
             }
 
             if (config.updateOn) {

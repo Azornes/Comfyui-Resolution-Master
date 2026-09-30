@@ -14,3 +14,7 @@ export function roundSliderValue(value, step) {
 export function formatMegapixels(value, step) {
     return `${value.toFixed(Math.max(1, getSliderStepDecimals(step)))}MP`;
 }
+
+export function formatScaling(value, step) {
+    return `${value.toFixed(Math.max(1, getSliderStepDecimals(step)))}x`;
+}

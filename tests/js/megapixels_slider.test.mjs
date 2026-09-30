@@ -24,11 +24,13 @@ test("dragging the megapixels slider preserves configured precision and notifies
     }
 });
 
-test("manual scaling retains its existing one-decimal rounding", () => {
+test("manual scaling follows configured precision up to three decimal places", () => {
+    for (const [step, target, expected] of [[0.1, 1.2, 1.2], [0.01, 1.23, 1.23], [0.001, 1.234, 1.234], [0.025, 1.225, 1.225], [0.0001, 3.0912, 3.091]]) {
     const context = {
-        node: { properties: { scaling_slider_min: 0.1, scaling_slider_max: 4, scaling_slider_step: 0.01 } },
+        node: { properties: { scaling_slider_min: 0.1, scaling_slider_max: 4, scaling_slider_step: step } },
         updateRescaleValue() {}, handlePropertyChange() {}, requestCanvasUpdate() {}
     };
-    interactionMethods.updateSliderValue.call(context, "scaleSlider", (1.23 - 0.1) / 3.9 * 100, 100);
-    assert.equal(context.node.properties.upscaleValue, 1.2);
+    interactionMethods.updateSliderValue.call(context, "scaleSlider", (target - 0.1) / 3.9 * 100, 100);
+    assert.equal(context.node.properties.upscaleValue, expected);
+    }
 });

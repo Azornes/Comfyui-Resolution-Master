@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getSliderStepDecimals, roundSliderValue, formatMegapixels } from "../../js/utils/slider_precision.js";
+import { getSliderStepDecimals, roundSliderValue, formatMegapixels, formatScaling } from "../../js/utils/slider_precision.js";
 
 test("megapixels precision follows decimal and scientific notation steps", () => {
     for (const [step, decimals, value, label] of [
@@ -14,6 +14,7 @@ test("megapixels precision follows decimal and scientific notation steps", () =>
         const snapped = Math.round(value / step) * step;
         assert.equal(roundSliderValue(snapped, step), value);
         assert.equal(formatMegapixels(value, step), label);
+        assert.equal(formatScaling(value, step), label.replace("MP", "x"));
     }
 });
 
@@ -22,6 +23,7 @@ test("megapixels values and labels are limited to three decimal places", () => {
         assert.equal(getSliderStepDecimals(step), 3);
         assert.equal(roundSliderValue(3.0912345, step), 3.091);
         assert.equal(formatMegapixels(3.0912345, step), "3.091MP");
+        assert.equal(formatScaling(3.0912345, step), "3.091x");
     }
 });
 

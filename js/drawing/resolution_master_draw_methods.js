@@ -3,7 +3,7 @@ import { formatClosestPResolution } from "../scaling/scaling_math.js";
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 import { getModelInfoMessage } from "../calculations/model_profiles.js";
-import { formatMegapixels } from "../utils/slider_precision.js";
+import { formatMegapixels, formatScaling } from "../utils/slider_precision.js";
 
 const log = createModuleLogger("resolution_master_draw_methods");
 const OUTPUT_VALUE_VISUAL_RIGHT_INSET = 3;
@@ -585,7 +585,7 @@ export const drawingMethods = {
             buttonControl: 'scaleBtn', mainControl: 'scaleSlider', radioControl: 'upscaleRadio',
             controlType: 'slider', icon: this.icons.upscale, valueProperty: 'upscaleValue',
             min: props.scaling_slider_min, max: props.scaling_slider_max, step: props.scaling_slider_step,
-            displayValue: props.upscaleValue.toFixed(1) + "x",
+            displayValue: formatScaling(props.upscaleValue, props.scaling_slider_step),
             previewDimensions: this.calculateScalingPreview('manual'),
             rescaleMode: 'manual'
         });
