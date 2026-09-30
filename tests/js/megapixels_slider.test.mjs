@@ -6,6 +6,22 @@ mock.module("../../js/utils/icon_utils.js", {
 });
 const { interactionMethods } = await import("../../js/interaction/resolution_master_interaction_methods.js");
 
+test("snap priority checkbox toggles independently and synchronizes the workflow", () => {
+    const calls = [];
+    const context = {
+        node: { properties: { preserveScalingRatio: true, preserveScalingSnap: false } },
+        syncBackendFallbackWidgets() { calls.push("sync"); },
+        updateRescaleValue() { calls.push("rescale"); },
+        requestCanvasUpdate() { calls.push("canvas"); }
+    };
+    interactionMethods.handleCheckboxClick.call(context, "preserveScalingSnapCheckbox");
+    assert.equal(context.node.properties.preserveScalingSnap, true);
+    assert.equal(context.node.properties.preserveScalingRatio, true);
+    assert.deepEqual(calls, ["sync", "rescale", "canvas"]);
+    interactionMethods.handleCheckboxClick.call(context, "preserveScalingSnapCheckbox");
+    assert.equal(context.node.properties.preserveScalingSnap, false);
+});
+
 test("dragging the megapixels slider preserves configured precision and notifies consumers", () => {
     for (const [step, target] of [[0.1, 1.2], [0.01, 1.23], [0.001, 1.234], [0.025, 1.225], [0.0001, 3.0912]]) {
         const calls = [];

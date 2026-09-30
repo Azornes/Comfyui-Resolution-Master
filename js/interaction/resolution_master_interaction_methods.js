@@ -775,6 +775,8 @@ export const interactionMethods = {
             props.useCustomCalc = !props.useCustomCalc;
         } else if (checkboxName === 'preserveScalingRatioCheckbox') {
             props.preserveScalingRatio = !props.preserveScalingRatio;
+        } else if (checkboxName === 'preserveScalingSnapCheckbox') {
+            props.preserveScalingSnap = !props.preserveScalingSnap;
         }
         this.syncBackendFallbackWidgets();
         this.updateRescaleValue();

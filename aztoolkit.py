@@ -71,6 +71,7 @@ class ResolutionMaster(io.ComfyNode):
                 io.Float.Input("rescale_value", default=1.0, step=0.001, min=0.0, max=100.0, tooltip="Current Rescale Factor value shown by the interface."),
                 io.Int.Input("batch_size", default=1, min=1, max=4096, tooltip="How many latent images to create in one batch."),
                 io.Image.Input("input_image", optional=True, tooltip="Optional image used for auto-detecting width and height."),
+                io.Boolean.Input("preserve_scaling_snap", default=False, optional=True, tooltip="Keep scaled dimensions divisible by the selected snap step. With Prioritize ratio, preserve exact proportions too."),
             ],
             outputs=[
                 io.Int.Output("width", tooltip="Final output width in pixels."),
@@ -140,6 +141,7 @@ class ResolutionMaster(io.ComfyNode):
         rescale_value,
         batch_size=1,
         input_image=None,
+        preserve_scaling_snap=False,
     ) -> io.NodeOutput:
         unique_id = cls.hidden.unique_id
         prompt = cls.hidden.prompt
@@ -210,6 +212,7 @@ class ResolutionMaster(io.ComfyNode):
                         safe_float(target_megapixels, 2.0),
                         rescale_mode,
                         auto_detect_presets_json,
+                        preserve_scaling_snap=preserve_scaling_snap,
                     )
                     log.info(
                         "Applied backend auto-detect fallback",

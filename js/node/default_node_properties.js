@@ -43,6 +43,7 @@ export const DEFAULT_NODE_PROPERTIES = {
     rescaleMode: "resolution",
     rescaleValue: 1.0,
     preserveScalingRatio: false,
+    preserveScalingSnap: false,
     autoDetect: false,
     autoDetectSource: "backend",
     autoDetectWidth: 0,

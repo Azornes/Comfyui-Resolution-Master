@@ -3,6 +3,27 @@ import test from "node:test";
 
 import { drawingMethods } from "../../js/drawing/resolution_master_draw_methods.js";
 
+test("scaling priority checkboxes share one row and have distinct hit areas", () => {
+    const labels = [];
+    const checkboxes = [];
+    const ctx = {
+        measureText(text) { return { width: text.length * 6 }; },
+        fillText(text) { labels.push(text); }
+    };
+    const context = {
+        node: { size: [330, 400], properties: { preserveScalingRatio: true, preserveScalingSnap: true, upscaleValue: 1, targetMegapixels: 2 } },
+        icons: {}, controls: {},
+        drawScalingRowBase() {}, calculateScaleFactor() { return 1; }, calculateScalingPreview() {},
+        drawCheckbox(ctx, x, y, size, checked) { checkboxes.push({ x, y, size, checked }); }
+    };
+    assert.equal(drawingMethods.drawScalingGrid.call(context, ctx, 0), 130);
+    assert.deepEqual(labels, ["Prioritize ratio", "Prioritize snap"]);
+    assert.equal(checkboxes.length, 2);
+    assert.ok(checkboxes.every(box => box.checked && box.x >= 20 && box.x + box.size <= 310));
+    assert.equal(checkboxes[0].y, checkboxes[1].y);
+    assert.ok(context.controls.preserveScalingRatioCheckbox.x < context.controls.preserveScalingSnapCheckbox.x);
+});
+
 test("canvas information shows actual megapixels with two to three decimal places", () => {
     for (const [width, height, expected] of [
         [2000, 1000, "2.00 MP"],

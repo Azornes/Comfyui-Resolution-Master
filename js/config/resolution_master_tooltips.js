@@ -27,6 +27,7 @@ export const tooltips = {
     megapixelsRadio: "Use the megapixel target for the Rescale Factor output.",
     megapixelsValueArea: "Click to enter the target megapixels.",
     preserveScalingRatioCheckbox: "Keep an exact aspect ratio when resizing. Also affects Smart Fit.",
+    preserveScalingSnapCheckbox: "Keep scaled dimensions divisible by the selected Snap step. With Prioritize ratio, keep exact proportions too; the resulting size may differ from the scaling target.",
     
     // Auto-detect controls
     autoDetectToggle: "Detect the size from the connected input image.",

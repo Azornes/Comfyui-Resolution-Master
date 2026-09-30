@@ -396,6 +396,7 @@ export const autoDetectMethods = {
         this.setBackendFallbackWidgetValue('smartFit', !!props.smartFit);
         this.setBackendFallbackWidgetValue('useCustomCalc', !!props.useCustomCalc);
         this.setBackendFallbackWidgetValue('preserveScalingRatio', !!props.preserveScalingRatio);
+        this.setBackendFallbackWidgetValue('preserveScalingSnap', !!props.preserveScalingSnap);
         this.setBackendFallbackWidgetValue('selectedCategory', props.selectedCategory || "");
         this.setBackendFallbackWidgetValue('snapValue', Math.max(1, Math.round(Number(props.snapValue) || 64)));
         this.setBackendFallbackWidgetValue('upscaleValue', Math.max(0, Number(props.upscaleValue) || 0));

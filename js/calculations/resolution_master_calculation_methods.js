@@ -49,6 +49,7 @@ export const calculationMethods = {
             smart_fit: !!get('smart_fit', 'smartFit', props.smartFit),
             use_custom_calc: !!get('use_custom_calc', 'useCustomCalc', props.useCustomCalc),
             preserve_scaling_ratio: !!get('preserve_scaling_ratio', 'preserveScalingRatio', props.preserveScalingRatio),
+            preserve_scaling_snap: !!get('preserve_scaling_snap', 'preserveScalingSnap', props.preserveScalingSnap),
             selected_category: selectedCategory,
             snap_value: Math.max(1, Math.round(Number(get('snap_value', 'snapValue', props.snapValue)) || 64)),
             upscale_value: Math.max(0, Number(get('upscale_value', 'upscaleValue', props.upscaleValue)) || 0),
@@ -128,7 +129,7 @@ export const calculationMethods = {
         const props = this.node.properties;
         const width = Math.max(1, Math.round(Number(this.widthWidget?.value ?? props.valueX) || 1));
         const height = Math.max(1, Math.round(Number(this.heightWidget?.value ?? props.valueY) || 1));
-        return calculateScaledDimensions(width, height, scale, props.preserveScalingRatio);
+        return calculateScaledDimensions(width, height, scale, props.preserveScalingRatio, props.preserveScalingSnap, props.snapValue);
     },
 
     applyBackendCalculationResult(result, options = {}) {

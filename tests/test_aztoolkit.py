@@ -98,6 +98,14 @@ class ResolutionMasterTests(unittest.TestCase):
     def test_detect_image_dimensions_supports_hwc_and_bhwc(self):
         self.assertEqual(self.node_class.detect_image_dimensions(FakeImage((600, 800, 3))), (800, 600))
         self.assertEqual(self.node_class.detect_image_dimensions(FakeImage((2, 600, 800, 3))), (800, 600))
+
+    def test_backend_auto_resize_preserves_ratio_and_snap(self):
+        result = self.node_class.execute(**self.execute_kwargs(
+            auto_detect=True, input_image=FakeImage((1, 1080, 1920, 3)),
+            auto_resize_on_change=True, upscale_value=0.5,
+            preserve_scaling_ratio=True, preserve_scaling_snap=True, snap_value=64,
+        ))
+        self.assertEqual(result.values[:2], (1024, 576))
         self.assertIsNone(self.node_class.detect_image_dimensions(FakeImage((800, 600))))
 
     def test_empty_local_image_gallery_selection_is_detected_from_prompt(self):

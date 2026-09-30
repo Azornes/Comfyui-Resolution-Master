@@ -33,6 +33,7 @@ def _normalize_payload(payload):
         "smart_fit": _payload_bool(payload, "smart_fit"),
         "use_custom_calc": _payload_bool(payload, "use_custom_calc"),
         "preserve_scaling_ratio": _payload_bool(payload, "preserve_scaling_ratio"),
+        "preserve_scaling_snap": _payload_bool(payload, "preserve_scaling_snap"),
         "selected_category": payload.get("selected_category") or "",
         "snap_value": safe_int(payload.get("snap_value"), 64),
         "upscale_value": safe_float(payload.get("upscale_value"), 1.0),

@@ -45,6 +45,7 @@ class PayloadNormalizationTests(unittest.TestCase):
                 "auto_fit_on_change": "YES",
                 "auto_resize_on_change": "false",
                 "auto_snap_on_change": 1,
+                "preserve_scaling_snap": "true",
                 "snap_value": "32",
                 "target_megapixels": "3.5",
             }
@@ -55,6 +56,7 @@ class PayloadNormalizationTests(unittest.TestCase):
         self.assertTrue(normalized["auto_fit_on_change"])
         self.assertFalse(normalized["auto_resize_on_change"])
         self.assertTrue(normalized["auto_snap_on_change"])
+        self.assertTrue(normalized["preserve_scaling_snap"])
         self.assertEqual(normalized["snap_value"], 32)
         self.assertEqual(normalized["target_megapixels"], 3.5)
 
@@ -66,6 +68,7 @@ class PayloadNormalizationTests(unittest.TestCase):
         self.assertEqual(normalized["height"], 512)
         self.assertEqual(normalized["rescale_mode"], "resolution")
         self.assertEqual(normalized["presets_json"], "{}")
+        self.assertFalse(normalized["preserve_scaling_snap"])
 
 
 class CalculationRouteTests(unittest.TestCase):

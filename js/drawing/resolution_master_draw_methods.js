@@ -609,18 +609,25 @@ export const drawingMethods = {
 
         const checkboxSize = 18;
         const ratioY = y + 105;
-        const checkboxLabel = "Prioritize ratio";
         ctx.font = "12px Arial";
-        const labelWidth = ctx.measureText(checkboxLabel).width;
         const checkboxGap = 6;
-        const groupWidth = checkboxSize + checkboxGap + labelWidth;
-        const checkboxX = margin + (this.node.size[0] - margin * 2 - groupWidth) / 2;
-        this.controls.preserveScalingRatioCheckbox = { x: checkboxX, y: ratioY + 3, w: checkboxSize, h: checkboxSize };
-        this.drawCheckbox(ctx, checkboxX, ratioY + 3, checkboxSize, props.preserveScalingRatio, this.hoverElement === 'preserveScalingRatioCheckbox');
-        ctx.fillStyle = this.hoverElement === 'preserveScalingRatioCheckbox' ? "#5af" : "#ccc";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        ctx.fillText(checkboxLabel, checkboxX + checkboxSize + checkboxGap, ratioY + 12);
+        const options = [
+            { label: "Prioritize ratio", control: "preserveScalingRatioCheckbox", checked: props.preserveScalingRatio },
+            { label: "Prioritize snap", control: "preserveScalingSnapCheckbox", checked: props.preserveScalingSnap }
+        ];
+        const widths = options.map(option => checkboxSize + checkboxGap + ctx.measureText(option.label).width);
+        const optionGap = 16;
+        const groupWidth = widths[0] + widths[1] + optionGap;
+        let checkboxX = margin + (this.node.size[0] - margin * 2 - groupWidth) / 2;
+        options.forEach((option, index) => {
+            this.controls[option.control] = { x: checkboxX, y: ratioY + 3, w: checkboxSize, h: checkboxSize };
+            this.drawCheckbox(ctx, checkboxX, ratioY + 3, checkboxSize, option.checked, this.hoverElement === option.control);
+            ctx.fillStyle = this.hoverElement === option.control ? "#5af" : "#ccc";
+            ctx.textAlign = "left";
+            ctx.textBaseline = "middle";
+            ctx.fillText(option.label, checkboxX + checkboxSize + checkboxGap, ratioY + 12);
+            checkboxX += widths[index] + optionGap;
+        });
 
         return 130;
     },

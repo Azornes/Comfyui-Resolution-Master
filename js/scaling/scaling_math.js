@@ -17,11 +17,18 @@ export function calculateScaleFactor(width, height, props, mode = props.rescaleM
     return Math.sqrt(targetPixels / currentPixels);
 }
 
-export function calculateScaledDimensions(width, height, scale, preserveRatio) {
+export function calculateScaledDimensions(width, height, scale, preserveRatio, preserveSnap = false, snapValue = 64) {
     const safeWidth = Math.max(1, Math.round(Number(width) || 1));
     const safeHeight = Math.max(1, Math.round(Number(height) || 1));
+    const snap = Math.max(1, Math.round(Number(snapValue) || 64));
 
     if (!preserveRatio) {
+        if (preserveSnap) {
+            return {
+                width: Math.max(snap, Math.round(safeWidth * scale / snap) * snap),
+                height: Math.max(snap, Math.round(safeHeight * scale / snap) * snap)
+            };
+        }
         return {
             width: Math.max(1, Math.round(safeWidth * scale)),
             height: Math.max(1, Math.round(safeHeight * scale))
@@ -33,7 +40,8 @@ export function calculateScaledDimensions(width, height, scale, preserveRatio) {
     const ratioY = safeHeight / divisor;
     const targetPixels = safeWidth * safeHeight * scale * scale;
     const ratioPixels = ratioX * ratioY;
-    const ratioScale = Math.max(1, Math.round(Math.sqrt(targetPixels / ratioPixels)));
+    const multiplierStep = preserveSnap ? snap : 1;
+    const ratioScale = Math.max(multiplierStep, Math.round(Math.sqrt(targetPixels / ratioPixels) / multiplierStep) * multiplierStep);
 
     return {
         width: ratioX * ratioScale,

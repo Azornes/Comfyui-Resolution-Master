@@ -310,8 +310,14 @@ def calculate_auto_fit(width, height, category, smart_fit, presets, preserve_sca
     return {"width": scaled["width"], "height": scaled["height"], "selected_preset": closest["name"]}
 
 
-def calculate_scaled_dimensions(width, height, scale, preserve_ratio):
+def calculate_scaled_dimensions(width, height, scale, preserve_ratio, preserve_snap=False, snap_value=64):
+    snap = max(1, safe_int(snap_value, 64))
     if not preserve_ratio:
+        if preserve_snap:
+            return {
+                "width": max(snap, math.floor(width * scale / snap + 0.5) * snap),
+                "height": max(snap, math.floor(height * scale / snap + 0.5) * snap),
+            }
         return {"width": round(width * scale), "height": round(height * scale)}
 
     divisor = math.gcd(max(1, width), max(1, height))
@@ -320,12 +326,16 @@ def calculate_scaled_dimensions(width, height, scale, preserve_ratio):
     target_pixels = width * height * scale * scale
     ratio_pixels = ratio_x * ratio_y
     ratio_scale = max(1, round(math.sqrt(target_pixels / ratio_pixels)))
+    if preserve_snap:
+        # Reduced ratio components are coprime, so their common multiplier must
+        # be a multiple of snap for both dimensions to be divisible by snap.
+        ratio_scale = max(snap, math.floor(math.sqrt(target_pixels / ratio_pixels) / snap + 0.5) * snap)
     return {"width": ratio_x * ratio_scale, "height": ratio_y * ratio_scale}
 
 
-def apply_auto_resize(width, height, rescale_mode, upscale_value, target_resolution, target_megapixels, preserve_ratio):
+def apply_auto_resize(width, height, rescale_mode, upscale_value, target_resolution, target_megapixels, preserve_ratio, preserve_snap=False, snap_value=64):
     scale = calculate_rescale_factor(width, height, rescale_mode, upscale_value, target_resolution, target_megapixels)
-    return calculate_scaled_dimensions(width, height, scale, preserve_ratio)
+    return calculate_scaled_dimensions(width, height, scale, preserve_ratio, preserve_snap, snap_value)
 
 
 def calculate_rescale_factor(width, height, rescale_mode, upscale_value, target_resolution, target_megapixels):
@@ -363,6 +373,7 @@ def apply_backend_auto_detect_fallback(
     target_megapixels,
     rescale_mode,
     auto_detect_presets_json,
+    preserve_scaling_snap=False,
 ):
     log.debug(
         "Applying backend auto-detect fallback",
@@ -382,6 +393,7 @@ def apply_backend_auto_detect_fallback(
         smart_fit=smart_fit,
         use_custom_calc=use_custom_calc,
         preserve_scaling_ratio=preserve_scaling_ratio,
+        preserve_scaling_snap=preserve_scaling_snap,
         selected_category=selected_category,
         snap_value=snap_value,
         upscale_value=upscale_value,
@@ -417,6 +429,7 @@ def calculate_resolution(
     rescale_mode="resolution",
     presets_json="{}",
     scale_value=1.0,
+    preserve_scaling_snap=False,
 ):
     width = max(1, safe_int(width, 1))
     height = max(1, safe_int(height, 1))
@@ -453,6 +466,8 @@ def calculate_resolution(
             target_resolution,
             target_megapixels,
             preserve_scaling_ratio,
+            preserve_scaling_snap,
+            snap_value,
         )
         width, height = resized["width"], resized["height"]
 
@@ -486,6 +501,8 @@ def calculate_resolution(
                 target_resolution,
                 target_megapixels,
                 preserve_scaling_ratio,
+                preserve_scaling_snap,
+                snap_value,
             )
             width, height = resized["width"], resized["height"]
 

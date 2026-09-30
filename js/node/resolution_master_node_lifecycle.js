@@ -1193,6 +1193,7 @@ export const nodeLifecycleMethods = {
         const smartFitWidget = node.widgets?.find(w => w.name === 'smart_fit');
         const useCustomCalcWidget = node.widgets?.find(w => w.name === 'use_custom_calc');
         const preserveScalingRatioWidget = node.widgets?.find(w => w.name === 'preserve_scaling_ratio');
+        const preserveScalingSnapWidget = node.widgets?.find(w => w.name === 'preserve_scaling_snap');
         const selectedCategoryWidget = node.widgets?.find(w => w.name === 'selected_category');
         const snapValueWidget = node.widgets?.find(w => w.name === 'snap_value');
         const upscaleValueWidget = node.widgets?.find(w => w.name === 'upscale_value');
@@ -1249,6 +1250,7 @@ export const nodeLifecycleMethods = {
             smartFit: smartFitWidget,
             useCustomCalc: useCustomCalcWidget,
             preserveScalingRatio: preserveScalingRatioWidget,
+            preserveScalingSnap: preserveScalingSnapWidget,
             selectedCategory: selectedCategoryWidget,
             snapValue: snapValueWidget,
             upscaleValue: upscaleValueWidget,

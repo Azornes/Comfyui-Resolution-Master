@@ -13,12 +13,39 @@ from core.auto_detect import (
     apply_auto_snap,
     apply_custom_calculation,
     calculate_rescale_factor,
+    calculate_scaled_dimensions,
     calculate_resolution,
     calculate_target_resolution_from_scale,
     find_closest_preset,
     load_calculation_config,
     load_presets,
 )
+
+
+class ScalingSnapTests(unittest.TestCase):
+    def test_snap_only_rounds_each_dimension(self):
+        self.assertEqual(calculate_scaled_dimensions(1000, 600, 1.23, False, True, 64), {"width": 1216, "height": 768})
+        self.assertEqual(calculate_scaled_dimensions(1000, 600, 0, False, True, 64), {"width": 64, "height": 64})
+
+    def test_ratio_and_snap_preserve_both_constraints(self):
+        for width, height, scale, snap in [(1920, 1080, 0.5, 64), (1080, 1920, 1.3, 32), (1000, 600, 0.01, 64), (1359, 1472, 1.2, 16)]:
+            with self.subTest(width=width, height=height, scale=scale, snap=snap):
+                result = calculate_scaled_dimensions(width, height, scale, True, True, snap)
+                self.assertEqual(result["width"] % snap, 0)
+                self.assertEqual(result["height"] % snap, 0)
+                self.assertEqual(result["width"] * height, result["height"] * width)
+        self.assertEqual(calculate_scaled_dimensions(1920, 1080, 0.5, True, True, 64), {"width": 1024, "height": 576})
+
+    def test_all_scaling_modes_and_auto_detect_honor_snap(self):
+        for action in ("auto_resize", "auto_detect"):
+            for mode in ("manual", "resolution", "megapixels"):
+                result = calculate_resolution(action, 1920, 1080, auto_resize_on_change=True, preserve_scaling_ratio=True, preserve_scaling_snap=True, snap_value=64, upscale_value=0.5, rescale_mode=mode)
+                self.assertEqual(result["width"] % 64, 0)
+                self.assertEqual(result["height"] % 64, 0)
+                self.assertEqual(result["width"] * 9, result["height"] * 16)
+
+    def test_disabled_snap_preserves_existing_scaling(self):
+        self.assertEqual(calculate_scaled_dimensions(1000, 600, 1.23, False), {"width": 1230, "height": 738})
 
 
 class FindClosestPresetTests(unittest.TestCase):

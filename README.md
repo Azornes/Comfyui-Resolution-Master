@@ -169,6 +169,7 @@ For new image generation:
 - **📺 Resolution Button**: Scales to target resolution (e.g., 1080p)
 - **📷 Megapixels Button**: Scales to target megapixel count
 - **Prioritize Ratio Checkbox**: Preserves the current aspect ratio as the top priority when applying scaling. The final dimensions may be slightly above or below the selected scale, p-value, or megapixel target.
+- **Prioritize Snap Checkbox**: Rounds scaled width and height to multiples of the selected Snap step. Works with manual scale, p-resolution, megapixels, and auto-resize. When both priority checkboxes are enabled, the closest size preserving the exact aspect ratio and Snap divisibility is used. This may differ substantially from the scaling target for unusual aspect ratios. Disabled by default.
 - **Radio Buttons**: Select which scaling mode affects the `rescale_factor` output
 
 ### Auto-Detect Section
