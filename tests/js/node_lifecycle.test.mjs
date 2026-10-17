@@ -717,9 +717,67 @@ test("Nodes 2.0 zoom out maintains minimum graph dimensions and context scale", 
     assert.deepEqual(controller.node.size, [330, 560]);
     assert.equal(controller._vueCompatWidgetWidth, 330);
     assert.equal(primaryCanvas.style.height, "560px");
-    assert.equal(primaryCanvas.width, 330);
-    assert.equal(primaryCanvas.height, 562);
-    assert.deepEqual(transforms.at(-1), [1, 0, 0, 1, 0, 0]);
+    assert.equal(primaryCanvas.width, 660);
+    assert.equal(primaryCanvas.height, 1124);
+    assert.deepEqual(transforms.at(-1), [2, 0, 0, 2, 0, 0]);
+});
+
+test("Nodes 2.0 maintains 2x retina backing scale and high smoothing quality at 1x default zoom", () => {
+    let installedWidget;
+    const transforms = [];
+    const controller = createLifecycleController({
+        pos: [0, 0],
+        size: [330, 560],
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    controller.calculateNeededHeight = () => 560;
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.drawInterface = () => {};
+    controller.installVueNodesCompatibilityWidget();
+
+    const canvasHost = {
+        clientWidth: 330,
+        clientHeight: 560,
+        style: {}
+    };
+    const primaryCanvas = {
+        parentElement: canvasHost,
+        clientWidth: 330,
+        clientHeight: 560,
+        width: 330,
+        height: 562,
+        style: {},
+        closest(selector) {
+            return selector === ".lg-node" ? { dataset: { nodeId: "5" } } : null;
+        },
+        getBoundingClientRect() {
+            return { left: 0, top: 0, width: 330, height: 560 };
+        }
+    };
+    const ctx = {
+        canvas: primaryCanvas,
+        save() {},
+        restore() {},
+        translate() {},
+        setTransform(...args) {
+            transforms.push(args);
+        }
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        installedWidget.draw(ctx, controller.node, 330, 1, 560);
+    });
+
+    assert.equal(primaryCanvas.width, 660);
+    assert.equal(primaryCanvas.height, 1124);
+    assert.deepEqual(transforms.at(-1), [2, 0, 0, 2, 0, 0]);
+    assert.equal(ctx.imageSmoothingQuality, "high");
+    assert.equal(ctx.imageSmoothingEnabled, true);
+    assert.equal(ctx.textRendering, "optimizeLegibility");
 });
 
 

@@ -297,18 +297,31 @@ export const nodeLifecycleMethods = {
             zoom = (screenWidth > 0 && layoutWidth > 0) ? (screenWidth / layoutWidth) : 1;
         }
 
-        const dpr = globalThis.devicePixelRatio || 1;
-        const backingScale = Math.max(1, Math.min(3, Math.round(Math.max(1, zoom) * dpr * 100) / 100));
+        const dpr = Math.max(1, Number(globalThis.devicePixelRatio) || 1);
+        const effectiveZoom = Math.max(1, Number.isFinite(zoom) && zoom > 0 ? zoom : 1);
+        const backingScale = Math.max(2, Math.min(3, Math.round(effectiveZoom * dpr * 100) / 100));
         const backingWidth = Math.max(1, Math.ceil(graphWidth * backingScale));
         const backingHeight = Math.max(1, Math.ceil((drawingHeight + 2) * backingScale));
 
         const widthMatches = Math.abs((Number(canvasElement.width) || 0) - backingWidth) <= 1;
         const heightMatches = Math.abs((Number(canvasElement.height) || 0) - backingHeight) <= 1;
 
+        const applyContextHints = (c) => {
+            if (!c) return;
+            try {
+                c.imageSmoothingQuality = 'high';
+                c.imageSmoothingEnabled = true;
+            } catch {}
+            try {
+                c.textRendering = 'optimizeLegibility';
+            } catch {}
+        };
+
         if (widthMatches && heightMatches) {
             if (typeof ctx?.setTransform === "function") {
                 ctx.setTransform(backingScale, 0, 0, backingScale, 0, 0);
             }
+            applyContextHints(ctx);
             if (layoutHeightChanged && !this._isUserResizing) this.scheduleVueCompatHeightRedraw();
             return { ctx, width: graphWidth, height: drawingHeight };
         }
@@ -321,6 +334,7 @@ export const nodeLifecycleMethods = {
         } else if (typeof resizedContext?.scale === "function") {
             resizedContext.scale(backingScale, backingScale);
         }
+        applyContextHints(resizedContext);
         if (layoutHeightChanged && !this._isUserResizing) this.scheduleVueCompatHeightRedraw();
         return { ctx: resizedContext, width: graphWidth, height: drawingHeight };
     },
