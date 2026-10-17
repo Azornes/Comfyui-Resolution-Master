@@ -599,8 +599,34 @@ export const interactionMethods = {
             const sectionKey = property.replace(/^section_/, '').replace(/_collapsed$/, '');
             this.collapsedSections[sectionKey] = node.properties[property];
             if (sectionKey === 'extraControls') {
-                this.userPreferredHeight = this.getStoredPreferredHeight(this.collapsedSections.extraControls);
+                const isCompact = Boolean(this.collapsedSections.extraControls);
+                const minHeight = this.isVueNodesMode?.()
+                    ? this.getVueCompatWidgetHeight()
+                    : Math.max(this.calculateNeededHeight(), this.node.min_size?.[1] || 200);
+                const storedCompact = this.getStoredPreferredHeight(true);
+                const expandedHeight = this.getStoredPreferredHeight(false) || 560;
+
+                if (isCompact) {
+                    if (storedCompact && (storedCompact >= expandedHeight || storedCompact > 500)) {
+                        delete this.node.properties['preferred_compact_height'];
+                        this.userPreferredHeight = null;
+                    } else {
+                        this.userPreferredHeight = storedCompact || null;
+                    }
+                } else {
+                    this.userPreferredHeight = this.getStoredPreferredHeight(false);
+                }
+
                 this.applyCompactSlotLabels();
+                if (this.isVueNodesMode?.()) {
+                    const preferredHeight = this.userPreferredHeight;
+                    const targetHeight = preferredHeight ? Math.max(minHeight, preferredHeight) : minHeight;
+                    this._vueCompatAutoSizedContentHeight = null;
+                    if (this.vueCompatWidget) {
+                        this.vueCompatWidget.computedHeight = minHeight;
+                    }
+                    this.applyVueCompatAutoSize(targetHeight);
+                }
             }
         }
         if (!node.configured) return;
@@ -804,8 +830,34 @@ export const interactionMethods = {
         const propertyKey = `section_${sectionKey}_collapsed`;
         this.node.properties[propertyKey] = this.collapsedSections[sectionKey];
         if (sectionKey === 'extraControls') {
-            this.userPreferredHeight = this.getStoredPreferredHeight(this.collapsedSections.extraControls);
+            const isCompact = Boolean(this.collapsedSections.extraControls);
+            const minHeight = this.isVueNodesMode?.()
+                ? this.getVueCompatWidgetHeight()
+                : Math.max(this.calculateNeededHeight(), this.node.min_size?.[1] || 200);
+            const storedCompact = this.getStoredPreferredHeight(true);
+            const expandedHeight = this.getStoredPreferredHeight(false) || 560;
+
+            if (isCompact) {
+                if (storedCompact && (storedCompact >= expandedHeight || storedCompact > 500)) {
+                    delete this.node.properties['preferred_compact_height'];
+                    this.userPreferredHeight = null;
+                } else {
+                    this.userPreferredHeight = storedCompact || null;
+                }
+            } else {
+                this.userPreferredHeight = this.getStoredPreferredHeight(false);
+            }
+
             this.applyCompactSlotLabels();
+            if (this.isVueNodesMode?.()) {
+                const preferredHeight = this.userPreferredHeight;
+                const targetHeight = preferredHeight ? Math.max(minHeight, preferredHeight) : minHeight;
+                this._vueCompatAutoSizedContentHeight = null;
+                if (this.vueCompatWidget) {
+                    this.vueCompatWidget.computedHeight = minHeight;
+                }
+                this.applyVueCompatAutoSize(targetHeight);
+            }
         }
         this.requestCanvasUpdate(true);
 

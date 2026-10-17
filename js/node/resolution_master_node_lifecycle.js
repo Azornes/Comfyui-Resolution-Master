@@ -49,9 +49,13 @@ export const nodeLifecycleMethods = {
         const minimumHeight = this.getVueCompatWidgetHeight();
         if (!this.collapsedSections?.extraControls) return minimumHeight;
 
+        const nodeHeight = Number(this.node.size?.[1]);
         const computedHeight = Number(this.vueCompatWidget?.computedHeight);
-        return Number.isFinite(computedHeight) && computedHeight > 0
-            ? Math.max(minimumHeight, computedHeight)
+        const candidateHeight = Number.isFinite(nodeHeight) && nodeHeight > 0
+            ? nodeHeight
+            : computedHeight;
+        return Number.isFinite(candidateHeight) && candidateHeight > 0
+            ? Math.max(minimumHeight, candidateHeight)
             : minimumHeight;
     },
 
@@ -64,15 +68,19 @@ export const nodeLifecycleMethods = {
 
         const minimumWidth = this.getVueCompatMinimumWidth();
         const currentWidth = Number(this.node.size?.[0]) || 0;
-        if (currentWidth >= minimumWidth) return false;
+        const minimumHeight = this.getVueCompatWidgetHeight();
+        const currentHeight = Number(this.node.size?.[1]) || 0;
+        const targetWidth = Math.max(currentWidth, minimumWidth);
+        const targetHeight = Math.max(currentHeight, minimumHeight);
 
-        const currentHeight = Number(this.node.size?.[1]) || this.node.min_size?.[1] || 200;
+        if (currentWidth >= minimumWidth && currentHeight >= minimumHeight) return false;
+
         this._isApplyingAutoSize = true;
         try {
             if (typeof this.node.setSize === "function") {
-                this.node.setSize([minimumWidth, currentHeight]);
+                this.node.setSize([targetWidth, targetHeight]);
             } else {
-                this.node.size = [minimumWidth, currentHeight];
+                this.node.size = [targetWidth, targetHeight];
             }
         } finally {
             this._isApplyingAutoSize = false;
@@ -81,7 +89,7 @@ export const nodeLifecycleMethods = {
     },
 
     getVueCompatBottomBadgeClearance() {
-        return this.isVueNodesMode() && this.collapsedSections?.extraControls ? -23 : 0;
+        return 0;
     },
 
     scheduleVueCompatHeightRedraw() {
@@ -214,64 +222,113 @@ export const nodeLifecycleMethods = {
     },
 
     prepareVueCompatCanvasDraw(ctx, width, height, widget) {
-        if (!this.isVueNodesMode() || !this.collapsedSections?.extraControls) {
-            return { ctx, height };
+        const minWidth = this.getVueCompatMinimumWidth();
+        const fallbackWidth = Math.max(minWidth, Number(this.node.size?.[0]) || minWidth);
+        const fallbackHeight = this.getVueCompatWidgetHeight();
+
+        if (!this.isVueNodesMode()) {
+            return { ctx, width: fallbackWidth, height };
         }
 
         const canvasElement = ctx?.canvas;
         const canvasHost = canvasElement?.parentElement;
-        if (!canvasElement || !canvasHost) return { ctx, height };
-
-        const releaseHostMinimum = () => {
-            if (canvasHost.isConnected !== false) {
-                canvasHost.style.minHeight = "0px";
-            }
-        };
-        releaseHostMinimum();
-        if (typeof queueMicrotask === "function") {
-            queueMicrotask(releaseHostMinimum);
+        if (!canvasElement || !canvasHost) {
+            return { ctx, width: fallbackWidth, height: height || fallbackHeight };
         }
 
+        const isCompact = Boolean(this.collapsedSections?.extraControls);
         const minimumHeight = this.getVueCompatWidgetHeight();
-        const hostHeight = Math.floor(Number(canvasHost.clientHeight) || 0);
         const currentHeight = Number(height) || minimumHeight;
-        const layoutHeight = Math.max(minimumHeight, hostHeight || currentHeight);
+        const nodeHeight = Number(this.node.size?.[1]) || minimumHeight;
         const drawingHeight = Math.max(
             minimumHeight,
-            layoutHeight - this.getVueCompatBottomBadgeClearance()
+            isCompact ? nodeHeight : minimumHeight
         );
         if (!Number.isFinite(drawingHeight)) {
-            return { ctx, height: currentHeight };
+            return { ctx, width: fallbackWidth, height: currentHeight };
         }
 
-        const layoutHeightChanged = Math.abs((Number(widget.computedHeight) || 0) - layoutHeight) > 1;
+        const layoutHeightChanged = Math.abs((Number(widget.computedHeight) || 0) - minimumHeight) > 1;
         if (layoutHeightChanged) {
-            widget.computedHeight = layoutHeight;
+            widget.computedHeight = minimumHeight;
         }
-        const pixelRatio = Math.max(
-            1,
-            Number(canvasElement.width) / Math.max(1, Number(width) || canvasElement.clientWidth || 1)
+
+        const graphWidth = Math.max(
+            minWidth,
+            Number(this.node.size?.[0]) || minWidth
         );
-        const backingHeight = Math.max(1, Math.ceil((drawingHeight + 2) * pixelRatio));
-        if (Math.abs(Number(canvasElement.height) - backingHeight) <= 1) {
-            if (layoutHeightChanged) this.scheduleVueCompatHeightRedraw();
-            return { ctx, height: drawingHeight };
+
+        if (canvasHost.style) {
+            canvasHost.style.width = "calc(100% + 24px)";
+            if (isCompact) {
+                canvasHost.style.minHeight = `${minimumHeight}px`;
+                canvasHost.style.height = "";
+            } else {
+                canvasHost.style.minHeight = `${drawingHeight}px`;
+                canvasHost.style.height = `${drawingHeight}px`;
+            }
+        }
+        if (canvasElement.style) {
+            canvasElement.style.width = "100%";
+            canvasElement.style.height = isCompact ? "100%" : `${drawingHeight}px`;
         }
 
-        canvasElement.height = backingHeight;
-        const resizedContext = canvasElement.getContext?.("2d");
-        if (!resizedContext) return { ctx, height: currentHeight };
+        const screenWidth = Number(canvasElement?.getBoundingClientRect?.().width) || Number(width) || graphWidth;
+        const layoutWidth = Math.max(1, Number(canvasHost.clientWidth) || graphWidth);
+        let zoom = 1;
+        if (screenWidth > 0 && layoutWidth > 0) {
+            zoom = screenWidth / layoutWidth;
+        } else if (globalThis.app?.canvas?.ds?.scale) {
+            zoom = Number(globalThis.app.canvas.ds.scale) || 1;
+        }
 
-        resizedContext.scale(pixelRatio, pixelRatio);
+        const dpr = globalThis.devicePixelRatio || 1;
+        const backingScale = Math.max(1, Math.min(3, Math.round(Math.max(1, zoom) * dpr * 100) / 100));
+        const backingWidth = Math.max(1, Math.ceil(graphWidth * backingScale));
+        const backingHeight = Math.max(1, Math.ceil((drawingHeight + 2) * backingScale));
+
+        const widthMatches = Math.abs((Number(canvasElement.width) || 0) - backingWidth) <= 1;
+        const heightMatches = Math.abs((Number(canvasElement.height) || 0) - backingHeight) <= 1;
+
+        if (widthMatches && heightMatches) {
+            if (typeof ctx?.setTransform === "function") {
+                ctx.setTransform(backingScale, 0, 0, backingScale, 0, 0);
+            }
+            if (layoutHeightChanged) this.scheduleVueCompatHeightRedraw();
+            return { ctx, width: graphWidth, height: drawingHeight };
+        }
+
+        canvasElement.width = backingWidth;
+        canvasElement.height = backingHeight;
+        const resizedContext = canvasElement.getContext?.("2d") || ctx;
+        if (typeof resizedContext?.setTransform === "function") {
+            resizedContext.setTransform(backingScale, 0, 0, backingScale, 0, 0);
+        } else if (typeof resizedContext?.scale === "function") {
+            resizedContext.scale(backingScale, backingScale);
+        }
         if (layoutHeightChanged) this.scheduleVueCompatHeightRedraw();
-        return { ctx: resizedContext, height: drawingHeight };
+        return { ctx: resizedContext, width: graphWidth, height: drawingHeight };
     },
 
     normalizeVueCompatPointerEvent(e, pos = null) {
         if (!e || !this.isVueNodesMode()) return e;
 
-        const localX = Number.isFinite(e.offsetX) ? e.offsetX : pos?.[0];
-        const localY = Number.isFinite(e.offsetY) ? e.offsetY : pos?.[1];
+        let localX = Number.isFinite(e.offsetX) ? e.offsetX : pos?.[0];
+        let localY = Number.isFinite(e.offsetY) ? e.offsetY : pos?.[1];
+
+        const canvasElement = this.resolveVueCompatEventCanvas(e) || this._vueCompatCanvasElement;
+        const rect = canvasElement?.getBoundingClientRect?.();
+        const graphWidth = Math.max(this.getVueCompatMinimumWidth(), Number(this.node.size?.[0]) || 330);
+        const graphHeight = this._vueCompatWidgetHeight || this.getVueCompatWidgetHeight();
+        if (rect && rect.width > 0 && rect.height > 0 && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
+            const computedX = (e.clientX - rect.left) * (graphWidth / rect.width);
+            const computedY = (e.clientY - rect.top) * (graphHeight / rect.height);
+            if (Number.isFinite(computedX) && Number.isFinite(computedY)) {
+                localX = computedX;
+                localY = computedY;
+            }
+        }
+
         if (!Number.isFinite(localX) || !Number.isFinite(localY)) return e;
 
         const values = {
@@ -350,10 +407,15 @@ export const nodeLifecycleMethods = {
                 widgetsGrid,
                 slotsElement,
                 canvasHost,
+                canvasElement,
                 nodeElement,
                 bodyPosition: bodyElement.style.position,
-                canvasHostMinHeight: canvasHost?.style.minHeight ?? '',
-                nodeMinWidth: nodeElement?.style.minWidth ?? '',
+                canvasHostMinHeight: canvasHost?.style?.minHeight ?? '',
+                canvasHostHeight: canvasHost?.style?.height ?? '',
+                canvasHostWidth: canvasHost?.style?.width ?? '',
+                canvasElementWidth: canvasElement?.style?.width ?? '',
+                canvasElementHeight: canvasElement?.style?.height ?? '',
+                nodeMinWidth: nodeElement?.style?.minWidth ?? '',
                 gridMarginTop: widgetsGrid.style.marginTop,
                 gridPosition: widgetsGrid.style.position,
                 gridZIndex: widgetsGrid.style.zIndex,
@@ -366,6 +428,10 @@ export const nodeLifecycleMethods = {
                 slotsPointerEvents: slotsElement.style.pointerEvents,
                 slotDotPointerEvents: new Map()
             };
+        }
+
+        if (this._vueCompatLayout.canvasHost?.style) {
+            this._vueCompatLayout.canvasHost.style.width = "calc(100% + 24px)";
         }
 
         const slotHeight = Math.max(0, Number(slotsElement.offsetHeight) || 0);
@@ -562,8 +628,14 @@ export const nodeLifecycleMethods = {
             if (layout.bodyElement) {
                 layout.bodyElement.style.position = layout.bodyPosition ?? "";
             }
-            if (layout.canvasHost) {
+            if (layout.canvasHost?.style) {
                 layout.canvasHost.style.minHeight = layout.canvasHostMinHeight ?? "";
+                layout.canvasHost.style.height = layout.canvasHostHeight ?? "";
+                layout.canvasHost.style.width = layout.canvasHostWidth ?? "";
+            }
+            if (layout.canvasElement?.style) {
+                layout.canvasElement.style.width = layout.canvasElementWidth ?? "";
+                layout.canvasElement.style.height = layout.canvasElementHeight ?? "";
             }
             if (layout.nodeElement) {
                 layout.nodeElement.style.minWidth = layout.nodeMinWidth ?? "";
@@ -851,16 +923,20 @@ export const nodeLifecycleMethods = {
 
                 const canvasElement = ctx.canvas;
                 const isPrimaryCanvas = self.isVueCompatPrimaryCanvas(canvasElement);
+                let drawingWidth = width;
+                let drawingHeight = height;
                 if (isPrimaryCanvas) {
-                    self._vueCompatWidgetWidth = width;
                     self.bindVueCompatCanvasEvents(canvasElement);
                     self.updateVueCompatCanvasLayout(canvasElement);
                     const preparedDraw = self.prepareVueCompatCanvasDraw(ctx, width, height, widget);
                     ctx = preparedDraw.ctx;
-                    height = preparedDraw.height;
+                    drawingWidth = preparedDraw.width ?? width;
+                    drawingHeight = preparedDraw.height ?? height;
+                    self._vueCompatWidgetWidth = drawingWidth;
+                    widget.width = drawingWidth;
                 }
                 const minimumHeight = self.getVueCompatWidgetHeight();
-                const renderedCanvasHeight = Number(height)
+                const renderedCanvasHeight = Number(drawingHeight)
                     || Number(widget.computedHeight)
                     || minimumHeight;
                 const contentHeight = self.collapsedSections?.extraControls
@@ -893,7 +969,7 @@ export const nodeLifecycleMethods = {
                         } finally {
                             ctx.restore();
                         }
-                    }, width, contentHeight);
+                    }, isPrimaryCanvas ? drawingWidth : width, contentHeight);
 
                     self._vueCompatSecondarySurfaces = self._vueCompatSecondarySurfaces || new WeakMap();
                     self._vueCompatSecondarySurfaceStates = self._vueCompatSecondarySurfaceStates || new Set();
@@ -904,7 +980,7 @@ export const nodeLifecycleMethods = {
                         canvasElement,
                         controls: self.controls,
                         sliderKnobAreas: self.sliderKnobAreas,
-                        width,
+                        width: isPrimaryCanvas ? drawingWidth : width,
                         height: contentHeight,
                         redraw() {
                             if (canvasElement.isConnected === false) return false;
@@ -915,11 +991,11 @@ export const nodeLifecycleMethods = {
                                 if (typeof redrawContext.setTransform === "function") {
                                     redrawContext.setTransform(1, 0, 0, 1, 0, 0);
                                 }
-                                redrawContext.clearRect?.(0, 0, canvasElement.width || width, canvasElement.height || contentHeight);
+                                redrawContext.clearRect?.(0, 0, canvasElement.width || (isPrimaryCanvas ? drawingWidth : width), canvasElement.height || contentHeight);
                             } finally {
                                 redrawContext.restore?.();
                             }
-                            widget.draw(redrawContext, _node, width, y, height);
+                            widget.draw(redrawContext, _node, isPrimaryCanvas ? drawingWidth : width, y, contentHeight);
                             return true;
                         }
                     });
@@ -1326,13 +1402,51 @@ export const nodeLifecycleMethods = {
             return result;
         };
         node.onResize = function() {
-            if (!self._isApplyingAutoSize && !self.isVueNodesMode()) {
-                self.storePreferredHeight(this.size[1]);
+            if (!self._isApplyingAutoSize) {
+                if (self.collapsedSections?.extraControls) {
+                    self.storePreferredHeight(this.size[1], true);
+                } else if (!self.isVueNodesMode()) {
+                    self.storePreferredHeight(this.size[1], false);
+                }
             }
-            if (!self.isVueNodesMode()) {
+            if (self.isVueNodesMode()) {
+                const minWidth = self.getVueCompatMinimumWidth();
+                let clampedWidth = Math.max(Number(this.size?.[0]) || 0, minWidth);
+                if (self.collapsedSections?.extraControls) {
+                    const minHeight = self.getVueCompatWidgetHeight();
+                    let clampedHeight = Math.max(Number(this.size?.[1]) || 0, minHeight);
+                    if (clampedWidth !== this.size[0] || clampedHeight !== this.size[1]) {
+                        self._isApplyingAutoSize = true;
+                        try {
+                            if (typeof this.setSize === "function") {
+                                this.setSize([clampedWidth, clampedHeight]);
+                            } else {
+                                this.size[0] = clampedWidth;
+                                this.size[1] = clampedHeight;
+                            }
+                        } finally {
+                            self._isApplyingAutoSize = false;
+                        }
+                    }
+                    if (self.vueCompatWidget) {
+                        self.vueCompatWidget.computedHeight = minHeight;
+                    }
+                } else if (clampedWidth !== this.size[0]) {
+                    self._isApplyingAutoSize = true;
+                    try {
+                        if (typeof this.setSize === "function") {
+                            this.setSize([clampedWidth, this.size[1]]);
+                        } else {
+                            this.size[0] = clampedWidth;
+                        }
+                    } finally {
+                        self._isApplyingAutoSize = false;
+                    }
+                }
+            } else {
                 self.ensureMinimumSize();
             }
-            self.requestVueCompatWidgetDraw(true);
+            self.requestVueCompatWidgetDraw(false);
             self.requestCanvasUpdate(true);
         };
         const origOnRemoved = node.onRemoved;

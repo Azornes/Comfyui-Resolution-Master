@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { mock, test } from "node:test";
+
+mock.module("../../js/utils/icon_utils.js", {
+    namedExports: { inlineSvgIcons: {} }
+});
 
 import { nodeLifecycleMethods } from "../../js/node/resolution_master_node_lifecycle.js";
+const { interactionMethods } = await import("../../js/interaction/resolution_master_interaction_methods.js");
 
 
 function withLiteGraph(value, callback) {
@@ -31,13 +36,19 @@ function createLifecycleController(nodeOverrides = {}) {
         outputs: [],
         flags: {},
         inputs: [],
+        setSize(size) {
+            this.size = [...size];
+        },
         ...nodeOverrides
     };
     const controller = {
         node,
-        collapsedSections: { extraControls: false }
+        collapsedSections: { extraControls: false },
+        requestCanvasUpdate() {},
+        syncBackendFallbackWidgets() {},
+        installCanvasDragZoomBypass() {}
     };
-    Object.assign(controller, nodeLifecycleMethods);
+    Object.assign(controller, nodeLifecycleMethods, interactionMethods);
     controller.calculateNeededHeight = () => 240;
     return controller;
 }
@@ -522,3 +533,301 @@ test("LiteGraph lifecycle hooks synchronize serialization and clean up on remova
         "original-remove"
     ]);
 });
+
+
+test("Nodes 2.0 zoom scaling prevents node inflation, locks CSS dimensions, and normalizes coordinates", () => {
+    let installedWidget;
+    const drawnSizes = [];
+    const transforms = [];
+    const controller = createLifecycleController({
+        pos: [50, 80],
+        size: [330, 560],
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    controller.calculateNeededHeight = () => 560;
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.drawInterface = () => {
+        drawnSizes.push([...controller.node.size]);
+    };
+    controller.installVueNodesCompatibilityWidget();
+
+    const canvasHost = {
+        clientWidth: 330,
+        clientHeight: 560,
+        style: {}
+    };
+    const primaryCanvas = {
+        parentElement: canvasHost,
+        clientWidth: 330,
+        clientHeight: 560,
+        width: 6600,
+        height: 1124,
+        style: {},
+        closest(selector) {
+            return selector === ".lg-node" ? { dataset: { nodeId: "5" } } : null;
+        },
+        getBoundingClientRect() {
+            return { left: 100, top: 100, width: 3300, height: 5600 };
+        }
+    };
+    const ctx = {
+        canvas: primaryCanvas,
+        save() {},
+        restore() {},
+        translate() {},
+        setTransform(...args) {
+            transforms.push(args);
+        }
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        // Simulates WidgetLegacy at 10x zoom passing screen width 3300.
+        installedWidget.draw(ctx, controller.node, 3300, 1, 560);
+    });
+
+    // 1. Assert node size was not inflated during drawInterface or after.
+    assert.deepEqual(drawnSizes, [[330, 560]]);
+    assert.deepEqual(controller.node.size, [330, 560]);
+    assert.equal(controller._vueCompatWidgetWidth, 330);
+    assert.equal(installedWidget.width, 330);
+
+    // 2. Assert canvas element and host styles lock graph dimensions and span node full width.
+    assert.equal(primaryCanvas.style.width, "100%");
+    assert.equal(primaryCanvas.style.height, "560px");
+    assert.equal(canvasHost.style.width, "calc(100% + 24px)");
+    assert.equal(canvasHost.style.minHeight, "560px");
+    assert.equal(canvasHost.style.height, "560px");
+
+    // 3. Assert buffer was resized to crisp, capped backing scale (3x) rather than screen pixels.
+    assert.equal(primaryCanvas.width, 990);
+    assert.equal(primaryCanvas.height, 1686);
+    assert.deepEqual(transforms.at(-1), [3, 0, 0, 3, 0, 0]);
+
+    // 4. Assert pointer coordinates at 10x zoom normalize accurately to graph space.
+    controller._vueCompatCanvasElement = primaryCanvas;
+    const pointerEvent = {
+        clientX: 1100,
+        clientY: 2900,
+        offsetX: 1000,
+        offsetY: 2800
+    };
+    withLiteGraph({ vueNodesMode: true }, () => controller.normalizeVueCompatPointerEvent(pointerEvent));
+    // localX = (1100 - 100) * (330 / 3300) = 100
+    // localY = (2900 - 100) * (560 / 5600) = 280
+    // canvasX = 50 + 100 = 150
+    // canvasY = 80 + 280 = 360
+    assert.equal(pointerEvent.canvasX, 150);
+    assert.equal(pointerEvent.canvasY, 360);
+});
+
+
+test("Nodes 2.0 zoom out maintains minimum graph dimensions and context scale", () => {
+    let installedWidget;
+    const drawnSizes = [];
+    const transforms = [];
+    const controller = createLifecycleController({
+        pos: [0, 0],
+        size: [330, 560],
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    controller.calculateNeededHeight = () => 560;
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.drawInterface = () => {
+        drawnSizes.push([...controller.node.size]);
+    };
+    controller.installVueNodesCompatibilityWidget();
+
+    const canvasHost = {
+        clientWidth: 330,
+        clientHeight: 560,
+        style: {}
+    };
+    const primaryCanvas = {
+        parentElement: canvasHost,
+        clientWidth: 330,
+        clientHeight: 560,
+        width: 330,
+        height: 562,
+        style: {},
+        closest(selector) {
+            return selector === ".lg-node" ? { dataset: { nodeId: "5" } } : null;
+        },
+        getBoundingClientRect() {
+            return { left: 0, top: 0, width: 165, height: 280 };
+        }
+    };
+    const ctx = {
+        canvas: primaryCanvas,
+        save() {},
+        restore() {},
+        translate() {},
+        setTransform(...args) {
+            transforms.push(args);
+        }
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        // Simulates WidgetLegacy at 0.5x zoom passing screen width 165.
+        installedWidget.draw(ctx, controller.node, 165, 1, 560);
+    });
+
+    assert.deepEqual(drawnSizes, [[330, 560]]);
+    assert.deepEqual(controller.node.size, [330, 560]);
+    assert.equal(controller._vueCompatWidgetWidth, 330);
+    assert.equal(primaryCanvas.style.height, "560px");
+    assert.equal(primaryCanvas.width, 330);
+    assert.equal(primaryCanvas.height, 562);
+    assert.deepEqual(transforms.at(-1), [1, 0, 0, 1, 0, 0]);
+});
+
+
+test("Nodes 2.0 compact mode toggle automatically shrinks node height and allows resizing down", () => {
+    let installedWidget;
+    const controller = createLifecycleController({
+        pos: [0, 0],
+        size: [330, 560],
+        min_size: [330, 200],
+        widgets: [{ name: "width", value: 512 }, { name: "height", value: 512 }],
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+
+    controller.calculateNeededHeight = () => (controller.collapsedSections.extraControls ? 240 : 560);
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.drawInterface = () => {};
+    controller.setupNode();
+    controller.installVueNodesCompatibilityWidget();
+
+    // 1. Initially auto-sized at 560px
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.applyVueCompatAutoSize(560);
+    });
+    assert.deepEqual(controller.node.size, [330, 560]);
+
+    // 2. Click toggle button to minimize
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.handleSectionHeaderClick("extraControlsHeader");
+    });
+
+    assert.equal(controller.collapsedSections.extraControls, true);
+    // Node height immediately shrunk to compact height 240px!
+    assert.deepEqual(controller.node.size, [330, 240]);
+    assert.equal(installedWidget.computedHeight, 240);
+    assert.equal(controller.node.properties.preferred_expanded_height, 560);
+
+    // 3. Draw in compact mode: canvasHost minHeight is locked to minimumHeight (240px), not inflated
+    const canvasHost = { clientWidth: 330, clientHeight: 240, style: {} };
+    const primaryCanvas = {
+        parentElement: canvasHost,
+        clientWidth: 330,
+        clientHeight: 240,
+        width: 330,
+        height: 263,
+        style: {},
+        closest(selector) {
+            return selector === ".lg-node" ? { dataset: { nodeId: "5" } } : null;
+        },
+        getBoundingClientRect() {
+            return { left: 0, top: 0, width: 330, height: 240 };
+        }
+    };
+    const ctx = {
+        canvas: primaryCanvas,
+        save() {},
+        restore() {},
+        translate() {},
+        setTransform() {}
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        installedWidget.draw(ctx, controller.node, 330, 1, 240);
+    });
+
+    // drawingHeight = 240px (no inflation offset)
+    assert.equal(canvasHost.style.minHeight, "240px");
+    assert.equal(canvasHost.style.height, "");
+    assert.equal(primaryCanvas.style.height, "100%");
+
+    // 4. User manually resizes taller (to 400px)
+    controller.node.size = [330, 400];
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.node.onResize();
+        installedWidget.draw(ctx, controller.node, 330, 1, 400);
+    });
+    assert.equal(installedWidget.computedHeight, 240);
+    assert.equal(controller.node.properties.preferred_compact_height, 400);
+    assert.equal(canvasHost.style.minHeight, "240px");
+    assert.equal(canvasHost.style.height, "");
+
+    // 5. User manually resizes back down (to 270px)
+    controller.node.size = [330, 270];
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.node.onResize();
+        installedWidget.draw(ctx, controller.node, 330, 1, 270);
+    });
+    assert.equal(installedWidget.computedHeight, 240);
+    assert.equal(controller.node.properties.preferred_compact_height, 270);
+    assert.equal(canvasHost.style.minHeight, "240px");
+    assert.equal(canvasHost.style.height, "");
+
+    // 6. User attempts to resize smaller than minimum (150px) -> clamped to 240px
+    controller.node.size = [330, 150];
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.node.onResize();
+    });
+    assert.deepEqual(controller.node.size, [330, 240]);
+    assert.equal(installedWidget.computedHeight, 240);
+
+    // 7. Click toggle to expand back -> restores stored expanded height (560px)
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.handleSectionHeaderClick("extraControlsHeader");
+    });
+    assert.equal(controller.collapsedSections.extraControls, false);
+    assert.deepEqual(controller.node.size, [330, 560]);
+    assert.equal(installedWidget.computedHeight, 560);
+
+    // 8. Click toggle to minimize again -> restores stored compact height (240px)
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.handleSectionHeaderClick("extraControlsHeader");
+    });
+    assert.equal(controller.collapsedSections.extraControls, true);
+    assert.deepEqual(controller.node.size, [330, 240]);
+    assert.equal(installedWidget.computedHeight, 240);
+
+    // 9. If user resizes to 270px in compact mode, toggling expand and minimize restores 270px
+    controller.node.size = [330, 270];
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.node.onResize();
+        controller.handleSectionHeaderClick("extraControlsHeader"); // expand
+    });
+    assert.deepEqual(controller.node.size, [330, 560]);
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.handleSectionHeaderClick("extraControlsHeader"); // minimize
+    });
+    assert.deepEqual(controller.node.size, [330, 270]);
+
+    // 10. If stored compact height is corrupted/too large (e.g. >= 560), toggle resets it to minHeight
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.handleSectionHeaderClick("extraControlsHeader"); // expand
+    });
+    controller.node.properties.preferred_compact_height = 800;
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.handleSectionHeaderClick("extraControlsHeader"); // collapse
+    });
+    assert.equal(controller.collapsedSections.extraControls, true);
+    assert.deepEqual(controller.node.size, [330, 240]);
+    assert.equal(installedWidget.computedHeight, 240);
+    assert.equal(controller.node.properties.preferred_compact_height, undefined);
+});
+
