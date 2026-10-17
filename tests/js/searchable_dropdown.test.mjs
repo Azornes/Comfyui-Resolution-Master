@@ -71,6 +71,11 @@ class MockElement {
         const event = { stopPropagation: () => {} };
         for (const h of handlers) h(event);
     }
+    mousedown() {
+        const handlers = this.listeners['mousedown'] || [];
+        const event = { stopPropagation: () => {} };
+        for (const h of handlers) h(event);
+    }
 }
 
 globalThis.document = {
@@ -140,4 +145,20 @@ test("SearchableDropdown mode toggle switches mode and hides dropdown", async ()
     assert.equal(switchedMode, "visual");
     assert.deepEqual(switchedItems, mockItems);
     assert.equal(dropdown.isActive, false);
+});
+
+test("SearchableDropdown mousedown on overlay hides dropdown", async () => {
+    const { SearchableDropdown } = await import("../../js/components/searchable_dropdown.js");
+    const dropdown = new SearchableDropdown();
+    dropdown.show(["Item 1", "Item 2"], {});
+
+    assert.equal(dropdown.isActive, true);
+    assert.ok(dropdown.overlay);
+
+    await new Promise(resolve => setTimeout(resolve, 60));
+
+    dropdown.overlay.mousedown();
+    assert.equal(dropdown.isActive, false);
+    assert.equal(dropdown.container, null);
+    assert.equal(dropdown.overlay, null);
 });

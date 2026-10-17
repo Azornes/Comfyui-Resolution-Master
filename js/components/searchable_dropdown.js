@@ -1,12 +1,13 @@
 // searchable_dropdown.js - A searchable dropdown component for better UX with large lists
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { loadIcons } from "../utils/icon_utils.js";
-import { createViewModeToggleBar } from "../utils/dialog_helper.js";
+import { createModalWrapper, createViewModeToggleBar } from "../utils/dialog_helper.js";
 
 const log = createModuleLogger('searchable_dropdown');
 
 export class SearchableDropdown {
     constructor() {
+        this.modalWrapper = null;
         this.overlay = null;
         this.container = null;
         this.searchInput = null;
@@ -56,16 +57,18 @@ export class SearchableDropdown {
         this.selectedIndex = -1;
         this.isExpanded = options.initialExpanded || false;
 
-        // Create overlay
-        this.overlay = document.createElement('div');
-        this.overlay.className = 'resolution-master-searchable-dropdown-overlay';
-        this.overlay.addEventListener('mousedown', () => this.hide());
-        document.body.appendChild(this.overlay);
-
-        // Create container
-        this.container = document.createElement('div');
-        this.container.className = 'resolution-master-searchable-dropdown';
-        this.container.addEventListener('mousedown', (e) => e.stopPropagation());
+        // Create overlay and dialog container via dialog_helper
+        this.modalWrapper = createModalWrapper({
+            className: 'resolution-master-searchable-dropdown',
+            overlayClassName: 'resolution-master-searchable-dropdown-overlay',
+            onClose: () => {
+                if (this.isActive) {
+                    this.hide();
+                }
+            }
+        });
+        this.overlay = this.modalWrapper.overlay;
+        this.container = this.modalWrapper.dialog;
 
         // Position container
         const event = options.event;
@@ -150,8 +153,6 @@ export class SearchableDropdown {
         this.countIndicator = document.createElement('div');
         this.countIndicator.className = 'resolution-master-searchable-dropdown-count';
         this.container.appendChild(this.countIndicator);
-
-        document.body.appendChild(this.container);
 
         // Render items
         this.renderItems();
@@ -484,15 +485,22 @@ export class SearchableDropdown {
      * Hides and cleans up the dropdown
      */
     hide() {
-        if (this.container && this.container.parentNode) {
-            document.body.removeChild(this.container);
-        }
-        if (this.overlay && this.overlay.parentNode) {
-            document.body.removeChild(this.overlay);
+        if (this.modalWrapper) {
+            const wrapper = this.modalWrapper;
+            this.modalWrapper = null;
+            wrapper.close();
+        } else {
+            if (this.container && this.container.parentNode) {
+                document.body.removeChild(this.container);
+            }
+            if (this.overlay && this.overlay.parentNode) {
+                document.body.removeChild(this.overlay);
+            }
         }
         
         this.container = null;
         this.overlay = null;
+        this.modalWrapper = null;
         this.searchInput = null;
         this.itemsContainer = null;
         this.isActive = false;

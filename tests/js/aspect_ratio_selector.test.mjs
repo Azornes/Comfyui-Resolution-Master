@@ -107,6 +107,11 @@ class MockElement {
         const event = { stopPropagation: () => {} };
         for (const h of handlers) h(event);
     }
+    mousedown() {
+        const handlers = this.listeners['mousedown'] || [];
+        const event = { stopPropagation: () => {} };
+        for (const h of handlers) h(event);
+    }
 }
 
 globalThis.document = {
@@ -166,6 +171,26 @@ test("AspectRatioSelector preset selection invokes callback and hides selector",
     selector.selectPreset("1024x1024");
 
     assert.equal(selected, "1024x1024");
+    assert.equal(selector.isActive, false);
+    assert.equal(selector.container, null);
+    assert.equal(selector.overlay, null);
+});
+
+test("AspectRatioSelector mousedown on overlay hides selector", async () => {
+    const { AspectRatioSelector } = await import("../../js/components/aspect_ratio_selector.js");
+    const selector = new AspectRatioSelector();
+    const presets = {
+        "1024x1024": { width: 1024, height: 1024 }
+    };
+
+    selector.show(presets, {
+        currentMode: 'visual'
+    });
+
+    assert.equal(selector.isActive, true);
+    assert.ok(selector.overlay);
+
+    selector.overlay.mousedown();
     assert.equal(selector.isActive, false);
     assert.equal(selector.container, null);
     assert.equal(selector.overlay, null);

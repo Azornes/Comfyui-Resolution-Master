@@ -2,12 +2,13 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { AspectRatioUtils } from "../presets/aspect_ratio_utils.js";
 import { loadIcons } from "../utils/icon_utils.js";
-import { createViewModeToggleBar } from "../utils/dialog_helper.js";
+import { createModalWrapper, createViewModeToggleBar } from "../utils/dialog_helper.js";
 
 const log = createModuleLogger('aspect_ratio_selector');
 
 export class AspectRatioSelector {
     constructor() {
+        this.modalWrapper = null;
         this.overlay = null;
         this.container = null;
         this.isActive = false;
@@ -52,32 +53,34 @@ export class AspectRatioSelector {
             }
         }
 
-        // Create overlay
-        this.overlay = document.createElement('div');
-        this.overlay.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5); z-index: 9998;
-        `;
-        this.overlay.addEventListener('mousedown', () => this.hide());
-        document.body.appendChild(this.overlay);
-
-        // Create container (no overflow here)
-        this.container = document.createElement('div');
-        this.container.className = 'aspect-ratio-selector';
-        this.container.addEventListener('mousedown', (e) => e.stopPropagation());
-        this.container.style.cssText = `
-            position: fixed;
-            background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
-            border: 2px solid #555;
-            border-radius: 4px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
-            z-index: 9999;
-            font-family: Arial, sans-serif;
-            max-width: calc(100vw - 20px);
-            max-height: calc(100vh - 20px);
-            display: flex;
-            flex-direction: column;
-        `;
+        // Create overlay and container via dialog_helper
+        this.modalWrapper = createModalWrapper({
+            className: 'aspect-ratio-selector',
+            overlayStyle: `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0, 0, 0, 0.5); z-index: 9998;
+            `,
+            dialogStyle: `
+                position: fixed;
+                background: linear-gradient(135deg, #2a2a2a 0%, #1e1e1e 100%);
+                border: 2px solid #555;
+                border-radius: 4px;
+                box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+                z-index: 9999;
+                font-family: Arial, sans-serif;
+                max-width: calc(100vw - 20px);
+                max-height: calc(100vh - 20px);
+                display: flex;
+                flex-direction: column;
+            `,
+            onClose: () => {
+                if (this.isActive) {
+                    this.hide();
+                }
+            }
+        });
+        this.overlay = this.modalWrapper.overlay;
+        this.container = this.modalWrapper.dialog;
         
         // Add custom scrollbar styling for better visibility
         const style = document.createElement('style');
@@ -221,7 +224,6 @@ export class AspectRatioSelector {
             // Reposition container to center after size change
             setTimeout(() => repositionContainer(), 0);
         });
-        document.body.appendChild(this.container);
         
         // Update scrollbar styles to apply to scroll wrapper
         style.textContent = `
@@ -336,15 +338,22 @@ export class AspectRatioSelector {
             this.resizeHandler = null;
         }
         
-        if (this.container && this.container.parentNode) {
-            document.body.removeChild(this.container);
-        }
-        if (this.overlay && this.overlay.parentNode) {
-            document.body.removeChild(this.overlay);
+        if (this.modalWrapper) {
+            const wrapper = this.modalWrapper;
+            this.modalWrapper = null;
+            wrapper.close();
+        } else {
+            if (this.container && this.container.parentNode) {
+                document.body.removeChild(this.container);
+            }
+            if (this.overlay && this.overlay.parentNode) {
+                document.body.removeChild(this.overlay);
+            }
         }
         
         this.container = null;
         this.overlay = null;
+        this.modalWrapper = null;
         this.horizontalScrollIndicator = null;
         this.isActive = false;
         this.presets = {};

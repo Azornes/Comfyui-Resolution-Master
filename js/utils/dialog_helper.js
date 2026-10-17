@@ -37,7 +37,10 @@ export function createModalWrapper({ className, overlayClassName, overlayStyle, 
         dialog.style.cssText = dialogStyle;
     }
 
+    let isClosed = false;
     const close = () => {
+        if (isClosed) return;
+        isClosed = true;
         log.debug(`Closing modal wrapper for ${className}`);
         if (dialog.parentNode) {
             dialog.parentNode.removeChild(dialog);
