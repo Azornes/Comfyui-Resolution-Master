@@ -66,6 +66,11 @@ class MockElement {
     querySelectorAll(selector) {
         return [];
     }
+    click() {
+        const handlers = this.listeners['click'] || [];
+        const event = { stopPropagation: () => {} };
+        for (const h of handlers) h(event);
+    }
 }
 
 globalThis.document = {
@@ -107,4 +112,32 @@ test("SearchableDropdown toggleExpand and applyExpandedState updates maxHeight",
     await new Promise(resolve => setTimeout(resolve, 100));
     
     dropdown.hide();
+});
+
+test("SearchableDropdown mode toggle switches mode and hides dropdown", async () => {
+    const { SearchableDropdown } = await import("../../js/components/searchable_dropdown.js");
+    const dropdown = new SearchableDropdown();
+    const mockItems = ["Item A", "Item B"];
+    let switchedMode = null;
+    let switchedItems = null;
+
+    dropdown.show(mockItems, {
+        currentMode: 'list',
+        onModeChange: (newMode, items) => {
+            switchedMode = newMode;
+            switchedItems = items;
+        }
+    });
+
+    assert.equal(dropdown.isActive, true);
+    const modeToggleContainer = dropdown.container.children[0];
+    const modeToggleButton = modeToggleContainer.children[1];
+    assert.ok(modeToggleButton.textContent.includes("List"));
+
+    await new Promise(resolve => setTimeout(resolve, 60));
+
+    modeToggleButton.click();
+    assert.equal(switchedMode, "visual");
+    assert.deepEqual(switchedItems, mockItems);
+    assert.equal(dropdown.isActive, false);
 });

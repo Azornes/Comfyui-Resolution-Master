@@ -1,7 +1,8 @@
 // aspect_ratio_selector.js - Visual aspect ratio selector for presets
 import { createModuleLogger } from "../log_system/log_funcs.js";
 import { AspectRatioUtils } from "../presets/aspect_ratio_utils.js";
-import { loadIcons, getIconHtml } from "../utils/icon_utils.js";
+import { loadIcons } from "../utils/icon_utils.js";
+import { createViewModeToggleBar } from "../utils/dialog_helper.js";
 
 const log = createModuleLogger('aspect_ratio_selector');
 
@@ -105,66 +106,22 @@ export class AspectRatioSelector {
         this.container.style.top = '0px';
 
         // Create mode toggle (at the very top)
-        const modeToggleContainer = document.createElement('div');
-        modeToggleContainer.style.cssText = `
-            flex-shrink: 0;
-            padding: 6px 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid #444;
-            background: rgba(0, 0, 0, 0.2);
-        `;
-        
-        const modeLabel = document.createElement('span');
-        modeLabel.textContent = 'View:';
-        modeLabel.style.cssText = `
-            color: #aaa;
-            font-size: 11px;
-            font-weight: bold;
-        `;
-        
-        const modeToggle = document.createElement('button');
-        const useVisualMode = options.currentMode !== 'list';
-        modeToggle.textContent = useVisualMode ? '🎨 Visual' : '📝 List';
-        modeToggle.style.cssText = `
-            padding: 4px 12px;
-            background: ${useVisualMode ? 'rgba(90, 170, 255, 0.2)' : 'rgba(100, 100, 100, 0.3)'};
-            border: 1px solid ${useVisualMode ? '#5af' : '#666'};
-            border-radius: 4px;
-            color: ${useVisualMode ? '#5af' : '#aaa'};
-            font-size: 11px;
-            cursor: pointer;
-            outline: none;
-            transition: all 0.2s;
-        `;
-        
-        modeToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const newMode = useVisualMode ? 'list' : 'visual';
-            
-            // Close current selector and reopen with new mode
-            const callback = this.callback;
-            const selectedPreset = this.selectedPreset;
-            const presets = this.presets;
-            this.hide();
-            
-            if (options.onModeChange) {
-                options.onModeChange(newMode, presets, { callback, selectedPreset });
-            }
-        });
-        
-        modeToggle.addEventListener('mouseenter', () => {
-            modeToggle.style.background = useVisualMode ? 'rgba(90, 170, 255, 0.3)' : 'rgba(120, 120, 120, 0.4)';
-        });
-        
-        modeToggle.addEventListener('mouseleave', () => {
-            modeToggle.style.background = useVisualMode ? 'rgba(90, 170, 255, 0.2)' : 'rgba(100, 100, 100, 0.3)';
-        });
-        
-        modeToggleContainer.appendChild(modeLabel);
-        modeToggleContainer.appendChild(modeToggle);
-        this.container.appendChild(modeToggleContainer);
+        if (options.onModeChange) {
+            const modeToggleContainer = createViewModeToggleBar({
+                currentMode: options.currentMode || 'visual',
+                onToggle: (newMode) => {
+                    const callback = this.callback;
+                    const selectedPreset = this.selectedPreset;
+                    const presets = this.presets;
+                    this.hide();
+                    
+                    if (options.onModeChange) {
+                        options.onModeChange(newMode, presets, { callback, selectedPreset });
+                    }
+                }
+            });
+            this.container.appendChild(modeToggleContainer);
+        }
         
         // Create search bar (fixed at top, outside scroll area)
         const searchContainer = document.createElement('div');
