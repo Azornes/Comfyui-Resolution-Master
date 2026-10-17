@@ -128,84 +128,52 @@ export class RenameDialogManager {
     }
 
     /**
-     * Starts renaming a category by converting title to input
-     * @param {HTMLElement} titleElement - The category title element
-     * @param {string} categoryName - Current category name
+     * Sets up inline input editing for an element.
+     * @private
+     * @param {HTMLElement} element - Target element to replace
+     * @param {Object} options
+     * @param {string} options.initialValue - Initial text value
+     * @param {string} options.inputClassName - CSS class for input
+     * @param {function(string): (boolean|void)} options.onSave - Callback returning true if saved, false if retry/keep editing
+     * @param {function(): HTMLElement} options.onRestore - Callback returning original element to restore
      */
-    startRenamingCategory(titleElement, categoryName) {
-        const originalText = titleElement.textContent;
-        const categoryNameOnly = categoryName; // Without the count
-        
-        // Create input field
+    _setupInlineEdit(element, { initialValue, inputClassName, onSave, onRestore }) {
         const input = document.createElement('input');
         input.type = 'text';
-        input.value = categoryNameOnly;
-        input.className = 'resolution-master-rename-inline-category-input';
-        
-        // Replace title with input
-        titleElement.replaceWith(input);
+        input.value = initialValue;
+        input.className = inputClassName;
+
+        element.replaceWith(input);
         input.focus();
         input.select();
-        
-        // Flag to prevent multiple saves
+
         let isSaving = false;
-        
-        // Handle Enter key - save
+
         const handleSave = () => {
-            // Prevent multiple calls
             if (isSaving) return;
             isSaving = true;
-            
-            const newName = input.value.trim();
-            
-            if (!newName) {
-                // Empty name - restore original
-                const newTitle = this.recreateCategoryTitleElement(originalText, categoryNameOnly);
-                input.replaceWith(newTitle);
+
+            const trimmedValue = input.value.trim();
+
+            if (!trimmedValue || trimmedValue === initialValue) {
+                input.replaceWith(onRestore());
                 return;
             }
-            
-            if (newName === categoryNameOnly) {
-                // No change - restore original
-                const newTitle = this.recreateCategoryTitleElement(originalText, categoryNameOnly);
-                input.replaceWith(newTitle);
-                return;
-            }
-            
-            // Generate unique name if needed (auto-add suffix like "(1)", "(2)", etc.)
-            let finalNewName = newName;
-            const customPresets = this.parentDialog.manager.getCustomPresets();
-            
-            // If category name already exists (and it's not the same category), add suffix
-            if (customPresets[finalNewName] && finalNewName !== categoryNameOnly) {
-                let counter = 1;
-                while (customPresets[`${newName} (${counter})`]) {
-                    counter++;
-                }
-                finalNewName = `${newName} (${counter})`;
-            }
-            
-            // Try to rename with the final unique name
-            const success = this.parentDialog.manager.renameCategory(categoryNameOnly, finalNewName);
-            
+
+            const success = onSave(trimmedValue);
             if (success) {
-                // Success - refresh dialog
                 this.parentDialog.renderDialog();
             } else {
-                // Failed - show error and keep editing
-                alert(`Cannot rename category to "${finalNewName}".\n\nOld name: "${categoryNameOnly}"\nCheck browser console for details.`);
+                isSaving = false;
                 input.focus();
                 input.select();
             }
         };
-        
-        // Handle Escape key - cancel
+
         const handleCancel = () => {
-            const newTitle = this.recreateCategoryTitleElement(originalText, categoryNameOnly);
-            input.replaceWith(newTitle);
+            input.replaceWith(onRestore());
         };
-        
-        // Event listeners
+
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
@@ -215,10 +183,45 @@ export class RenameDialogManager {
                 handleCancel();
             }
         });
-        
+
         input.addEventListener('blur', () => {
-            // Save on blur
             handleSave();
+        });
+    }
+
+    /**
+     * Starts renaming a category by converting title to input
+     * @param {HTMLElement} titleElement - The category title element
+     * @param {string} categoryName - Current category name
+     */
+    startRenamingCategory(titleElement, categoryName) {
+        const originalText = titleElement.textContent;
+        const categoryNameOnly = categoryName; // Without the count
+
+        this._setupInlineEdit(titleElement, {
+            initialValue: categoryNameOnly,
+            inputClassName: 'resolution-master-rename-inline-category-input',
+            onRestore: () => this.recreateCategoryTitleElement(originalText, categoryNameOnly),
+            onSave: (newName) => {
+                let finalNewName = newName;
+                const customPresets = this.parentDialog.manager.getCustomPresets();
+
+                // If category name already exists (and it's not the same category), add suffix
+                if (customPresets[finalNewName] && finalNewName !== categoryNameOnly) {
+                    let counter = 1;
+                    while (customPresets[`${newName} (${counter})`]) {
+                        counter++;
+                    }
+                    finalNewName = `${newName} (${counter})`;
+                }
+
+                // Try to rename with the final unique name
+                const success = this.parentDialog.manager.renameCategory(categoryNameOnly, finalNewName);
+                if (!success) {
+                    alert(`Cannot rename category to "${finalNewName}".\n\nOld name: "${categoryNameOnly}"\nCheck browser console for details.`);
+                }
+                return success;
+            }
         });
     }
 
@@ -248,90 +251,29 @@ export class RenameDialogManager {
      */
     startRenamingPreset(nameElement, category, presetName, dims) {
         const originalText = nameElement.textContent;
-        
-        // Create input field
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = presetName;
-        input.className = 'resolution-master-rename-inline-preset-input';
-        
-        // Replace name with input
-        nameElement.replaceWith(input);
-        input.focus();
-        input.select();
-        
-        // Flag to prevent multiple saves
-        let isSaving = false;
-        
-        // Handle Enter key - save
-        const handleSave = () => {
-            // Prevent multiple calls
-            if (isSaving) return;
-            isSaving = true;
-            
-            const newName = input.value.trim();
-            
-            if (!newName) {
-                // Empty name - restore original
-                const newNameElement = this.recreatePresetNameElement(originalText, category, presetName, dims);
-                input.replaceWith(newNameElement);
-                return;
+
+        this._setupInlineEdit(nameElement, {
+            initialValue: presetName,
+            inputClassName: 'resolution-master-rename-inline-preset-input',
+            onRestore: () => this.recreatePresetNameElement(originalText, category, presetName, dims),
+            onSave: (newName) => {
+                // Check if new name already exists in category
+                const customPresets = this.parentDialog.manager.getCustomPresets();
+                const categoryPresets = customPresets[category] || {};
+                if (Object.keys(categoryPresets).includes(newName)) {
+                    // Name exists - show error and keep editing
+                    alert(`Preset "${newName}" already exists in category "${category}".\n\nPlease choose a different name.`);
+                    return false;
+                }
+
+                // Try to rename using updatePreset
+                const success = this.parentDialog.manager.updatePreset(category, presetName, newName, dims.width, dims.height);
+                if (!success) {
+                    // Failed - show error and keep editing
+                    alert(`Cannot rename preset to "${newName}".\n\nOld name: "${presetName}"\nCheck browser console for details.`);
+                }
+                return success;
             }
-            
-            if (newName === presetName) {
-                // No change - restore original
-                const newNameElement = this.recreatePresetNameElement(originalText, category, presetName, dims);
-                input.replaceWith(newNameElement);
-                return;
-            }
-            
-            // Check if new name already exists in category
-            const customPresets = this.parentDialog.manager.getCustomPresets();
-            const categoryPresets = customPresets[category] || {};
-            if (Object.keys(categoryPresets).includes(newName)) {
-                // Name exists - show error and keep editing
-                alert(`Preset "${newName}" already exists in category "${category}".\n\nPlease choose a different name.`);
-                isSaving = false; // Reset flag to allow retry
-                input.focus();
-                input.select();
-                return;
-            }
-            
-            // Try to rename using updatePreset
-            const success = this.parentDialog.manager.updatePreset(category, presetName, newName, dims.width, dims.height);
-            
-            if (success) {
-                // Success - refresh dialog
-                this.parentDialog.renderDialog();
-            } else {
-                // Failed - show error and keep editing
-                alert(`Cannot rename preset to "${newName}".\n\nOld name: "${presetName}"\nCheck browser console for details.`);
-                isSaving = false; // Reset flag to allow retry
-                input.focus();
-                input.select();
-            }
-        };
-        
-        // Handle Escape key - cancel
-        const handleCancel = () => {
-            const newNameElement = this.recreatePresetNameElement(originalText, category, presetName, dims);
-            input.replaceWith(newNameElement);
-        };
-        
-        // Event listeners
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSave();
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                handleCancel();
-            }
-        });
-        
-        input.addEventListener('blur', () => {
-            // Save on blur
-            handleSave();
         });
     }
 
