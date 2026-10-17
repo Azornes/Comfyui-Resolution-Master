@@ -178,3 +178,32 @@ test("hiding a built-in keeps an active custom override selected", () => {
 
     assert.equal(rm.node.properties.selectedPreset, "Square");
 });
+
+
+test("reorderCategories and renameCategory preserve key order in customPresets", () => {
+    const { rm, manager } = createManager();
+    manager.addPreset("CatA", "P1", 512, 512);
+    manager.addPreset("CatB", "P2", 640, 480);
+    manager.addPreset("CatC", "P3", 800, 600);
+
+    assert.deepEqual(Object.keys(manager.getCustomPresets()), ["CatA", "CatB", "CatC"]);
+
+    // Reorder CatC to index 0
+    assert.equal(manager.reorderCategories("CatC", 0), true);
+    assert.deepEqual(Object.keys(manager.getCustomPresets()), ["CatC", "CatA", "CatB"]);
+
+    // Rename CatA to CatA_Renamed in-place
+    assert.equal(manager.renameCategory("CatA", "CatA_Renamed"), true);
+    assert.deepEqual(Object.keys(manager.getCustomPresets()), ["CatC", "CatA_Renamed", "CatB"]);
+
+    // Update preset P1 in CatA_Renamed in-place
+    assert.equal(manager.updatePreset("CatA_Renamed", "P1", "P1_New", 1024, 768), true);
+    assert.deepEqual(Object.keys(manager.getCustomPresets()["CatA_Renamed"]), ["P1_New"]);
+    assert.deepEqual(manager.getCustomPresets()["CatA_Renamed"]["P1_New"], { width: 1024, height: 768 });
+
+    // Non-existent operations return false
+    assert.equal(manager.reorderCategories("NonExistent", 0), false);
+    assert.equal(manager.renameCategory("NonExistent", "New"), false);
+    assert.equal(manager.updatePreset("CatA_Renamed", "NonExistent", "New", 100, 100), false);
+});
+

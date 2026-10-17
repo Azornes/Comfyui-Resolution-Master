@@ -3,6 +3,42 @@ import { createModuleLogger } from "../log_system/log_funcs.js";
 
 const log = createModuleLogger('custom_presets_manager');
 
+/**
+ * Reorders keys in an object by moving one entry to a new index.
+ *
+ * @param {Object} obj - Source dictionary object
+ * @param {string} key - Key of the entry to move
+ * @param {number} newIndex - Target index
+ * @returns {Object|null} Reordered object or null if key not found
+ */
+export function reorderObjectEntries(obj, key, newIndex) {
+    if (!obj || typeof obj !== 'object') return null;
+    const entries = Object.entries(obj);
+    const currentIndex = entries.findIndex(([k]) => k === key);
+    if (currentIndex === -1) return null;
+    const [movedEntry] = entries.splice(currentIndex, 1);
+    entries.splice(Math.max(0, Math.min(entries.length, newIndex)), 0, movedEntry);
+    return Object.fromEntries(entries);
+}
+
+/**
+ * Updates a key and/or value in an object while strictly preserving entry order.
+ *
+ * @param {Object} obj - Source dictionary object
+ * @param {string} oldKey - Existing key
+ * @param {string} newKey - New key name
+ * @param {Function} [valueUpdater] - Optional transformer function receiving current value
+ * @returns {Object|null} Updated object or null if oldKey not found
+ */
+export function updateObjectKeyOrderPreserved(obj, oldKey, newKey, valueUpdater = (v) => v) {
+    if (!obj || typeof obj !== 'object') return null;
+    const entries = Object.entries(obj);
+    const index = entries.findIndex(([k]) => k === oldKey);
+    if (index === -1) return null;
+    entries[index] = [newKey, valueUpdater(entries[index][1])];
+    return Object.fromEntries(entries);
+}
+
 export class CustomPresetsManager {
     constructor(resolutionMasterInstance) {
         this.rm = resolutionMasterInstance;
@@ -194,31 +230,6 @@ export class CustomPresetsManager {
     }
     
     /**
-     * Renames a preset
-     * @param {string} category - Category name
-     * @param {string} oldName - Old preset name
-     * @param {string} newName - New preset name
-     * @returns {boolean} Success status
-     */
-    renamePreset(category, oldName, newName) {
-        try {
-            if (this.customPresets[category] && this.customPresets[category][oldName]) {
-                const preset = this.customPresets[category][oldName];
-                this.customPresets[category][newName] = preset;
-                delete this.customPresets[category][oldName];
-                
-                this.saveCustomPresets();
-                log.debug(`Renamed preset: ${category}/${oldName} -> ${newName}`);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            log.error('Error renaming preset:', error);
-            return false;
-        }
-    }
-    
-    /**
      * Updates a preset (name and/or dimensions) while preserving its position in the list
      * @param {string} category - Category name
      * @param {string} oldName - Current preset name
@@ -247,27 +258,23 @@ export class CustomPresetsManager {
                 log.warn(`Preset ${category}/${newName} already exists`);
                 return false;
             }
-            
-            // Convert category presets to array of entries to preserve order
-            const entries = Object.entries(this.customPresets[category]);
-            
-            // Find the index of the old preset
-            const index = entries.findIndex(([name]) => name === oldName);
-            
-            if (index === -1) {
+
+            const updatedCategory = updateObjectKeyOrderPreserved(
+                this.customPresets[category],
+                oldName,
+                newName,
+                () => ({
+                    width: parseInt(width),
+                    height: parseInt(height)
+                })
+            );
+
+            if (!updatedCategory) {
                 log.warn(`Preset ${category}/${oldName} not found in entries`);
                 return false;
             }
-            
-            // Replace the entry with updated preset
-            entries[index] = [newName, {
-                width: parseInt(width),
-                height: parseInt(height)
-            }];
-            
-            // Rebuild the category object from entries (preserves order)
-            this.customPresets[category] = Object.fromEntries(entries);
-            
+
+            this.customPresets[category] = updatedCategory;
             this.saveCustomPresets();
             log.debug(`Updated preset: ${category}/${oldName} -> ${newName} (${width}x${height})`);
             return true;
@@ -308,23 +315,18 @@ export class CustomPresetsManager {
             return true;
         }
 
-        // Convert customPresets to array of entries to preserve order
-        const entries = Object.entries(this.customPresets);
-        
-        // Find the index of the old category
-        const index = entries.findIndex(([categoryName]) => categoryName === oldName);
-        
-        if (index === -1) {
+        const updated = updateObjectKeyOrderPreserved(
+            this.customPresets,
+            oldName,
+            trimmedNewName
+        );
+
+        if (!updated) {
             log.warn(`Category ${oldName} not found in entries`);
             return false;
         }
-        
-        // Replace the entry with new category name (keeping the same presets)
-        entries[index] = [trimmedNewName, entries[index][1]];
-        
-        // Rebuild the customPresets object from entries (preserves order)
-        this.customPresets = Object.fromEntries(entries);
 
+        this.customPresets = updated;
         this.saveCustomPresets();
         log.debug(`Renamed category: ${oldName} -> ${trimmedNewName}`);
         return true;
@@ -534,28 +536,15 @@ export class CustomPresetsManager {
      */
     reorderCategories(categoryName, newIndex) {
         try {
-            // Convert to array of entries
-            const entries = Object.entries(this.customPresets);
-            
-            // Find current index
-            const currentIndex = entries.findIndex(([name]) => name === categoryName);
-            
-            if (currentIndex === -1) {
+            const reordered = reorderObjectEntries(this.customPresets, categoryName, newIndex);
+            if (!reordered) {
                 log.warn(`Category ${categoryName} not found`);
                 return false;
             }
-            
-            // Remove from current position
-            const [movedEntry] = entries.splice(currentIndex, 1);
-            
-            // Insert at new position
-            entries.splice(newIndex, 0, movedEntry);
-            
-            // Rebuild object with new order
-            this.customPresets = Object.fromEntries(entries);
-            
+
+            this.customPresets = reordered;
             this.saveCustomPresets();
-            log.debug(`Reordered category ${categoryName}: ${currentIndex} -> ${newIndex}`);
+            log.debug(`Reordered category ${categoryName} to index ${newIndex}`);
             return true;
         } catch (error) {
             log.error('Error reordering categories:', error);
@@ -576,29 +565,16 @@ export class CustomPresetsManager {
                 log.warn(`Category ${category} not found`);
                 return false;
             }
-            
-            // Convert to array of entries
-            const entries = Object.entries(this.customPresets[category]);
-            
-            // Find current index
-            const currentIndex = entries.findIndex(([name]) => name === presetName);
-            
-            if (currentIndex === -1) {
+
+            const reordered = reorderObjectEntries(this.customPresets[category], presetName, newIndex);
+            if (!reordered) {
                 log.warn(`Preset ${presetName} not found in category ${category}`);
                 return false;
             }
-            
-            // Remove from current position
-            const [movedEntry] = entries.splice(currentIndex, 1);
-            
-            // Insert at new position
-            entries.splice(newIndex, 0, movedEntry);
-            
-            // Rebuild category with new order
-            this.customPresets[category] = Object.fromEntries(entries);
-            
+
+            this.customPresets[category] = reordered;
             this.saveCustomPresets();
-            log.debug(`Reordered preset ${category}/${presetName}: ${currentIndex} -> ${newIndex}`);
+            log.debug(`Reordered preset ${category}/${presetName} to index ${newIndex}`);
             return true;
         } catch (error) {
             log.error('Error reordering presets:', error);
