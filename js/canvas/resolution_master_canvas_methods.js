@@ -4,6 +4,51 @@ import { performanceDiagnostics } from "../utils/performance_diagnostics.js";
 
 const log = createModuleLogger('resolution_master_canvas_methods');
 
+/**
+ * Maps a coordinate or normalized position to a value along a canvas axis,
+ * applying optional step snapping and decimal rounding.
+ *
+ * @param {Object} params
+ * @param {number} [params.coord] - Raw coordinate on the axis
+ * @param {number} [params.size] - Axis dimension size
+ * @param {number} [params.normalizedPos] - Pre-calculated normalized position [0..1]
+ * @param {boolean} [params.isInverse=false] - Whether coordinate is inverted (e.g., Y axis)
+ * @param {number} params.min - Minimum value for the axis
+ * @param {number} params.max - Maximum value for the axis
+ * @param {number} params.step - Step snapping interval
+ * @param {number} [params.decimals=0] - Number of decimal places
+ * @param {boolean} [params.shouldSnap=true] - Whether to snap to step
+ * @returns {{ normalizedPos: number, value: number }}
+ */
+export function calculateCanvasAxisValue({
+    coord,
+    size,
+    normalizedPos,
+    isInverse = false,
+    min,
+    max,
+    step,
+    decimals = 0,
+    shouldSnap = true
+}) {
+    let normPos = normalizedPos !== undefined
+        ? normalizedPos
+        : (isInverse ? 1 - coord / size : coord / size);
+    normPos = Math.max(0, Math.min(1, normPos));
+
+    const range = max - min;
+    if (shouldSnap && range > 0 && step > 0) {
+        const stepScale = step / range;
+        normPos = Math.round(normPos / stepScale) * stepScale;
+    }
+
+    let value = min + range * normPos;
+    const rn = Math.pow(10, decimals);
+    value = Math.round(rn * value) / rn;
+
+    return { normalizedPos: normPos, value };
+}
+
 export const canvasMethods = {
     /**
      * Safely request a canvas update - prevents multiple rapid updates during initialization
@@ -127,44 +172,63 @@ export const canvasMethods = {
             const node = this.node;
             const props = node.properties;
 
-            let vX = Math.max(0, Math.min(1, x / w));
-            let vY = Math.max(0, Math.min(1, 1 - y / h));
-            if (ctrlKey && shiftKey) {
+            let resX;
+            let resY;
+
+            if (shiftKey) {
+                let vX = Math.max(0, Math.min(1, x / w));
+                let vY = Math.max(0, Math.min(1, 1 - y / h));
                 let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
                 let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-                const lockedDimensions = this.getAspectLockedDimensions(newX, newY);
-                newX = lockedDimensions.width;
-                newY = lockedDimensions.height;
-                vX = (newX - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
-                vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
-            } else if (shiftKey && !ctrlKey) {
-                let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
-                let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-                const lockedDimensions = this.getAspectLockedDimensions(newX, newY, true);
-                newX = lockedDimensions.width;
-                newY = lockedDimensions.height;
-                vX = (newX - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
-                vY = (newY - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
-            } else if (ctrlKey && !shiftKey) {
+                const snapToGrid = !ctrlKey;
+                const lockedDimensions = this.getAspectLockedDimensions(newX, newY, snapToGrid);
+                vX = (lockedDimensions.width - props.canvas_min_x) / (props.canvas_max_x - props.canvas_min_x);
+                vY = (lockedDimensions.height - props.canvas_min_y) / (props.canvas_max_y - props.canvas_min_y);
+
+                resX = calculateCanvasAxisValue({
+                    normalizedPos: vX,
+                    min: props.canvas_min_x,
+                    max: props.canvas_max_x,
+                    step: props.canvas_step_x,
+                    decimals: props.canvas_decimals_x,
+                    shouldSnap: false
+                });
+                resY = calculateCanvasAxisValue({
+                    normalizedPos: vY,
+                    min: props.canvas_min_y,
+                    max: props.canvas_max_y,
+                    step: props.canvas_step_y,
+                    decimals: props.canvas_decimals_y,
+                    shouldSnap: false
+                });
             } else {
-                let sX = props.canvas_step_x / (props.canvas_max_x - props.canvas_min_x);
-                let sY = props.canvas_step_y / (props.canvas_max_y - props.canvas_min_y);
-                vX = Math.round(vX / sX) * sX;
-                vY = Math.round(vY / sY) * sY;
+                resX = calculateCanvasAxisValue({
+                    coord: x,
+                    size: w,
+                    isInverse: false,
+                    min: props.canvas_min_x,
+                    max: props.canvas_max_x,
+                    step: props.canvas_step_x,
+                    decimals: props.canvas_decimals_x,
+                    shouldSnap: !ctrlKey
+                });
+                resY = calculateCanvasAxisValue({
+                    coord: y,
+                    size: h,
+                    isInverse: true,
+                    min: props.canvas_min_y,
+                    max: props.canvas_max_y,
+                    step: props.canvas_step_y,
+                    decimals: props.canvas_decimals_y,
+                    shouldSnap: !ctrlKey
+                });
             }
 
-            node.intpos.x = vX;
-            node.intpos.y = vY;
+            node.intpos.x = resX.normalizedPos;
+            node.intpos.y = resY.normalizedPos;
 
-            let newX = props.canvas_min_x + (props.canvas_max_x - props.canvas_min_x) * vX;
-            let newY = props.canvas_min_y + (props.canvas_max_y - props.canvas_min_y) * vY;
-
-            const rnX = Math.pow(10, props.canvas_decimals_x);
-            const rnY = Math.pow(10, props.canvas_decimals_y);
-            newX = Math.round(rnX * newX) / rnX;
-            newY = Math.round(rnY * newY) / rnY;
-            if (props.valueX !== newX || props.valueY !== newY) {
-                this.setDimensions(newX, newY, { syncPosition: false });
+            if (props.valueX !== resX.value || props.valueY !== resY.value) {
+                this.setDimensions(resX.value, resY.value, { syncPosition: false });
             }
         } finally {
             performanceDiagnostics.end(diagnosticsToken);
@@ -202,34 +266,25 @@ export const canvasMethods = {
             const props = node.properties;
             const isX = axis === 'x';
 
-            let val = isX ? coord / size : 1 - coord / size;
-            val = Math.max(0, Math.min(1, val));
+            const res = calculateCanvasAxisValue({
+                coord,
+                size,
+                isInverse: !isX,
+                min: props[`canvas_min_${axis}`],
+                max: props[`canvas_max_${axis}`],
+                step: props[`canvas_step_${axis}`],
+                decimals: props[`canvas_decimals_${axis}`],
+                shouldSnap: !ctrlKey
+            });
 
-            if (!ctrlKey) {
-                const step = props[`canvas_step_${axis}`];
-                const min = props[`canvas_min_${axis}`];
-                const max = props[`canvas_max_${axis}`];
-                const range = max - min;
-                const stepScale = step / range;
-                val = Math.round(val / stepScale) * stepScale;
-            }
-
-            node.intpos[axis] = val;
-
-            const min = props[`canvas_min_${axis}`];
-            const max = props[`canvas_max_${axis}`];
-            let newVal = min + (max - min) * val;
-
-            const decimals = props[`canvas_decimals_${axis}`];
-            const rn = Math.pow(10, decimals);
-            newVal = Math.round(rn * newVal) / rn;
+            node.intpos[axis] = res.normalizedPos;
 
             const propName = isX ? 'valueX' : 'valueY';
-            if (props[propName] !== newVal) {
+            if (props[propName] !== res.value) {
                 if (isX) {
-                    this.setDimensions(newVal, this.heightWidget.value, { syncPosition: false });
+                    this.setDimensions(res.value, this.heightWidget.value, { syncPosition: false });
                 } else {
-                    this.setDimensions(this.widthWidget.value, newVal, { syncPosition: false });
+                    this.setDimensions(this.widthWidget.value, res.value, { syncPosition: false });
                 }
             }
         } finally {
