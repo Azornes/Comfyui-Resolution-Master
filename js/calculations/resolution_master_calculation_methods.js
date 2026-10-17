@@ -4,6 +4,7 @@ import {
     calculateScaledDimensions
 } from "../scaling/scaling_math.js";
 import { createCalculationConfig } from "./model_profiles.js";
+import { normalizeCalculationSettings } from "./calculation_settings.js";
 
 const log = createModuleLogger('resolution_master_calculation_methods');
 const RESCALE_VALUE_MIN = 0;
@@ -37,26 +38,30 @@ export const calculationMethods = {
         const props = this.node.properties;
         const get = (snakeName, camelName, fallback) =>
             overrides[snakeName] ?? overrides[camelName] ?? fallback;
-        const selectedCategory = get('selected_category', 'selectedCategory', props.selectedCategory || "");
+        const settings = normalizeCalculationSettings(
+            props,
+            overrides,
+            (cat) => this.getCategoryPresetsJSON(cat)
+        );
 
         return {
             action,
             width: Math.max(1, Math.round(Number(get('width', 'width', this.widthWidget?.value ?? props.valueX ?? 512)) || 1)),
             height: Math.max(1, Math.round(Number(get('height', 'height', this.heightWidget?.value ?? props.valueY ?? 512)) || 1)),
-            auto_fit_on_change: !!get('auto_fit_on_change', 'autoFitOnChange', props.autoFitOnChange),
-            auto_resize_on_change: !!get('auto_resize_on_change', 'autoResizeOnChange', props.autoResizeOnChange),
-            auto_snap_on_change: !!get('auto_snap_on_change', 'autoSnapOnChange', props.autoSnapOnChange),
-            smart_fit: !!get('smart_fit', 'smartFit', props.smartFit),
-            use_custom_calc: !!get('use_custom_calc', 'useCustomCalc', props.useCustomCalc),
-            preserve_scaling_ratio: !!get('preserve_scaling_ratio', 'preserveScalingRatio', props.preserveScalingRatio),
-            preserve_scaling_snap: !!get('preserve_scaling_snap', 'preserveScalingSnap', props.preserveScalingSnap),
-            selected_category: selectedCategory,
-            snap_value: Math.max(1, Math.round(Number(get('snap_value', 'snapValue', props.snapValue)) || 64)),
-            upscale_value: Math.max(0, Number(get('upscale_value', 'upscaleValue', props.upscaleValue)) || 0),
-            target_resolution: Math.max(1, Math.round(Number(get('target_resolution', 'targetResolution', props.targetResolution)) || 1080)),
-            target_megapixels: Math.max(0, Number(get('target_megapixels', 'targetMegapixels', props.targetMegapixels)) || 0),
-            rescale_mode: get('rescale_mode', 'rescaleMode', props.rescaleMode || "resolution"),
-            presets_json: get('presets_json', 'presetsJSON', this.getCategoryPresetsJSON(selectedCategory))
+            auto_fit_on_change: settings.autoFitOnChange,
+            auto_resize_on_change: settings.autoResizeOnChange,
+            auto_snap_on_change: settings.autoSnapOnChange,
+            smart_fit: settings.smartFit,
+            use_custom_calc: settings.useCustomCalc,
+            preserve_scaling_ratio: settings.preserveScalingRatio,
+            preserve_scaling_snap: settings.preserveScalingSnap,
+            selected_category: settings.selectedCategory,
+            snap_value: settings.snapValue,
+            upscale_value: settings.upscaleValue,
+            target_resolution: settings.targetResolution,
+            target_megapixels: settings.targetMegapixels,
+            rescale_mode: settings.rescaleMode,
+            presets_json: settings.presetsJson
         };
     },
 

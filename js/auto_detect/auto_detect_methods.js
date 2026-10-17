@@ -1,4 +1,5 @@
 import { createModuleLogger } from "../log_system/log_funcs.js";
+import { normalizeCalculationSettings } from "../calculations/calculation_settings.js";
 import { isLivePreviewWidget } from "./source_detectors/shared.js";
 import {
     attachSourceDetectorWatchers,
@@ -387,22 +388,25 @@ export const autoDetectMethods = {
     syncBackendFallbackWidgets() {
         if (!this.backendFallbackWidgets) return;
 
-        const props = this.node.properties;
-        const presetsJSON = this.getCategoryPresetsJSON(props.selectedCategory);
+        const settings = normalizeCalculationSettings(
+            this.node.properties,
+            {},
+            (cat) => this.getCategoryPresetsJSON(cat)
+        );
 
-        this.setBackendFallbackWidgetValue('autoFitOnChange', !!props.autoFitOnChange);
-        this.setBackendFallbackWidgetValue('autoResizeOnChange', !!props.autoResizeOnChange);
-        this.setBackendFallbackWidgetValue('autoSnapOnChange', !!props.autoSnapOnChange);
-        this.setBackendFallbackWidgetValue('smartFit', !!props.smartFit);
-        this.setBackendFallbackWidgetValue('useCustomCalc', !!props.useCustomCalc);
-        this.setBackendFallbackWidgetValue('preserveScalingRatio', !!props.preserveScalingRatio);
-        this.setBackendFallbackWidgetValue('preserveScalingSnap', !!props.preserveScalingSnap);
-        this.setBackendFallbackWidgetValue('selectedCategory', props.selectedCategory || "");
-        this.setBackendFallbackWidgetValue('snapValue', Math.max(1, Math.round(Number(props.snapValue) || 64)));
-        this.setBackendFallbackWidgetValue('upscaleValue', Math.max(0, Number(props.upscaleValue) || 0));
-        this.setBackendFallbackWidgetValue('targetResolution', Math.max(1, Math.round(Number(props.targetResolution) || 1080)));
-        this.setBackendFallbackWidgetValue('targetMegapixels', Math.max(0, Number(props.targetMegapixels) || 0));
-        this.setBackendFallbackWidgetValue('autoDetectPresetsJSON', presetsJSON);
+        this.setBackendFallbackWidgetValue('autoFitOnChange', settings.autoFitOnChange);
+        this.setBackendFallbackWidgetValue('autoResizeOnChange', settings.autoResizeOnChange);
+        this.setBackendFallbackWidgetValue('autoSnapOnChange', settings.autoSnapOnChange);
+        this.setBackendFallbackWidgetValue('smartFit', settings.smartFit);
+        this.setBackendFallbackWidgetValue('useCustomCalc', settings.useCustomCalc);
+        this.setBackendFallbackWidgetValue('preserveScalingRatio', settings.preserveScalingRatio);
+        this.setBackendFallbackWidgetValue('preserveScalingSnap', settings.preserveScalingSnap);
+        this.setBackendFallbackWidgetValue('selectedCategory', settings.selectedCategory);
+        this.setBackendFallbackWidgetValue('snapValue', settings.snapValue);
+        this.setBackendFallbackWidgetValue('upscaleValue', settings.upscaleValue);
+        this.setBackendFallbackWidgetValue('targetResolution', settings.targetResolution);
+        this.setBackendFallbackWidgetValue('targetMegapixels', settings.targetMegapixels);
+        this.setBackendFallbackWidgetValue('autoDetectPresetsJSON', settings.presetsJson);
     },
 
     getAutoDetectLiveStatus() {

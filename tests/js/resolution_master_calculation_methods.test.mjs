@@ -97,3 +97,76 @@ test("handleScale, handleResolutionScale, handleMegapixelsScale request backend 
     assert.equal(requests[2].payload.rescale_mode, "megapixels");
     assert.equal(rescaleValueUpdated, 3);
 });
+
+
+test("buildCalculationPayload normalizes properties, clamp values, and applies snake and camel overrides", () => {
+    const context = {
+        node: {
+            properties: {
+                selectedCategory: "Flux",
+                snapValue: 32,
+                upscaleValue: 2.5,
+                targetResolution: 720,
+                targetMegapixels: 1.5,
+                rescaleMode: "megapixels",
+                autoFitOnChange: true,
+                autoResizeOnChange: false,
+                autoSnapOnChange: true,
+                smartFit: true,
+                useCustomCalc: false,
+                preserveScalingRatio: true,
+                preserveScalingSnap: true,
+                valueX: 800,
+                valueY: 600
+            }
+        },
+        widthWidget: { value: 1200 },
+        heightWidget: { value: 900 },
+        getCategoryPresetsJSON(cat) {
+            return JSON.stringify({ category: cat });
+        }
+    };
+
+    const payloadDefault = calculationMethods.buildCalculationPayload.call(context, "custom_calc");
+    assert.equal(payloadDefault.action, "custom_calc");
+    assert.equal(payloadDefault.width, 1200);
+    assert.equal(payloadDefault.height, 900);
+    assert.equal(payloadDefault.selected_category, "Flux");
+    assert.equal(payloadDefault.snap_value, 32);
+    assert.equal(payloadDefault.upscale_value, 2.5);
+    assert.equal(payloadDefault.target_resolution, 720);
+    assert.equal(payloadDefault.target_megapixels, 1.5);
+    assert.equal(payloadDefault.rescale_mode, "megapixels");
+    assert.equal(payloadDefault.auto_fit_on_change, true);
+    assert.equal(payloadDefault.auto_resize_on_change, false);
+    assert.equal(payloadDefault.auto_snap_on_change, true);
+    assert.equal(payloadDefault.smart_fit, true);
+    assert.equal(payloadDefault.use_custom_calc, false);
+    assert.equal(payloadDefault.preserve_scaling_ratio, true);
+    assert.equal(payloadDefault.preserve_scaling_snap, true);
+    assert.equal(payloadDefault.presets_json, JSON.stringify({ category: "Flux" }));
+
+    // Overrides test with invalid/clamped values and mixed casing
+    const payloadOverrides = calculationMethods.buildCalculationPayload.call(context, "auto_resize", {
+        width: "640",
+        height: 480,
+        snap_value: -10, // clamped to min 1
+        upscaleValue: -5, // clamped to min 0
+        target_resolution: 0, // clamped to min 1
+        targetMegapixels: -1, // clamped to min 0
+        rescale_mode: "manual",
+        selectedCategory: "SDXL",
+        presetsJSON: '{"override":true}'
+    });
+    assert.equal(payloadOverrides.action, "auto_resize");
+    assert.equal(payloadOverrides.width, 640);
+    assert.equal(payloadOverrides.height, 480);
+    assert.equal(payloadOverrides.selected_category, "SDXL");
+    assert.equal(payloadOverrides.snap_value, 1);
+    assert.equal(payloadOverrides.upscale_value, 0);
+    assert.equal(payloadOverrides.target_resolution, 1080);
+    assert.equal(payloadOverrides.target_megapixels, 0);
+    assert.equal(payloadOverrides.rescale_mode, "manual");
+    assert.equal(payloadOverrides.presets_json, '{"override":true}');
+});
+
