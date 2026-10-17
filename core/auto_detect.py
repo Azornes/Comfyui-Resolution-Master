@@ -411,6 +411,56 @@ def calculate_target_resolution_from_scale(width, height, scale_value):
     return max(1, round(math.sqrt(target_pixels / (16 / 9))))
 
 
+def _step_auto_fit(width, height, category, smart_fit, presets, preserve_scaling_ratio):
+    if not category:
+        return width, height, None
+    fitted = calculate_auto_fit(width, height, category, smart_fit, presets, preserve_scaling_ratio)
+    return fitted["width"], fitted["height"], fitted.get("selected_preset")
+
+
+def _step_auto_resize(
+    width,
+    height,
+    rescale_mode,
+    upscale_value,
+    target_resolution,
+    target_megapixels,
+    preserve_scaling_ratio,
+    preserve_scaling_snap,
+    snap_value,
+):
+    resized = apply_auto_resize(
+        width,
+        height,
+        rescale_mode,
+        upscale_value,
+        target_resolution,
+        target_megapixels,
+        preserve_scaling_ratio,
+        preserve_scaling_snap,
+        snap_value,
+    )
+    return resized["width"], resized["height"]
+
+
+def _step_auto_snap(width, height, snap_value):
+    snapped = apply_auto_snap(width, height, snap_value)
+    return snapped["width"], snapped["height"]
+
+
+def _step_custom_calc(width, height, category, presets, calculation_profile):
+    if not category:
+        return width, height
+    calculated = apply_custom_calculation(
+        width,
+        height,
+        category,
+        presets,
+        calculation_profile,
+    )
+    return calculated["width"], calculated["height"]
+
+
 def calculate_resolution(
     action,
     width,
@@ -452,13 +502,12 @@ def calculate_resolution(
     )
 
     if action == "auto_fit":
-        if selected_category:
-            fitted = calculate_auto_fit(width, height, selected_category, smart_fit, presets, preserve_scaling_ratio)
-            width, height = fitted["width"], fitted["height"]
-            selected_preset = fitted.get("selected_preset")
+        width, height, selected_preset = _step_auto_fit(
+            width, height, selected_category, smart_fit, presets, preserve_scaling_ratio
+        )
 
     elif action == "auto_resize":
-        resized = apply_auto_resize(
+        width, height = _step_auto_resize(
             width,
             height,
             rescale_mode,
@@ -469,31 +518,23 @@ def calculate_resolution(
             preserve_scaling_snap,
             snap_value,
         )
-        width, height = resized["width"], resized["height"]
 
     elif action == "auto_snap":
-        snapped = apply_auto_snap(width, height, snap_value)
-        width, height = snapped["width"], snapped["height"]
+        width, height = _step_auto_snap(width, height, snap_value)
 
     elif action == "custom_calc":
-        if selected_category:
-            calculated = apply_custom_calculation(
-                width,
-                height,
-                selected_category,
-                presets,
-                calculation_profile,
-            )
-            width, height = calculated["width"], calculated["height"]
+        width, height = _step_custom_calc(
+            width, height, selected_category, presets, calculation_profile
+        )
 
     elif action == "auto_detect":
-        if auto_fit_on_change and selected_category:
-            fitted = calculate_auto_fit(width, height, selected_category, smart_fit, presets, preserve_scaling_ratio)
-            width, height = fitted["width"], fitted["height"]
-            selected_preset = fitted.get("selected_preset")
+        if auto_fit_on_change:
+            width, height, selected_preset = _step_auto_fit(
+                width, height, selected_category, smart_fit, presets, preserve_scaling_ratio
+            )
 
         if auto_resize_on_change:
-            resized = apply_auto_resize(
+            width, height = _step_auto_resize(
                 width,
                 height,
                 rescale_mode,
@@ -504,21 +545,14 @@ def calculate_resolution(
                 preserve_scaling_snap,
                 snap_value,
             )
-            width, height = resized["width"], resized["height"]
 
         if auto_snap_on_change:
-            snapped = apply_auto_snap(width, height, snap_value)
-            width, height = snapped["width"], snapped["height"]
+            width, height = _step_auto_snap(width, height, snap_value)
 
-        if use_custom_calc and selected_category:
-            calculated = apply_custom_calculation(
-                width,
-                height,
-                selected_category,
-                presets,
-                calculation_profile,
+        if use_custom_calc:
+            width, height = _step_custom_calc(
+                width, height, selected_category, presets, calculation_profile
             )
-            width, height = calculated["width"], calculated["height"]
 
     elif action in ("rescale", "target_resolution_from_scale"):
         pass

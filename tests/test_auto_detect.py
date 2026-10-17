@@ -324,6 +324,35 @@ class CalculateResolutionTests(unittest.TestCase):
         self.assertEqual(result["selected_preset"], "square")
         self.assertEqual(result["rescale_factor"], 2.0)
 
+    def test_single_actions_produce_expected_transformations(self):
+        presets = json.dumps({"preset_1": {"width": 1024, "height": 768}})
+
+        # auto_fit standalone vs auto_detect with auto_fit_on_change
+        fit_res = calculate_resolution("auto_fit", 1000, 800, selected_category="Standard", presets_json=presets)
+        auto_fit_res = calculate_resolution("auto_detect", 1000, 800, auto_fit_on_change=True, selected_category="Standard", presets_json=presets)
+        self.assertEqual(fit_res["width"], 1024)
+        self.assertEqual(fit_res["height"], 768)
+        self.assertEqual(fit_res["selected_preset"], "preset_1")
+        self.assertEqual(fit_res["width"], auto_fit_res["width"])
+        self.assertEqual(fit_res["height"], auto_fit_res["height"])
+        self.assertEqual(fit_res["selected_preset"], auto_fit_res["selected_preset"])
+
+        # auto_snap standalone vs auto_detect with auto_snap_on_change
+        snap_res = calculate_resolution("auto_snap", 500, 500, snap_value=64)
+        auto_snap_res = calculate_resolution("auto_detect", 500, 500, auto_snap_on_change=True, snap_value=64)
+        self.assertEqual(snap_res["width"], 512)
+        self.assertEqual(snap_res["height"], 512)
+        self.assertEqual(snap_res["width"], auto_snap_res["width"])
+        self.assertEqual(snap_res["height"], auto_snap_res["height"])
+
+        # custom_calc standalone vs auto_detect with use_custom_calc
+        calc_res = calculate_resolution("custom_calc", 3000, 3000, selected_category="Flux")
+        auto_calc_res = calculate_resolution("auto_detect", 3000, 3000, use_custom_calc=True, selected_category="Flux")
+        self.assertEqual(calc_res["width"], 1984)
+        self.assertEqual(calc_res["height"], 1984)
+        self.assertEqual(calc_res["width"], auto_calc_res["width"])
+        self.assertEqual(calc_res["height"], auto_calc_res["height"])
+
     def test_invalid_dimensions_are_normalized_to_positive_integers(self):
         result = calculate_resolution("rescale", "invalid", 0)
 
