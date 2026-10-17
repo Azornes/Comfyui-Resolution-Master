@@ -831,3 +831,340 @@ test("Nodes 2.0 compact mode toggle automatically shrinks node height and allows
     assert.equal(controller.node.properties.preferred_compact_height, undefined);
 });
 
+
+test("Nodes 2.0 resize coalesces redraws via requestAnimationFrame without synchronous redraw flood", () => {
+    let drawCalls = 0;
+    let dirtyCanvasCalls = 0;
+    let scheduledRaf = null;
+    let rafCallCount = 0;
+
+    const previousRaf = globalThis.requestAnimationFrame;
+    const previousApp = globalThis.app;
+    globalThis.requestAnimationFrame = (callback) => {
+        rafCallCount++;
+        scheduledRaf = callback;
+        return rafCallCount;
+    };
+    globalThis.app = {
+        graph: {
+            setDirtyCanvas() {
+                dirtyCanvasCalls++;
+            }
+        }
+    };
+
+    try {
+        let installedWidget;
+        const controller = createLifecycleController({
+            pos: [0, 0],
+            size: [330, 560],
+            min_size: [330, 200],
+            addCustomWidget(widget) {
+                installedWidget = widget;
+                return widget;
+            }
+        });
+        controller.app = globalThis.app;
+        controller.controls = {};
+        controller.calculateNeededHeight = () => 560;
+        controller.bindVueCompatCanvasEvents = () => {};
+        controller.updateVueCompatCanvasLayout = () => {};
+        controller.drawInterface = () => {};
+        controller.requestVueCompatWidgetDraw = () => {
+            drawCalls++;
+        };
+
+        withLiteGraph({ vueNodesMode: true }, () => {
+            controller.setupNode();
+            controller.installVueNodesCompatibilityWidget();
+
+            // Simulate rapid mouse movements during resize drag
+            controller.node.size = [350, 560];
+            controller.node.onResize();
+            controller.node.size = [370, 560];
+            controller.node.onResize();
+            controller.node.size = [400, 560];
+            controller.node.onResize();
+        });
+
+        // 1. Synchronous draw must not have been triggered 3 times
+        assert.equal(drawCalls, 0);
+        // 2. Only a single animation frame should be scheduled across all rapid events
+        assert.equal(rafCallCount, 1);
+        assert.equal(typeof scheduledRaf, "function");
+
+        // 3. When the frame ticks, exactly one draw and dirty canvas occurs
+        withLiteGraph({ vueNodesMode: true }, () => {
+            scheduledRaf();
+        });
+        assert.equal(drawCalls, 1);
+        assert.equal(dirtyCanvasCalls, 1);
+        assert.equal(controller._vueCompatResizeRaf, null);
+
+        // 4. Teardown cancels any pending resize RAF
+        controller._vueCompatResizeRaf = 999;
+        controller.teardownVueCompatCanvasLayout();
+        assert.equal(controller._vueCompatResizeRaf, null);
+    } finally {
+        if (previousRaf === undefined) {
+            delete globalThis.requestAnimationFrame;
+        } else {
+            globalThis.requestAnimationFrame = previousRaf;
+        }
+        if (previousApp === undefined) {
+            delete globalThis.app;
+        } else {
+            globalThis.app = previousApp;
+        }
+    }
+});
+
+
+test("Vue canvas layout reuses cached layout and avoids redundant DOM queries and reflows", () => {
+    const controller = createLifecycleController({ outputs: Array.from({ length: 3 }, () => ({})) });
+    let queryCount = 0;
+    const nodeElement = { style: { minWidth: "120px" } };
+    const slotsElement = {
+        style: {},
+        querySelectorAll() {
+            queryCount++;
+            return [
+                { style: {}, getBoundingClientRect: () => ({ left: 200, top: 10, width: 10, height: 10 }) },
+                { style: {}, getBoundingClientRect: () => ({ left: 200, top: 30, width: 10, height: 10 }) },
+                { style: {}, getBoundingClientRect: () => ({ left: 200, top: 50, width: 10, height: 10 }) }
+            ];
+        }
+    };
+    const bodyElement = { style: {} };
+    const widgetsGrid = {
+        style: {},
+        previousElementSibling: slotsElement,
+        parentElement: bodyElement,
+        closest() {
+            return nodeElement;
+        }
+    };
+    const canvasElement = {
+        clientWidth: 330,
+        clientHeight: 200,
+        parentElement: { style: {} },
+        closest() {
+            return widgetsGrid;
+        },
+        getBoundingClientRect() {
+            return { left: 0, top: 0, width: 330, height: 200 };
+        }
+    };
+    controller.ensureVueCompatHeaderControls = () => {};
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        // First layout update initializes and measures slots
+        controller.updateVueCompatCanvasLayout(canvasElement);
+        assert.equal(queryCount, 1);
+        assert.equal(controller._vueCompatOutputSlotCenters?.length, 3);
+
+        // Subsequent layout updates during live resize must not re-query or re-measure
+        controller.updateVueCompatCanvasLayout(canvasElement);
+        controller.updateVueCompatCanvasLayout(canvasElement);
+        assert.equal(queryCount, 1);
+    });
+});
+
+
+test("Vue canvas draw preparation queries ds.scale directly and avoids forced layout reads", () => {
+    const controller = createLifecycleController({
+        size: [330, 400],
+        min_size: [330, 200]
+    });
+    controller.calculateNeededHeight = () => 400;
+    let rectReads = 0;
+    const canvasHost = { style: {} };
+    const canvasElement = {
+        parentElement: canvasHost,
+        style: {},
+        width: 330,
+        height: 400,
+        getBoundingClientRect() {
+            rectReads++;
+            return { width: 495, height: 600 };
+        }
+    };
+    const ctx = {
+        canvas: canvasElement,
+        setTransform() {}
+    };
+    const previousApp = globalThis.app;
+    globalThis.app = {
+        canvas: {
+            ds: {
+                scale: 1.5
+            }
+        }
+    };
+
+    try {
+        withLiteGraph({ vueNodesMode: true }, () => {
+            const prepared = controller.prepareVueCompatCanvasDraw(ctx, 330, 400, { computedHeight: 400 });
+            assert.equal(prepared.width, 330);
+            assert.equal(prepared.height, 400);
+            // getBoundingClientRect was bypassed in favor of in-memory app.canvas.ds.scale
+            assert.equal(rectReads, 0);
+        });
+    } finally {
+        if (previousApp === undefined) {
+            delete globalThis.app;
+        } else {
+            globalThis.app = previousApp;
+        }
+    }
+});
+
+
+test("requestVueCompatWidgetDraw delegates to widget.triggerDraw without scheduling duplicate primary surface redraw", () => {
+    let installedWidget;
+    let triggerDrawCalls = 0;
+    let surfaceRedrawCalls = 0;
+    const controller = createLifecycleController({
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.drawInterface = () => {};
+    controller.installVueNodesCompatibilityWidget();
+
+    // ComfyUI provides triggerDraw on custom widgets
+    installedWidget.triggerDraw = () => {
+        triggerDrawCalls++;
+    };
+    controller._vueCompatPrimarySurface = {
+        canvasElement: { isConnected: true },
+        redraw() {
+            surfaceRedrawCalls++;
+        }
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        controller.requestVueCompatWidgetDraw(false);
+    });
+
+    assert.equal(triggerDrawCalls, 1);
+    assert.equal(surfaceRedrawCalls, 0);
+    assert.equal(controller._vueCompatSurfaceDrawFrame == null, true);
+});
+
+
+test("Nodes 2.0 resize defers reactive node.properties writes until resize drag finishes", () => {
+    const windowListeners = new Map();
+    const mockWindow = {
+        addEventListener(type, handler) {
+            windowListeners.set(type, handler);
+        },
+        removeEventListener(type) {
+            windowListeners.delete(type);
+        }
+    };
+    const previousWindow = globalThis.window;
+    globalThis.window = mockWindow;
+
+    try {
+        let propertyWrites = 0;
+        const propertiesProxy = new Proxy({}, {
+            set(target, prop, value) {
+                propertyWrites++;
+                target[prop] = value;
+                return true;
+            }
+        });
+        const controller = createLifecycleController({
+            size: [330, 300],
+            min_size: [330, 200],
+            properties: propertiesProxy
+        });
+        controller.collapsedSections = { extraControls: true };
+        controller.calculateNeededHeight = () => 200;
+        controller.setupNode();
+
+        withLiteGraph({ vueNodesMode: true }, () => {
+            // Drag moves continuously across multiple frames
+            controller.node.size = [330, 310];
+            controller.node.onResize();
+            controller.node.size = [330, 320];
+            controller.node.onResize();
+            controller.node.size = [330, 350];
+            controller.node.onResize();
+        });
+
+        // While dragging is active, no writes have touched node.properties!
+        assert.equal(propertyWrites, 0);
+        assert.equal(controller._isUserResizing, true);
+        assert.equal(controller.getStoredPreferredHeight(true), 350);
+
+        // When drag finishes (pointerup fires on window)
+        const pointerUp = windowListeners.get("pointerup");
+        assert.equal(typeof pointerUp, "function");
+        pointerUp();
+
+        // Exactly ONE property write occurred at the end of the drag gesture!
+        assert.equal(propertyWrites, 1);
+        assert.equal(controller.node.properties.preferred_compact_height, 350);
+        assert.equal(controller._isUserResizing, false);
+    } finally {
+        if (previousWindow === undefined) {
+            delete globalThis.window;
+        } else {
+            globalThis.window = previousWindow;
+        }
+    }
+});
+
+
+test("widget.draw skips applyVueCompatAutoSize while user resize drag is active", () => {
+    let autoSizeCalls = 0;
+    let installedWidget;
+    const controller = createLifecycleController({
+        size: [330, 350],
+        min_size: [330, 200],
+        addCustomWidget(widget) {
+            installedWidget = widget;
+            return widget;
+        }
+    });
+    controller.bindVueCompatCanvasEvents = () => {};
+    controller.updateVueCompatCanvasLayout = () => {};
+    controller.prepareVueCompatCanvasDraw = (ctx, w, h) => ({ ctx, width: w, height: h });
+    controller.drawInterface = () => {};
+    controller.applyVueCompatAutoSize = () => {
+        autoSizeCalls++;
+    };
+    controller.installVueNodesCompatibilityWidget();
+
+    const canvasElement = {
+        closest(selector) {
+            return selector === ".lg-node" ? { dataset: { nodeId: "5" } } : null;
+        }
+    };
+    const ctx = {
+        canvas: canvasElement,
+        save() {},
+        restore() {},
+        translate() {}
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => {
+        // While resizing is active:
+        controller._isUserResizing = true;
+        installedWidget.draw(ctx, controller.node, 330, 0, 350);
+        assert.equal(autoSizeCalls, 0);
+
+        // When resizing ends:
+        controller._isUserResizing = false;
+        installedWidget.draw(ctx, controller.node, 330, 0, 350);
+        assert.equal(autoSizeCalls, 1);
+    });
+});
+
+
+

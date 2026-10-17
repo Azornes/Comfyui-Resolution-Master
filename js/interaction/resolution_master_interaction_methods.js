@@ -599,6 +599,7 @@ export const interactionMethods = {
             const sectionKey = property.replace(/^section_/, '').replace(/_collapsed$/, '');
             this.collapsedSections[sectionKey] = node.properties[property];
             if (sectionKey === 'extraControls') {
+                this.flushPendingPreferredHeight?.();
                 const isCompact = Boolean(this.collapsedSections.extraControls);
                 const minHeight = this.isVueNodesMode?.()
                     ? this.getVueCompatWidgetHeight()
@@ -824,6 +825,7 @@ export const interactionMethods = {
     handleSectionHeaderClick(headerKey) {
         const sectionKey = headerKey.replace('Header', '');
         if (sectionKey === 'extraControls') {
+            this.flushPendingPreferredHeight?.();
             this.storePreferredHeight(this.node.size[1], this.collapsedSections.extraControls);
         }
         this.collapsedSections[sectionKey] = !this.collapsedSections[sectionKey];
