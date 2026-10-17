@@ -171,21 +171,18 @@ export const nodeLifecycleMethods = {
             }
         }
         widget.triggerDraw?.();
-        if (this._vueCompatSecondarySurfaceStates?.size > 0 || !widget.triggerDraw) {
-            this.requestVueCompatSurfaceDraws();
-        }
+        this.requestVueCompatSurfaceDraws();
     },
 
     requestVueCompatSurfaceDraws() {
         const secondarySurfaces = this._vueCompatSecondarySurfaceStates;
-        const hasTriggerDraw = Boolean(this.vueCompatWidget?.triggerDraw);
-        const primarySurface = hasTriggerDraw ? null : this._vueCompatPrimarySurface;
+        const primarySurface = this._vueCompatPrimarySurface;
         if ((!primarySurface && !secondarySurfaces?.size) || this._vueCompatSurfaceDrawFrame != null) return;
 
         const redraw = () => {
             this._vueCompatSurfaceDrawFrame = null;
             const surfaces = [
-                ...(primarySurface ? [this._vueCompatPrimarySurface] : []),
+                ...(this._vueCompatPrimarySurface ? [this._vueCompatPrimarySurface] : []),
                 ...(this._vueCompatSecondarySurfaceStates || [])
             ];
             for (const surface of surfaces) {
@@ -335,12 +332,18 @@ export const nodeLifecycleMethods = {
         let localY = Number.isFinite(e.offsetY) ? e.offsetY : pos?.[1];
 
         const canvasElement = this.resolveVueCompatEventCanvas(e) || this._vueCompatCanvasElement;
+        const secondarySurface = canvasElement
+            ? this._vueCompatSecondarySurfaces?.get?.(canvasElement)
+            : null;
+        const targetWidth = secondarySurface?.width
+            || Math.max(this.getVueCompatMinimumWidth(), Number(this.node.size?.[0]) || 330);
+        const targetHeight = secondarySurface?.height
+            || this._vueCompatWidgetHeight
+            || this.getVueCompatWidgetHeight();
         const rect = canvasElement?.getBoundingClientRect?.();
-        const graphWidth = Math.max(this.getVueCompatMinimumWidth(), Number(this.node.size?.[0]) || 330);
-        const graphHeight = this._vueCompatWidgetHeight || this.getVueCompatWidgetHeight();
         if (rect && rect.width > 0 && rect.height > 0 && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
-            const computedX = (e.clientX - rect.left) * (graphWidth / rect.width);
-            const computedY = (e.clientY - rect.top) * (graphHeight / rect.height);
+            const computedX = (e.clientX - rect.left) * (targetWidth / rect.width);
+            const computedY = (e.clientY - rect.top) * (targetHeight / rect.height);
             if (Number.isFinite(computedX) && Number.isFinite(computedY)) {
                 localX = computedX;
                 localY = computedY;
@@ -744,6 +747,7 @@ export const nodeLifecycleMethods = {
             this._vueCompatForwardingNodePointer = false;
         };
         const handlePointerLeave = () => {
+            if (this.node.capture) return;
             if (this.tooltipTimer) {
                 clearTimeout(this.tooltipTimer);
                 this.tooltipTimer = null;
@@ -905,6 +909,7 @@ export const nodeLifecycleMethods = {
             }
         };
         const clearActive = () => {
+            if (this.node.capture) return;
             if (this._vueCompatActiveEventCanvas !== canvasElement) return;
             this._vueCompatActiveEventCanvas = null;
             this._vueCompatForwardingNodePointer = false;

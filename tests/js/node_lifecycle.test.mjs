@@ -349,6 +349,40 @@ test("Vue pointer normalization converts widget-local coordinates to node coordi
 });
 
 
+test("Vue pointer normalization uses secondary surface dimensions when event originates from secondary surface", () => {
+    const controller = createLifecycleController({
+        pos: [100, 200],
+        size: [330, 560]
+    });
+    const secondaryCanvas = {
+        getBoundingClientRect() {
+            return { left: 400, top: 50, width: 600, height: 500 };
+        }
+    };
+    controller._vueCompatSecondarySurfaces = new WeakMap();
+    controller._vueCompatSecondarySurfaces.set(secondaryCanvas, {
+        canvasElement: secondaryCanvas,
+        width: 600,
+        height: 500
+    });
+
+    const event = {
+        target: secondaryCanvas,
+        clientX: 400 + 230,
+        clientY: 50 + 150
+    };
+
+    withLiteGraph({ vueNodesMode: true }, () => controller.normalizeVueCompatPointerEvent(event));
+
+    // localX = (630 - 400) * (600 / 600) = 230
+    // localY = (200 - 50) * (500 / 500) = 150
+    // canvasX = 100 + 230 = 330
+    // canvasY = 200 + 150 = 350
+    assert.equal(event.canvasX, 330);
+    assert.equal(event.canvasY, 350);
+});
+
+
 test("Vue output slot centers are measured relative to the widget canvas", () => {
     const controller = createLifecycleController({ outputs: Array.from({ length: 5 }, () => ({})) });
     const canvasElement = {
@@ -1020,10 +1054,11 @@ test("Vue canvas draw preparation queries ds.scale directly and avoids forced la
 });
 
 
-test("requestVueCompatWidgetDraw delegates to widget.triggerDraw without scheduling duplicate primary surface redraw", () => {
+test("requestVueCompatWidgetDraw synchronizes both primary canvas and secondary surface when triggerDraw is present", () => {
     let installedWidget;
     let triggerDrawCalls = 0;
     let surfaceRedrawCalls = 0;
+    let scheduledRaf = null;
     const controller = createLifecycleController({
         addCustomWidget(widget) {
             installedWidget = widget;
@@ -1035,7 +1070,7 @@ test("requestVueCompatWidgetDraw delegates to widget.triggerDraw without schedul
     controller.drawInterface = () => {};
     controller.installVueNodesCompatibilityWidget();
 
-    // ComfyUI provides triggerDraw on custom widgets
+    // ComfyUI provides triggerDraw on custom widgets when side panel is open
     installedWidget.triggerDraw = () => {
         triggerDrawCalls++;
     };
@@ -1046,13 +1081,27 @@ test("requestVueCompatWidgetDraw delegates to widget.triggerDraw without schedul
         }
     };
 
-    withLiteGraph({ vueNodesMode: true }, () => {
-        controller.requestVueCompatWidgetDraw(false);
-    });
+    const previousRaf = globalThis.requestAnimationFrame;
+    globalThis.requestAnimationFrame = (callback) => {
+        scheduledRaf = callback;
+        return 1;
+    };
 
-    assert.equal(triggerDrawCalls, 1);
-    assert.equal(surfaceRedrawCalls, 0);
-    assert.equal(controller._vueCompatSurfaceDrawFrame == null, true);
+    try {
+        withLiteGraph({ vueNodesMode: true }, () => {
+            controller.requestVueCompatWidgetDraw(false);
+            assert.equal(triggerDrawCalls, 1);
+            assert.equal(typeof scheduledRaf, "function");
+            scheduledRaf();
+            assert.equal(surfaceRedrawCalls, 1);
+        });
+    } finally {
+        if (previousRaf === undefined) {
+            delete globalThis.requestAnimationFrame;
+        } else {
+            globalThis.requestAnimationFrame = previousRaf;
+        }
+    }
 });
 
 
