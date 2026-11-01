@@ -195,3 +195,22 @@ test("AspectRatioSelector mousedown on overlay hides selector", async () => {
     assert.equal(selector.container, null);
     assert.equal(selector.overlay, null);
 });
+
+test("AspectRatioUtils.createDefaultPresetItem safely renders preset name as textContent without HTML parsing", async () => {
+    const { AspectRatioUtils } = await import("../../js/presets/aspect_ratio_utils.js");
+    const maliciousName = '<img src="x" onerror="alert(1)">';
+    const item = AspectRatioUtils.createDefaultPresetItem({
+        name: maliciousName,
+        width: 1024,
+        height: 1024,
+        isCustom: true
+    }, {
+        customPresetIcon: { src: "icon.svg" }
+    });
+
+    const nameDiv = item.children[0];
+    assert.equal(nameDiv.textContent, maliciousName);
+    assert.equal(nameDiv.children.length, 1);
+    assert.equal(nameDiv.children[0].tagName, "img");
+    assert.equal(nameDiv.children[0].className, "resolution-master-aspect-ratio-preset-custom-icon");
+});

@@ -640,9 +640,13 @@ export class PresetAddViewRenderer {
         // Preset name with custom icon if applicable
         const nameDiv = document.createElement('div');
         nameDiv.className = 'resolution-master-aspect-ratio-preset-item-name';
-        const customIcon = preset.isCustom && this.parentDialog.customPresetIcon ? 
-            `<img src="${this.parentDialog.customPresetIcon.src}" class="resolution-master-aspect-ratio-preset-custom-icon">` : '';
-        nameDiv.innerHTML = `${preset.name}${customIcon}`;
+        nameDiv.textContent = preset.name;
+        if (preset.isCustom && this.parentDialog.customPresetIcon) {
+            const iconImg = document.createElement('img');
+            iconImg.src = this.parentDialog.customPresetIcon.src;
+            iconImg.className = 'resolution-master-aspect-ratio-preset-custom-icon';
+            nameDiv.appendChild(iconImg);
+        }
         
         // Dimensions below name
         const dimensionsDiv = document.createElement('div');

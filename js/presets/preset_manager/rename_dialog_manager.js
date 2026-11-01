@@ -28,8 +28,8 @@ export class RenameDialogManager {
         dialog.innerHTML = `
             <div class="resolution-master-rename-dialog-title">Rename Category</div>
             <div class="resolution-master-rename-dialog-input-group">
-                <label class="resolution-master-rename-dialog-label">Current: ${currentCategoryName}</label>
-                <input type="text" id="renameCategoryInput" value="${currentCategoryName}" class="resolution-master-rename-dialog-input">
+                <label id="renameCategoryLabel" class="resolution-master-rename-dialog-label"></label>
+                <input type="text" id="renameCategoryInput" class="resolution-master-rename-dialog-input">
             </div>
             <div id="renameValidationMessage" class="resolution-master-rename-dialog-validation"></div>
             <div class="resolution-master-rename-dialog-buttons">
@@ -39,7 +39,10 @@ export class RenameDialogManager {
         `;
         
         // Get elements
+        const label = dialog.querySelector('#renameCategoryLabel');
         const input = dialog.querySelector('#renameCategoryInput');
+        label.textContent = `Current: ${currentCategoryName}`;
+        input.value = currentCategoryName;
         const validationMsg = dialog.querySelector('#renameValidationMessage');
         const cancelBtn = dialog.querySelector('#renameCancelBtn');
         const applyBtn = dialog.querySelector('#renameApplyBtn');
